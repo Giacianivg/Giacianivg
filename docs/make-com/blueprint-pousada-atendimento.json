@@ -1,0 +1,410 @@
+{
+  "name": "Pousada — Atendimento WhatsApp v3",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 2,
+      "parameters": {
+        "hook": "",
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 0, "y": 0 },
+        "restore": {
+          "parameters": { "hook": { "label": "Pousada WhatsApp Webhook" } }
+        },
+        "notes": "ACAO OBRIGATORIA: clique aqui → selecione 'Pousada WhatsApp Webhook'"
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:RouterModule",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 300, "y": 0 },
+        "notes": "Router: mensagem de texto vs midia"
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 3,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": true, "useNewZLibDecompression": true },
+              "filter": {
+                "name": "E mensagem de texto",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.type}}",
+                      "b": "text",
+                      "o": "text:equal"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://api.airtable.com/v0/{{team_variable.AIRTABLE_BASE_ID}}/Conversas",
+                "serializeUrl": false,
+                "method": "get",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer {{team_variable.AIRTABLE_API_KEY}}" }
+                ],
+                "qs": [
+                  { "name": "filterByFormula", "value": "({Telefone}='{{1.from}}')" },
+                  { "name": "sort[0][field]", "value": "Ultima Mensagem" },
+                  { "name": "sort[0][direction]", "value": "desc" },
+                  { "name": "maxRecords", "value": "1" }
+                ],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": ""
+              },
+              "metadata": {
+                "designer": { "x": 600, "y": -150 },
+                "notes": "Busca historico do hospede no Airtable"
+              }
+            },
+            {
+              "id": 4,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": true, "useNewZLibDecompression": true },
+              "mapper": {
+                "url": "https://api.anthropic.com/v1/messages",
+                "serializeUrl": false,
+                "method": "post",
+                "headers": [
+                  { "name": "x-api-key", "value": "{{team_variable.ANTHROPIC_API_KEY}}" },
+                  { "name": "anthropic-version", "value": "2023-06-01" },
+                  { "name": "content-type", "value": "application/json" }
+                ],
+                "qs": [],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\"model\":\"claude-sonnet-4-6\",\"max_tokens\":1024,\"system\":\"{{team_variable.SYSTEM_PROMPT}}\",\"messages\":[{\"role\":\"user\",\"content\":\"{{if(3.data.records[1].fields.`Ultima Msg Texto`; 'Contexto: na ultima interacao o hospede disse: ' + 3.data.records[1].fields.`Ultima Msg Texto` + char(10) + char(10) + 'Mensagem atual: ' + 1.text; 1.text)}}\"}]}"
+              },
+              "metadata": {
+                "designer": { "x": 900, "y": -150 },
+                "notes": "Claude Sonnet 4.6 — Luna. Inclui contexto da ultima mensagem do Airtable."
+              }
+            },
+            {
+              "id": 5,
+              "module": "builtin:RouterModule",
+              "version": 1,
+              "parameters": {},
+              "mapper": {},
+              "metadata": {
+                "designer": { "x": 1200, "y": -150 },
+                "notes": "Router de acao: ESCALAR | COTAR | CONFIRMAR | Normal"
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 6,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+                      "filter": {
+                        "name": "ESCALAR — Claude incluiu [ESCALAR ou [ESCALAR:",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{4.data.content[].text}}",
+                              "b": "[ESCALAR",
+                              "o": "text:contain"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.from}}\",\"type\":\"text\",\"text\":{\"body\":\"{{trim(first(split(4.data.content[].text; '[ESCALAR')))}}\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": -450 },
+                        "notes": "Envia msg ao hospede (texto ANTES do token [ESCALAR]). Funciona com [ESCALAR] e [ESCALAR: GRUPO | ...]"
+                      }
+                    },
+                    {
+                      "id": 7,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{team_variable.EQUIPE_WHATSAPP_NUMBER}}\",\"type\":\"text\",\"text\":{\"body\":\"🔔 *Escalonamento solicitado!*\\nHospede: {{1.name}}\\nTelefone: wa.me/{{1.from}}\\nUltima msg: {{1.text}}\\n\\n_Contexto Luna: {{trim(last(split(4.data.content[].text; '[ESCALAR')))}}_\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": -300 },
+                        "notes": "Notifica equipe com contexto do escalonamento"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 8,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": true, "useNewZLibDecompression": true },
+                      "filter": {
+                        "name": "COTAR — Claude incluiu [COTAR:]",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{4.data.content[].text}}",
+                              "b": "[COTAR:",
+                              "o": "text:contain"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "url": "https://webhook-six-topaz.vercel.app/quote",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"data_entrada\":\"{{replace(replace(toString(regexSearch(4.data.content[].text, 'data_entrada=([\\\\d/]+)')), '[', ''), ']', '')}}\",\"data_saida\":\"{{replace(replace(toString(regexSearch(4.data.content[].text, 'data_saida=([\\\\d/]+)')), '[', ''), ']', '')}}\",\"pessoas\":\"{{replace(replace(toString(regexSearch(4.data.content[].text, 'pessoas=(\\\\d+)')), '[', ''), ']', '')}}\",\"tipo\":\"{{replace(replace(toString(regexSearch(4.data.content[].text, 'tipo=(ALA_[A-Z_]+)')), '[', ''), ']', '')}}\"}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": 0 },
+                        "notes": "POST /quote no Vercel — extrai data_entrada, data_saida, pessoas, tipo via regex"
+                      }
+                    },
+                    {
+                      "id": 9,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": true, "useNewZLibDecompression": true },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.from}}\",\"type\":\"text\",\"text\":{\"body\":\"{{8.data.data.message}}\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1800, "y": 0 },
+                        "notes": "Envia cotacao formatada ao hospede (retorno do /quote)"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 10,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+                      "filter": {
+                        "name": "CONFIRMAR — Claude incluiu [CONFIRMAR:]",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{4.data.content[].text}}",
+                              "b": "[CONFIRMAR:",
+                              "o": "text:contain"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.from}}\",\"type\":\"text\",\"text\":{\"body\":\"{{trim(first(split(4.data.content[].text; '[CONFIRMAR:')))}}\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": 150 },
+                        "notes": "Envia resposta da Luna ao hospede (texto ANTES do token [CONFIRMAR:])"
+                      }
+                    },
+                    {
+                      "id": 11,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{team_variable.EQUIPE_WHATSAPP_NUMBER}}\",\"type\":\"text\",\"text\":{\"body\":\"🔔 *Nova reserva solicitada!*\\nHospede: {{1.name}}\\nTelefone: wa.me/{{1.from}}\\n\\nDetalhes: {{trim(last(split(4.data.content[].text; '[CONFIRMAR:')))}}\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": 300 },
+                        "notes": "Notifica equipe com dados da reserva (extraidos do token [CONFIRMAR:])"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 12,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+                      "filter": {
+                        "name": "Resposta normal (catch-all)",
+                        "conditions": []
+                      },
+                      "mapper": {
+                        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                        "serializeUrl": false,
+                        "method": "post",
+                        "headers": [
+                          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                          { "name": "Content-Type", "value": "application/json" }
+                        ],
+                        "qs": [],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.from}}\",\"type\":\"text\",\"text\":{\"body\":\"{{4.data.content[].text}}\"}}"
+                      },
+                      "metadata": {
+                        "designer": { "x": 1500, "y": 450 },
+                        "notes": "Resposta normal da Luna ao hospede"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": 13,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+              "mapper": {
+                "url": "https://api.airtable.com/v0/{{team_variable.AIRTABLE_BASE_ID}}/Conversas",
+                "serializeUrl": false,
+                "method": "post",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer {{team_variable.AIRTABLE_API_KEY}}" },
+                  { "name": "Content-Type", "value": "application/json" }
+                ],
+                "qs": [],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\"fields\":{\"Nome do Hospede\":\"{{1.name}}\",\"Telefone\":\"{{1.from}}\",\"Ultima Mensagem\":\"{{now}}\",\"Ultima Msg Texto\":\"{{1.text}}\",\"Status\":\"Em atendimento\",\"Modelo LLM\":\"Claude Sonnet 4.6\"}}"
+              },
+              "metadata": {
+                "designer": { "x": 1800, "y": -150 },
+                "notes": "Registra/atualiza conversa no Airtable. Status padrao: Em atendimento."
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 14,
+              "module": "http:ActionSendData",
+              "version": 3,
+              "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+              "filter": {
+                "name": "Mensagem de midia (foto, audio, video, sticker)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.type}}",
+                      "b": "text",
+                      "o": "text:notequal"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+                "serializeUrl": false,
+                "method": "post",
+                "headers": [
+                  { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+                  { "name": "Content-Type", "value": "application/json" }
+                ],
+                "qs": [],
+                "bodyType": "raw",
+                "contentType": "application/json",
+                "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.from}}\",\"type\":\"text\",\"text\":{\"body\":\"Ola! Por favor, envie sua mensagem em texto para que eu possa te ajudar melhor 🌙\"}}"
+              },
+              "metadata": {
+                "designer": { "x": 600, "y": 150 },
+                "notes": "Resposta padrao para midia — pede texto"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": false,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": { "orphans": [] },
+    "zone": "us2.make.com"
+  }
+}

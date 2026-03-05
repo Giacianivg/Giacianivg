@@ -1,0 +1,106 @@
+{
+  "name": "Pousada — Follow-up Pós-Cotação (2h)",
+  "flow": [
+    {
+      "id": 1,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+      "mapper": {
+        "url": "https://api.airtable.com/v0/{{team_variable.AIRTABLE_BASE_ID}}/Conversas",
+        "serializeUrl": false,
+        "method": "get",
+        "headers": [
+          { "name": "Authorization", "value": "Bearer {{team_variable.AIRTABLE_API_KEY}}" }
+        ],
+        "qs": [
+          { "name": "filterByFormula", "value": "AND({Status}='Cotação enviada',{Follow-up Enviado}=FALSE(),DATETIME_DIFF(NOW(),{Ultima Mensagem},'hours')>=2)" }
+        ],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": ""
+      },
+      "metadata": {
+        "designer": { "x": 0, "y": 0 },
+        "notes": "Busca contatos com cotação enviada há +2h sem resposta e sem follow-up enviado"
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicAggregator",
+      "version": 1,
+      "parameters": {
+        "groupBy": "",
+        "stopProcessing": false
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": { "x": 300, "y": 0 },
+        "notes": "Itera sobre cada registro retornado do Airtable"
+      }
+    },
+    {
+      "id": 3,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+      "mapper": {
+        "url": "https://graph.facebook.com/v19.0/{{team_variable.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "serializeUrl": false,
+        "method": "post",
+        "headers": [
+          { "name": "Authorization", "value": "Bearer {{team_variable.WHATSAPP_ACCESS_TOKEN}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": "{\"messaging_product\":\"whatsapp\",\"to\":\"{{1.data.records[].fields['Telefone']}}\",\"type\":\"text\",\"text\":{\"body\":\"Olá {{1.data.records[].fields['Nome do Hospede']}}! 🌙 Vi que você recebeu nossa cotação.\\nAinda tem interesse? Posso tirar alguma dúvida ou ajustar o período?\\nEstamos aqui para te ajudar! ☀️\"}}"
+      },
+      "metadata": {
+        "designer": { "x": 600, "y": 0 },
+        "notes": "Envia mensagem de follow-up suave ao hóspede"
+      }
+    },
+    {
+      "id": 4,
+      "module": "http:ActionSendData",
+      "version": 3,
+      "parameters": { "handleErrors": false, "useNewZLibDecompression": true },
+      "mapper": {
+        "url": "https://api.airtable.com/v0/{{team_variable.AIRTABLE_BASE_ID}}/Conversas/{{1.data.records[].id}}",
+        "serializeUrl": false,
+        "method": "patch",
+        "headers": [
+          { "name": "Authorization", "value": "Bearer {{team_variable.AIRTABLE_API_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ],
+        "qs": [],
+        "bodyType": "raw",
+        "contentType": "application/json",
+        "body": "{\"fields\":{\"Follow-up Enviado\":true,\"Status\":\"Follow-up enviado\"}}"
+      },
+      "metadata": {
+        "designer": { "x": 900, "y": 0 },
+        "notes": "Marca follow-up como enviado para não reenviar (máx 1 por cotação)"
+      }
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": true,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": { "orphans": [] },
+    "zone": "us2.make.com"
+  }
+}

@@ -1,0 +1,459 @@
+# Synkra AIOS Development Rules for Claude Code
+
+You are working with Synkra AIOS, an AI-Orchestrated System for Full Stack Development.
+
+<!-- AIOS-MANAGED-START: core-framework -->
+## Core Framework Understanding
+
+Synkra AIOS is a meta-framework that orchestrates AI agents to handle complex development workflows. Always recognize and work within this architecture.
+<!-- AIOS-MANAGED-END: core-framework -->
+
+<!-- AIOS-MANAGED-START: agent-system -->
+## Agent System
+
+### Agent Activation
+- Agents are activated with @agent-name syntax: @dev, @qa, @architect, @pm, @po, @sm, @analyst
+- The master agent is activated with @aios-master
+- Agent commands use the * prefix: *help, *create-story, *task, *exit
+
+### Agent Context
+When an agent is active:
+- Follow that agent's specific persona and expertise
+- Use the agent's designated workflow patterns
+- Maintain the agent's perspective throughout the interaction
+<!-- AIOS-MANAGED-END: agent-system -->
+
+## Development Methodology
+
+### Story-Driven Development
+1. **Work from stories** - All development starts with a story in `docs/stories/`
+2. **Update progress** - Mark checkboxes as tasks complete: [ ] → [x]
+3. **Track changes** - Maintain the File List section in the story
+4. **Follow criteria** - Implement exactly what the acceptance criteria specify
+
+### Code Standards
+- Write clean, self-documenting code
+- Follow existing patterns in the codebase
+- Include comprehensive error handling
+- Add unit tests for all new functionality
+- Use TypeScript/JavaScript best practices
+
+### Testing Requirements
+- Run all tests before marking tasks complete
+- Ensure linting passes: `npm run lint`
+- Verify type checking: `npm run typecheck`
+- Add tests for new features
+- Test edge cases and error scenarios
+
+<!-- AIOS-MANAGED-START: framework-structure -->
+## AIOS Framework Structure
+
+```
+aios-core/
+├── agents/         # Agent persona definitions (YAML/Markdown)
+├── tasks/          # Executable task workflows
+├── workflows/      # Multi-step workflow definitions
+├── templates/      # Document and code templates
+├── checklists/     # Validation and review checklists
+└── rules/          # Framework rules and patterns
+
+docs/
+├── stories/        # Development stories (numbered)
+├── prd/            # Product requirement documents
+├── architecture/   # System architecture documentation
+└── guides/         # User and developer guides
+```
+<!-- AIOS-MANAGED-END: framework-structure -->
+
+## Workflow Execution
+
+### Task Execution Pattern
+1. Read the complete task/workflow definition
+2. Understand all elicitation points
+3. Execute steps sequentially
+4. Handle errors gracefully
+5. Provide clear feedback
+
+### Interactive Workflows
+- Workflows with `elicit: true` require user input
+- Present options clearly
+- Validate user responses
+- Provide helpful defaults
+
+## Best Practices
+
+### When implementing features:
+- Check existing patterns first
+- Reuse components and utilities
+- Follow naming conventions
+- Keep functions focused and testable
+- Document complex logic
+
+### When working with agents:
+- Respect agent boundaries
+- Use appropriate agent for each task
+- Follow agent communication patterns
+- Maintain agent context
+
+### When handling errors:
+```javascript
+try {
+  // Operation
+} catch (error) {
+  console.error(`Error in ${operation}:`, error);
+  // Provide helpful error message
+  throw new Error(`Failed to ${operation}: ${error.message}`);
+}
+```
+
+## Git & GitHub Integration
+
+### Commit Conventions
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, etc.
+- Reference story ID: `feat: implement IDE detection [Story 2.1]`
+- Keep commits atomic and focused
+
+### GitHub CLI Usage
+- Ensure authenticated: `gh auth status`
+- Use for PR creation: `gh pr create`
+- Check org access: `gh api user/memberships`
+
+<!-- AIOS-MANAGED-START: aios-patterns -->
+## AIOS-Specific Patterns
+
+### Working with Templates
+```javascript
+const template = await loadTemplate('template-name');
+const rendered = await renderTemplate(template, context);
+```
+
+### Agent Command Handling
+```javascript
+if (command.startsWith('*')) {
+  const agentCommand = command.substring(1);
+  await executeAgentCommand(agentCommand, args);
+}
+```
+
+### Story Updates
+```javascript
+// Update story progress
+const story = await loadStory(storyId);
+story.updateTask(taskId, { status: 'completed' });
+await story.save();
+```
+<!-- AIOS-MANAGED-END: aios-patterns -->
+
+## Environment Setup
+
+### Required Tools
+- Node.js 18+
+- GitHub CLI
+- Git
+- Your preferred package manager (npm/yarn/pnpm)
+
+### Configuration Files
+- `.aios/config.yaml` - Framework configuration
+- `.env` - Environment variables
+- `aios.config.js` - Project-specific settings
+
+<!-- AIOS-MANAGED-START: common-commands -->
+## Common Commands
+
+### AIOS Master Commands
+- `*help` - Show available commands
+- `*create-story` - Create new story
+- `*task {name}` - Execute specific task
+- `*workflow {name}` - Run workflow
+
+### Development Commands
+- `npm run dev` - Start development
+- `npm test` - Run tests
+- `npm run lint` - Check code style
+- `npm run build` - Build project
+<!-- AIOS-MANAGED-END: common-commands -->
+
+## Debugging
+
+### Enable Debug Mode
+```bash
+export AIOS_DEBUG=true
+```
+
+### View Agent Logs
+```bash
+tail -f .aios/logs/agent.log
+```
+
+### Trace Workflow Execution
+```bash
+npm run trace -- workflow-name
+```
+
+## Claude Code Specific Configuration
+
+### Performance Optimization
+- Prefer batched tool calls when possible for better performance
+- Use parallel execution for independent operations
+- Cache frequently accessed data in memory during sessions
+
+### Tool Usage Guidelines
+- Always use the Grep tool for searching, never `grep` or `rg` in bash
+- Use the Task tool for complex multi-step operations
+- Batch file reads/writes when processing multiple files
+- Prefer editing existing files over creating new ones
+
+### Session Management
+- Track story progress throughout the session
+- Update checkboxes immediately after completing tasks
+- Maintain context of the current story being worked on
+- Save important state before long-running operations
+
+### Error Recovery
+- Always provide recovery suggestions for failures
+- Include error context in messages to user
+- Suggest rollback procedures when appropriate
+- Document any manual fixes required
+
+### Testing Strategy
+- Run tests incrementally during development
+- Always verify lint and typecheck before marking complete
+- Test edge cases for each new feature
+- Document test scenarios in story files
+
+### Documentation
+- Update relevant docs when changing functionality
+- Include code examples in documentation
+- Keep README synchronized with actual behavior
+- Document breaking changes prominently
+
+---
+*Synkra AIOS Claude Code Configuration v2.0*
+
+---
+
+## Princípios de Execução — "Never Take the Lazy Path"
+
+> "Never take the lazy path. Do the hard work now. The shortcut is forbidden."
+> Atalho hoje = debugging amanhã. Sem exceção.
+
+### A Equação que Governa Tudo
+
+**30 minutos de análise agora = 10 horas de debugging evitadas depois**
+
+O trabalho da IA é devolver tempo ao humano. Isso significa:
+- Análise sempre profunda e completa
+- Relatórios que reduzem carga cognitiva do decisor
+- Nunca otimizar para menos tokens às custas de profundidade
+
+Atalhos criam dívida invisível. Dívida invisível cobra juros compostos.
+
+---
+
+### PARTE I: MODELO MENTAL
+
+#### 1. A Inversão Fundamental
+
+O modelo correto:
+
+```
+Claude explora → Claude propõe arquitetura → Eu valido/ajusto → Claude executa → Claude verifica
+```
+
+Você não é o executor que delega tarefas.
+Você é o arquiteto que valida decisões.
+A diferença de produtividade entre esses dois modelos: 10x a 50x.
+
+#### 2. Gradiente de Permissão
+
+```
+READ     → Livre (faça sem perguntar)
+MOVE     → Após aprovação de direção
+CREATE   → Verificar se similar existe primeiro
+DELETE   → SEMPRE confirmar
+```
+
+Quanto mais destrutiva a ação, mais explícita a permissão necessária.
+
+**Corolário:** Aprovação de direção = execute até completar. Só pare para DELETE significativo ou dúvida genuína. Nunca "Quer que eu continue?" após aprovação já dada.
+
+#### 3. A Regra do 2x
+
+> Se o usuário repetiu algo 2x → você não entendeu
+
+Repetição não é ênfase. É sinal de erro.
+**Ação:** PARE e faça EXATAMENTE o que foi pedido.
+
+**Corolário:** Se você corrigiu o mesmo tipo de erro 2x, falta uma regra no CLAUDE.md. Adicione imediatamente.
+
+---
+
+### PARTE II: ANTES DE EXECUTAR
+
+#### 4. Verificação Física Antes de Teoria
+
+**Regra de Ouro: VERIFIQUE FISICAMENTE ANTES DE TEORIZAR**
+
+4 Checagens obrigatórias antes de declarar "completo":
+1. Arquivo existe onde o código espera? → `ls -la /caminho/exato/`
+2. Servidor serve? → `curl -I http://localhost:PORT/path`
+3. Usuário repetiu input 2x? → PARE, faça EXATAMENTE o que ele disse
+4. Testou com hard refresh? → Cmd+Shift+R (limpa cache)
+
+Red Flags de que você está assumindo:
+- Assumindo caminhos sem `ls -la`
+- Teorizando antes de evidência física
+- Ignorando input repetido
+- Lendo arquivos parcialmente antes de editar
+
+#### 5. Leitura Completa ou Nada
+
+NUNCA leia arquivos parcialmente.
+
+```
+❌ Read(file, limit: 100) + Edit = Conflitos, duplicações, quebras
+✅ Read(file) + Edit = Contexto completo, mudanças corretas
+```
+
+"Mas tokens?" → Ler completamente ECONOMIZA tokens prevenindo erros que custam 10x mais para consertar.
+
+#### 6. Discovery Antes de Implementação
+
+Mapeie sistemas existentes antes de criar novos.
+
+- **Fase 1:** Query sistemas existentes — "O que já existe relacionado a [X]?"
+- **Fase 2:** Verificar volume/uso — "Quantos registros? Última atualização?"
+- **Fase 3:** Apresentar findings ANTES de propor — Existente / Gap / Opções / Recomendação
+- **Fase 4:** Aguardar aprovação antes de implementar
+
+**Red Flag:** "Vou criar uma nova tabela para isso" sem consultar schema existente.
+
+#### 7. Opções Antes de Implementação
+
+NUNCA implemente direto. Sempre apresente opções primeiro:
+
+```
+1. [Opção A] - [trade-off]
+2. [Opção B] - [trade-off]
+3. [Opção C] - [trade-off]
+
+Recomendação: [número] porque [uma frase]
+```
+
+Deixe o humano escolher o número. Depois execute.
+
+#### 8. Prompt de Arquitetura Antes de Código
+
+Para qualquer feature significativa, apresente antes de escrever código:
+1. **Abordagens possíveis** — 3 formas diferentes de resolver + trade-offs
+2. **Recomendação** — qual escolheria e por quê
+3. **Riscos** — o que pode dar errado e como mitigar
+4. **Dependências** — o que precisa existir antes e o que vai quebrar
+
+Só implemente após aprovação da arquitetura. Isso previne retrabalho massivo.
+
+---
+
+### PARTE III: EXECUÇÃO
+
+#### 9. Determinismo Primeiro (Código > LLM)
+
+Sempre prefira soluções determinísticas sobre LLM:
+
+| Prioridade | Abordagem |
+|-----------|-----------|
+| 1 | Script/código determinístico — SEMPRE preferir |
+| 2 | Query SQL direta — previsível, auditável |
+| 3 | Regex/pattern matching — reproduzível |
+| 4 | LLM como último recurso — só quando criatividade é necessária |
+
+**Por quê:** LLM = não-determinístico, caro, lento. Código = reproduzível, grátis, instantâneo.
+
+#### 10. Commits Atômicos
+
+Nunca peça mudanças grandes. Sempre:
+
+> "Faça APENAS [uma mudança específica]. Não toque em mais nada. Me mostre o diff antes de aplicar."
+
+Mudanças grandes = bugs escondidos + rollback impossível.
+Mudanças atômicas = histórico limpo + debugging trivial.
+
+#### 11. A Regra do Over-Engineering
+
+> 3 linhas duplicadas > 1 abstração prematura
+
+Proibido:
+- Factory patterns sem necessidade
+- Interfaces para 1 implementação
+- Config files para 1 valor
+- Atomização excessiva de componentes
+
+Simplicidade > padrões sofisticados. Sempre.
+
+#### 12. Só o que Foi Pedido
+
+```
+FAÇA:     Exatamente o que foi solicitado
+NÃO FAÇA: "Também adicionei X já que estava mexendo"
+```
+
+Se você acha que algo seria útil → PERGUNTE antes de fazer.
+Feature não solicitada é débito, não crédito.
+
+---
+
+### PARTE IV: VERIFICAÇÃO
+
+#### 13. Loop de Verificação Tripla
+
+Antes de aceitar qualquer output significativo:
+1. Claude gera código
+2. Claude escreve teste para o código
+3. Claude tenta quebrar o próprio teste
+4. Claude documenta edge cases descobertos
+5. Só então você revisa
+
+Elimina 80% dos bugs antes de você olhar o código.
+
+#### 14. Debugging por Hipótese
+
+Quando algo não funciona:
+
+```
+O comportamento esperado era [X].
+O comportamento observado é [Y].
+
+Gere 3 hipóteses ordenadas por probabilidade.
+Para cada hipótese:
+- Como verificar se é verdade
+- O que fazer se for
+
+Não tente consertar ainda. Primeiro confirme a causa.
+```
+
+Debugging sem hipótese = tentativa e erro.
+Debugging com hipótese = ciência.
+
+---
+
+### PARTE V: ARQUITETURA DE CONTEXTO
+
+#### 15. CLAUDE.md como Arquitetura de Pensamento
+
+Seu CLAUDE.md não é documentação. É arquitetura de pensamento.
+
+O que funciona:
+
+```markdown
+## DECISÕES ARQUITETURAIS (imutáveis)
+- Banco: PostgreSQL. Sem exceção.
+- Auth: Supabase. Sem exceção.
+
+## PADRÕES (sempre aplicar)
+- Funções puras primeiro. Side effects isolados.
+- Erros são valores, não exceções.
+
+## ANTI-PADRÕES (rejeitar automaticamente)
+- Nunca use any em TypeScript.
+- Nunca commit direto na main.
+```

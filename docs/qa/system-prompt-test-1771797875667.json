@@ -1,0 +1,362 @@
+{
+  "api": "Claude Sonnet 4.6",
+  "results": [
+    {
+      "id": "TC-01",
+      "category": "FAQ",
+      "msg": "Oi, tudo bem?",
+      "expect": "apresentacao_luna",
+      "response": "Olá! Tudo bem sim, obrigada! 😊\n\nSeja muito bem-vindo(a)! Sou a **Luna**, assistente virtual da **Pousada Luz da Lua**, aqui em Socorro-SP, na Serra da Mantiqueira. 🌙\n\nComo posso te ajudar hoje? Está pensando em uma estadia por aqui?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-02",
+      "category": "FAQ",
+      "msg": "Onde fica a pousada?",
+      "expect": "socorro_sp",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua 🌙\n\nNossa pousada fica em **Socorro-SP**, na região da **Serra da Mantiqueira**, interior de São Paulo — um ambiente lindo e tranquilo, perfeito para descansar e se reconectar com a natureza! 🌿\n\nDe São Paulo, são aproximadamente **130km** (cerca de 1h45 de carro pela Rodovia Anhanguera/Dom Pedro I). Para o endereço exato e mais detalhes, acesse nosso site: [pousadaluzdaluasp.com.br](https://pousadaluzdaluasp.com.br)\n\nPosso te ajudar com mais alguma informação ou montar uma cotação para sua estadia?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-03",
+      "category": "FAQ",
+      "msg": "Como chegar de São Paulo?",
+      "expect": "km_ou_horas",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua! 🌙\n\nSocorro-SP fica a aproximadamente **130km de São Paulo** (cerca de 1h45 de carro pela Rodovia Anhanguera/Dom Pedro I). Nossa pousada está situada na região da Serra da Mantiqueira, um ambiente perfeito para relaxar e se reconectar com a natureza! 🌿\n\nPara o endereço exato e mais detalhes de como nos encontrar, acesse nosso site: **https://pousadaluzdaluasp.com.br** 🗺️\n\nSe quiser saber mais sobre as acomodações ou tiver alguma dúvida, é só me perguntar!",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-04",
+      "category": "FAQ",
+      "msg": "Qual o horário de check-in?",
+      "expect": "14h",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nNosso **check-in é a partir das 14h** e o **check-out até as 12h**.\n\nSe precisar de um horário diferente, posso verificar com nossa equipe se há disponibilidade. Posso te ajudar com mais alguma coisa? 🏡",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-05",
+      "category": "FAQ",
+      "msg": "Aceita pets?",
+      "expect": "escalar_ou_verificar",
+      "response": "Olá! Sou a Luna, assistente virtual da Pousada Luz da Lua 🌙\n\nSobre pets, deixa eu verificar essa informação com nossa equipe! Pode me passar seu nome para já deixar anotado? Assim assim que eu confirmar, já te retorno com tudo certinho 🐾",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-06",
+      "category": "FAQ",
+      "msg": "Tem estacionamento?",
+      "expect": "estacionamento",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua! 🌙\n\nTemos estacionamento disponível para os hóspedes — deixa eu confirmar os detalhes com nossa equipe para te passar a informação certinha!\n\nEnquanto isso, posso te ajudar com mais alguma coisa? Datas, tipos de quarto ou qualquer outra dúvida sobre a pousada! 🏡",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-07",
+      "category": "FAQ",
+      "msg": "Tem piscina?",
+      "expect": "verificar",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua! 🌙\n\nVou verificar esse detalhe com nossa equipe para te dar uma informação certinha! 🌊\n\nEnquanto isso, posso te ajudar com mais alguma coisa? Se quiser saber sobre nossas acomodações ou montar uma cotação, é só falar! 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-08",
+      "category": "FAQ",
+      "msg": "O café da manhã está incluso?",
+      "expect": "sim_incluso",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua 🌙\n\nSim! O café da manhã está incluso na diária em todas as nossas acomodações. É uma ótima forma de começar o dia na serra!\n\nPosso te ajudar com mais alguma informação ou gostaria de fazer uma reserva? 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-09",
+      "category": "FAQ",
+      "msg": "Qual a política de cancelamento?",
+      "expect": "7_dias",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nNossa política de cancelamento é bem tranquila: o cancelamento é **gratuito até 7 dias antes** da data de check-in.\n\nPara cancelamentos com menos de 7 dias de antecedência ou em caso de no-show, nossa equipe pode te orientar melhor sobre as condições. Prefere que eu chame alguém para te ajudar?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-10",
+      "category": "FAQ",
+      "msg": "Tem Wi-Fi na pousada?",
+      "expect": "wifi",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nTemos Wi-Fi disponível na pousada — deixa eu confirmar com nossa equipe se está incluso na diária ou se há alguma condição especial para te passar a informação certinha!\n\nPosso te ajudar com mais alguma coisa, como datas disponíveis ou tipos de quarto? 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-11",
+      "category": "QUARTOS",
+      "msg": "Quais tipos de quarto vocês têm?",
+      "expect": "ala_abc",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nTemos 18 quartos distribuídos em 3 alas:\n\n**Ala A — Quarto Standard Casal**\nCama de casal + 1 solteiro | Até 3 pessoas | R$300/noite\nIdeal para casais ou casal com acompanhante.\n\n**Ala B — Quarto Família**\nCama de casal + 2 solteiros + cama auxiliar | Até 5 pessoas | R$300–350/noite\nPerfeito para famílias com crianças ou grupos pequenos.\n\n**Ala C — Suíte Grupo / Quarto Casal Especial**\n2 quartos para grupos (até 8 pessoas cada) + 1 quarto casal (R$300/noite)\nPara grupos maiores, os valores são sob consulta com nossa equipe.\n\nTodas as acomodações incluem **café da manhã** na diária! 🌿\n\nPosso te ajudar a montar uma cotação? É só me contar as datas e quantas pessoas serão!",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": false,
+      "error": null
+    },
+    {
+      "id": "TC-12",
+      "category": "QUARTOS",
+      "msg": "Tenho uma família de 4 pessoas, qual quarto indicam?",
+      "expect": "ala_b",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja muito bem-vindo(a)! 🌙\n\nPara uma família de 4 pessoas, o **Quarto Família (Ala B)** é a escolha perfeita! Ele conta com 1 cama de casal + 2 camas de solteiro, com capacidade para até 5 pessoas — espaço de sobra para todos ficarem confortáveis. 🏡\n\nA diária está entre **R$300 a R$350/noite**, já incluindo café da manhã. Gostaria de fazer uma cotação com as suas datas? É só me contar quando pretende vir!",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-13",
+      "category": "QUARTOS",
+      "msg": "Somos 2 pessoas, casal",
+      "expect": "ala_a",
+      "response": "Olá! Seja bem-vindo à Pousada Luz da Lua! 🌙 Sou a Luna, assistente virtual da pousada, e estou aqui para te ajudar!\n\nQue ótimo, um casal! Temos opções perfeitas para vocês. Para montar uma cotação personalizada, preciso de mais uma informação:\n\n**Quais datas vocês têm em mente?** (ex: de 20/03 a 22/03) 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-14",
+      "category": "QUARTOS",
+      "msg": "Quantas pessoas cabem no quarto maior?",
+      "expect": "capacidade",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua! 🌙\n\nNossos maiores quartos ficam na **Ala C**, com capacidade para até **8 pessoas** cada. São ideais para grupos, eventos e comemorações especiais!\n\nGostaria de saber mais detalhes ou fazer uma cotação? É só me falar as datas e o número de hóspedes! 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-15",
+      "category": "QUARTOS",
+      "msg": "Temos um grupo de 20 pessoas para evento",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nQue animado, um grupo de 20 pessoas! Para eventos desse porte, nossa equipe está melhor preparada para montar uma proposta completa e personalizada para vocês.\n\nEnquanto isso, pode nos passar seu **nome e telefone** para o contato ser ainda mais rápido? Você também pode falar diretamente conosco pelo WhatsApp: **(19) 99840-0306** 🏡",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-16",
+      "category": "COTACAO",
+      "msg": "Quero fazer uma reserva",
+      "expect": "passo_1_datas",
+      "response": "Olá! Seja muito bem-vindo à Pousada Luz da Lua! 🌙 Sou a Luna, assistente virtual da pousada, e ficou muito feliz em te ajudar!\n\nPara montar sua cotação personalizada, preciso de algumas informações. Quais datas você tem em mente? (ex: de 15/03 a 17/03)",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-17",
+      "category": "COTACAO",
+      "msg": "Qual o preço da diária?",
+      "expect": "preco_ala",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nNossas diárias variam conforme o tipo de quarto:\n\n• **Quarto Standard Casal (Ala A)** — até 3 pessoas — **R$300/noite**\n• **Quarto Família (Ala B)** — até 5 pessoas — **R$300 a R$350/noite**\n• **Suíte para Grupos (Ala C)** — até 8 pessoas — sob consulta\n\nTodas as acomodações incluem **café da manhã** na diária! ☀️\n\nPosso montar uma cotação personalizada para você! Quais datas você tem em mente?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-18",
+      "category": "COTACAO",
+      "msg": "Tem disponibilidade para o feriado de Carnaval?",
+      "expect": "verificar_datas",
+      "response": "Olá! Sou a Luna, assistente virtual da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nQue ótima escolha para o Carnaval! Para verificar a disponibilidade nas suas datas, preciso de algumas informações:\n\n**Quais dias exatos você tem em mente?** (ex: de 28/02 a 05/03) E quantas pessoas serão da viagem?\n\nCom esses detalhes, consigo montar uma cotação personalizada para você! 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-19",
+      "category": "COTACAO",
+      "msg": "Quanto custa para 3 pessoas em março?",
+      "expect": "qualificacao",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nPara 3 pessoas, temos uma ótima opção: o **Quarto Standard Casal (Ala A)**, com 1 cama de casal + 1 cama de solteiro, por **R$300/noite** — já incluindo café da manhã!\n\nPara montar sua cotação, me conta: quais datas você tem em mente em março? 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-20",
+      "category": "COTACAO",
+      "msg": "De 10/04 a 12/04 para 2 pessoas, tem disponível?",
+      "expect": "[COTAR]",
+      "response": "Olá! Sou a Luna, assistente virtual da Pousada Luz da Lua 🌙\n\nQue período incrível para visitar Socorro! Para 2 pessoas, temos opções perfeitas:\n\n**Quarto Standard Casal (Ala A)** — 1 cama de casal + 1 de solteiro, até 3 pessoas — **R$300/noite**, com café da manhã incluso. São 2 diárias, totalizando **R$600**.\n\nPara confirmar a disponibilidade nas datas de 10 a 12/04, vou acionar nossa equipe agora:\n\n[COTAR: data_entrada=10/04/2025, data_saida=12/04/2025, pessoas=2, tipo=ALA_A]\n\nEnquanto isso, posso te ajudar com mais alguma informação sobre a pousada? 🌿",
+      "hasEscalar": false,
+      "hasCotar": true,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-21",
+      "category": "ESCALAMENTO",
+      "msg": "Quero falar com um humano",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nEnquanto isso, se preferir, você também pode entrar em contato diretamente pelo nosso WhatsApp: **(19) 99840-0306**. Estamos à disposição!",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-22",
+      "category": "ESCALAMENTO",
+      "msg": "Estou insatisfeito com o atendimento anterior",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nSinto muito pela experiência que você teve — isso é muito importante para nós! Nossa equipe vai entrar em contato para resolver tudo da melhor forma possível.\n\nSe preferir, você também pode nos chamar diretamente pelo WhatsApp: **(19) 99840-0306** 🏡",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-23",
+      "category": "ESCALAMENTO",
+      "msg": "Preciso de decoração especial para proposta de casamento",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nQue momento especial você está planejando! 💍 Nossa equipe vai adorar ajudar a tornar essa proposta inesquecível aqui na Serra da Mantiqueira.\n\nEnquanto aguarda, pode me passar seu nome? Assim já deixo tudo anotado para o atendimento ficar ainda mais ágil!",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-24",
+      "category": "ESCALAMENTO",
+      "msg": "Quero contratar o espaço para uma festa de 50 pessoas",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nQue incrível, uma festa para 50 pessoas! Fico feliz que tenha pensado na Pousada Luz da Lua para essa ocasião especial. 🎉\n\nNossa equipe é a melhor pessoa para montar uma proposta completa para eventos desse porte — eles vão entender todos os detalhes e garantir que tudo saia perfeito!\n\nEnquanto aguarda o contato, você também pode falar diretamente conosco pelo WhatsApp: **(19) 99840-0306** 🌙",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-25",
+      "category": "ESCALAMENTO",
+      "msg": "Quero falar com a recepcionista",
+      "expect": "[ESCALAR]",
+      "response": "[ESCALAR] Vou chamar nossa equipe para te ajudar melhor! Um momento 🌙\n\nJá estou avisando nossa recepcionista — em breve ela estará com você. Caso prefira, também pode entrar em contato diretamente pelo WhatsApp **(19) 99840-0306**. 😊",
+      "hasEscalar": true,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-26",
+      "category": "TOM",
+      "msg": "Bom dia! Estou de férias e quero conhecer Socorro!",
+      "expect": "acolhedor",
+      "response": "Bom dia! 😊 Que notícia maravilhosa!\n\nEu sou a **Luna**, assistente da **Pousada Luz da Lua**! Socorro-SP é um lugar encantador, no coração da Serra da Mantiqueira — natureza, ar puro e muito aconchego te esperam por aqui! 🌿\n\nPosso te ajudar a planejar sua estadia? Me conta: você já tem alguma data em mente ou está ainda explorando as opções?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-27",
+      "category": "TOM",
+      "msg": "Sua pousada parece incrível, anseio ir!",
+      "expect": "entusiasmo_acolhedor",
+      "response": "Que mensagem linda, ficamos muito felizes em saber disso! 🌙\n\nOlá! Sou a **Luna**, assistente virtual da **Pousada Luz da Lua**. É um prazer te receber por aqui!\n\nA pousada fica em Socorro-SP, na Serra da Mantiqueira — um lugar perfeito para relaxar, respirar ar puro e se reconectar com a natureza. 🌿\n\nPosso te ajudar a planejar sua estadia? Me conta um pouco mais sobre o que você tem em mente — datas, número de pessoas — e eu monto uma cotação pra você!",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-28",
+      "category": "TOM",
+      "msg": "Cadê vocês, nunca atendem!",
+      "expect": "empatico_escalar",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua, e sinto muito pelo transtorno! 😔\n\nEntendo sua frustração e me desculpe pela demora no atendimento. Posso te ajudar agora mesmo por aqui!\n\nSe preferir falar diretamente com nossa equipe, você também pode entrar em contato pelo WhatsApp **(19) 99840-0306**. Como posso te ajudar hoje? 🌙",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-29",
+      "category": "EDGE",
+      "msg": "Olá 😊",
+      "expect": "apresentacao_ou_pergunta",
+      "response": "Olá! Seja muito bem-vindo(a)! 🌙\n\nSou a **Luna**, assistente virtual da **Pousada Luz da Lua**, aqui em Socorro-SP, na Serra da Mantiqueira!\n\nEstou aqui para te ajudar com informações, disponibilidade e cotações. Como posso te atender hoje? 🌿",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-30",
+      "category": "EDGE",
+      "msg": "Ok",
+      "expect": "clarificacao",
+      "response": "Olá! Seja bem-vindo(a)! 🌙\n\nSou a **Luna**, assistente virtual da **Pousada Luz da Lua**, em Socorro-SP. Estou aqui para te ajudar com informações, disponibilidade e reservas.\n\nComo posso te ajudar hoje?",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-31",
+      "category": "EDGE",
+      "msg": "Não entendi nada do que você disse",
+      "expect": "clarificacao_acolhedora",
+      "response": "Olá! Sou a Luna, assistente virtual da **Pousada Luz da Lua** 🌙\n\nParece que houve alguma confusão! Pode me contar o que você está procurando? Estou aqui para te ajudar com informações sobre a pousada, disponibilidade de quartos ou qualquer dúvida que tiver. 🏡",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    },
+    {
+      "id": "TC-32",
+      "category": "EDGE",
+      "msg": "Quanto é uma suíte presidencial?",
+      "expect": "nao_existe_escalar",
+      "response": "Olá! Sou a Luna, assistente da Pousada Luz da Lua. Seja bem-vindo(a)! 🌙\n\nNão temos suíte presidencial em nosso portfólio, mas temos ótimas opções que podem te atender muito bem:\n\n- **Quarto Standard Casal (Ala A)** — até 3 pessoas — R$300/noite\n- **Quarto Família (Ala B)** — até 5 pessoas — R$300-350/noite\n- **Suíte / Quarto para Grupos (Ala C)** — para grupos maiores, sob consulta\n\nTodas as acomodações incluem café da manhã e ficam em um ambiente charmoso na Serra da Mantiqueira. 🌿\n\nPosso te ajudar a encontrar a opção ideal? Me conta quantas pessoas serão e as datas que você tem em mente!",
+      "hasEscalar": false,
+      "hasCotar": false,
+      "isShort": true,
+      "error": null
+    }
+  ],
+  "summary": {
+    "pass": 32,
+    "fail": 0,
+    "total": 32
+  }
+}

@@ -1,0 +1,266 @@
+{
+  "api": "Claude Sonnet 4.6",
+  "results": [
+    {
+      "id": "TC-01",
+      "category": "FAQ",
+      "msg": "Oi, tudo bem?",
+      "expect": "apresentacao_luna",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrdw3H57XzpqAVC34YC\"}"
+    },
+    {
+      "id": "TC-02",
+      "category": "FAQ",
+      "msg": "Onde fica a pousada?",
+      "expect": "socorro_sp",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrdzWP6RqCLkkcJFaS1\"}"
+    },
+    {
+      "id": "TC-03",
+      "category": "FAQ",
+      "msg": "Como chegar de São Paulo?",
+      "expect": "km_ou_horas",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPre3ZgwXgpfcStTSd2j\"}"
+    },
+    {
+      "id": "TC-04",
+      "category": "FAQ",
+      "msg": "Qual o horário de check-in?",
+      "expect": "14h",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPre723wHDSQmzwU4R1z\"}"
+    },
+    {
+      "id": "TC-05",
+      "category": "FAQ",
+      "msg": "Aceita pets?",
+      "expect": "escalar_ou_verificar",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreAC3bXuaeNyBvUStW\"}"
+    },
+    {
+      "id": "TC-06",
+      "category": "FAQ",
+      "msg": "Tem estacionamento?",
+      "expect": "estacionamento",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreEDtWpt7gRMNvuC5F\"}"
+    },
+    {
+      "id": "TC-07",
+      "category": "FAQ",
+      "msg": "Tem piscina?",
+      "expect": "verificar",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreHScWvQNei2BC1TCF\"}"
+    },
+    {
+      "id": "TC-08",
+      "category": "FAQ",
+      "msg": "O café da manhã está incluso?",
+      "expect": "sim_incluso",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreLVAyVhDuH3qqbtjz\"}"
+    },
+    {
+      "id": "TC-09",
+      "category": "FAQ",
+      "msg": "Qual a política de cancelamento?",
+      "expect": "7_dias",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrePQnkvrSBK24fkgYN\"}"
+    },
+    {
+      "id": "TC-10",
+      "category": "FAQ",
+      "msg": "Tem Wi-Fi na pousada?",
+      "expect": "wifi",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreSnw95Xpis7mn29VW\"}"
+    },
+    {
+      "id": "TC-11",
+      "category": "QUARTOS",
+      "msg": "Quais tipos de quarto vocês têm?",
+      "expect": "ala_abc",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreWSTPvE4qa8WLXoML\"}"
+    },
+    {
+      "id": "TC-12",
+      "category": "QUARTOS",
+      "msg": "Tenho uma família de 4 pessoas, qual quarto indicam?",
+      "expect": "ala_b",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreanQ665VGfGB3CH9L\"}"
+    },
+    {
+      "id": "TC-13",
+      "category": "QUARTOS",
+      "msg": "Somos 2 pessoas, casal",
+      "expect": "ala_a",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrede3cLQQNMm4GzXdo\"}"
+    },
+    {
+      "id": "TC-14",
+      "category": "QUARTOS",
+      "msg": "Quantas pessoas cabem no quarto maior?",
+      "expect": "capacidade",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreiiduN9HHRFyveX9S\"}"
+    },
+    {
+      "id": "TC-15",
+      "category": "QUARTOS",
+      "msg": "Temos um grupo de 20 pessoas para evento",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPremuswo6J8JcFmuvHU\"}"
+    },
+    {
+      "id": "TC-16",
+      "category": "COTACAO",
+      "msg": "Quero fazer uma reserva",
+      "expect": "passo_1_datas",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPreqGHzeuizLrsaypUg\"}"
+    },
+    {
+      "id": "TC-17",
+      "category": "COTACAO",
+      "msg": "Qual o preço da diária?",
+      "expect": "preco_ala",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPretgv92yP6XmXLnBcm\"}"
+    },
+    {
+      "id": "TC-18",
+      "category": "COTACAO",
+      "msg": "Tem disponibilidade para o feriado de Carnaval?",
+      "expect": "verificar_datas",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrewqgDcH7vhupim7rh\"}"
+    },
+    {
+      "id": "TC-19",
+      "category": "COTACAO",
+      "msg": "Quanto custa para 3 pessoas em março?",
+      "expect": "qualificacao",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrf1887sgh98iuk1wbY\"}"
+    },
+    {
+      "id": "TC-20",
+      "category": "COTACAO",
+      "msg": "De 10/04 a 12/04 para 2 pessoas, tem disponível?",
+      "expect": "[COTAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrf47TUaJMXkJdWbwPb\"}"
+    },
+    {
+      "id": "TC-21",
+      "category": "ESCALAMENTO",
+      "msg": "Quero falar com um humano",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrf8QB2R69UKdUkKN5W\"}"
+    },
+    {
+      "id": "TC-22",
+      "category": "ESCALAMENTO",
+      "msg": "Estou insatisfeito com o atendimento anterior",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfBHJi8yTq3yvuddxo\"}"
+    },
+    {
+      "id": "TC-23",
+      "category": "ESCALAMENTO",
+      "msg": "Preciso de decoração especial para proposta de casamento",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfEVHzU1JyBaQtG5rR\"}"
+    },
+    {
+      "id": "TC-24",
+      "category": "ESCALAMENTO",
+      "msg": "Quero contratar o espaço para uma festa de 50 pessoas",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfHNRddb7ZpaH2USxg\"}"
+    },
+    {
+      "id": "TC-25",
+      "category": "ESCALAMENTO",
+      "msg": "Quero falar com a recepcionista",
+      "expect": "[ESCALAR]",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfMG5gnQs9xDWKSnJK\"}"
+    },
+    {
+      "id": "TC-26",
+      "category": "TOM",
+      "msg": "Bom dia! Estou de férias e quero conhecer Socorro!",
+      "expect": "acolhedor",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfQQbCqGUpgLvih8Nn\"}"
+    },
+    {
+      "id": "TC-27",
+      "category": "TOM",
+      "msg": "Sua pousada parece incrível, anseio ir!",
+      "expect": "entusiasmo_acolhedor",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfTojV9EcN84LfajRd\"}"
+    },
+    {
+      "id": "TC-28",
+      "category": "TOM",
+      "msg": "Cadê vocês, nunca atendem!",
+      "expect": "empatico_escalar",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfZU3jP84Ho2ntbf7w\"}"
+    },
+    {
+      "id": "TC-29",
+      "category": "EDGE",
+      "msg": "Olá 😊",
+      "expect": "apresentacao_ou_pergunta",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfde5P2ZVrSANbUUVt\"}"
+    },
+    {
+      "id": "TC-30",
+      "category": "EDGE",
+      "msg": "Ok",
+      "expect": "clarificacao",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfgjN2hYcte5EZevtR\"}"
+    },
+    {
+      "id": "TC-31",
+      "category": "EDGE",
+      "msg": "Não entendi nada do que você disse",
+      "expect": "clarificacao_acolhedora",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfk3nunsmcGDZWRk4L\"}"
+    },
+    {
+      "id": "TC-32",
+      "category": "EDGE",
+      "msg": "Quanto é uma suíte presidencial?",
+      "expect": "nao_existe_escalar",
+      "response": null,
+      "error": "Anthropic API 401: {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"invalid x-api-key\"},\"request_id\":\"req_011CYPrfoSvuWqHhAyEfyVce\"}"
+    }
+  ],
+  "summary": {
+    "pass": 0,
+    "fail": 32,
+    "total": 32
+  }
+}

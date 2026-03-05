@@ -1,0 +1,13 @@
+{
+  "name": "pousada-chatbot-tools",
+  "version": "1.0.0",
+  "description": "Ferramentas de teste e configuração do chatbot Luna — Pousada Luz da Lua",
+  "scripts": {
+    "test-prompt": "node test-system-prompt.js",
+    "test-prompt-deepseek": "node test-system-prompt.js --deepseek"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "license": "UNLICENSED"
+}
