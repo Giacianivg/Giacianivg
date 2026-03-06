@@ -71,46 +71,94 @@ async function sendWhatsApp(to, text) {
 // ---------------------------------------------------------------------------
 // Anthropic — chamar Claude com histórico de conversa
 // ---------------------------------------------------------------------------
-async function callClaude(messages, clientContext = '') {
+async function callClaude(messages, clientContext = '', attempt = 0) {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY não configurada');
 
   const system = clientContext
     ? `${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`
     : LUNA_SYSTEM_PROMPT;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      system,
-      messages,
-    }),
-  });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system,
+        messages,
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Anthropic ${res.status}: ${body}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Anthropic ${res.status}: ${body}`);
+    }
+
+    const data = await res.json();
+    return data.content[0].text;
+  } catch (err) {
+    // Retry once on transient network errors (TLS disconnect, socket drop)
+    const isTransient = err.message?.includes('fetch failed') || err.name === 'TimeoutError';
+    if (attempt === 0 && isTransient) {
+      console.warn('[claude] Erro de rede, tentando novamente:', err.message);
+      await new Promise(r => setTimeout(r, 1000));
+      return callClaude(messages, clientContext, 1);
+    }
+    throw err;
   }
+}
 
-  const data = await res.json();
-  return data.content[0].text;
+// ---------------------------------------------------------------------------
+// Memória em RAM — fallback enquanto Google Sheets não está configurado
+// Cada entrada expira após 2h (TTL). Resets em cold start (ok para MVP).
+// ---------------------------------------------------------------------------
+const conversationMemory = new Map(); // phone → { messages: [], ts: number }
+const MEMORY_TTL_MS = 2 * 60 * 60 * 1000; // 2h
+
+// Contexto de escalonamentos aguardando resposta da equipe
+// phone → { history, question, nome, ts }
+const pendingTeamQueries = new Map();
+
+function memoryGet(phone) {
+  const entry = conversationMemory.get(phone);
+  if (!entry) return [];
+  if (Date.now() - entry.ts > MEMORY_TTL_MS) {
+    conversationMemory.delete(phone);
+    return [];
+  }
+  return entry.messages;
+}
+
+function memorySet(phone, messages) {
+  conversationMemory.set(phone, { messages: messages.slice(-20), ts: Date.now() });
 }
 
 // ---------------------------------------------------------------------------
 // Contexto dinâmico do cliente — injetado no system prompt a cada chamada
 // ---------------------------------------------------------------------------
 
+function getCurrentDateContext() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  const dias = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  return `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()}`;
+}
+
 function buildClientContext(nome, isFirstMessage) {
   const lines = [
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
     'CONTEXTO DO CLIENTE ATUAL',
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    `Data atual: ${getCurrentDateContext()}`,
+    '→ Use esta data para interpretar "amanhã", "domingo", "semana que vem", etc.',
+    '→ NUNCA repita perguntas sobre informações que o cliente já forneceu nesta conversa.',
   ];
   if (nome) {
     lines.push(`Nome: ${nome}`);
@@ -127,6 +175,20 @@ function buildClientContext(nome, isFirstMessage) {
     }
   }
   return lines.join('\n');
+}
+
+// Verifica se o nome parece um nome real (sem emojis, números ou caracteres estranhos)
+function looksLikeRealName(name) {
+  if (!name || name === 'Hóspede') return false;
+  // Emojis (blocos unicode comuns)
+  if (/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27FF}]/u.test(name)) return false;
+  // Números
+  if (/\d/.test(name)) return false;
+  // Muito curto (menos de 3 letras reais)
+  if (name.replace(/\s/g, '').length < 3) return false;
+  // Caracteres não esperados em nomes (permite letras, acentos, espaço, hífen, apóstrofo)
+  if (/[^a-záàâãéèêíïóôõöúüçñA-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ\s'\-]/u.test(name)) return false;
+  return true;
 }
 
 // Extrai o nome capturado do sinal [NOME: ...] na resposta da Luna
@@ -195,9 +257,64 @@ async function handleEscalar(userMsg, from, rawSignal, contactName) {
   await recordEvent(from, contactName, 'ESCALAR', { detail });
 
   if (EQUIPE_WHATSAPP_NUMBER) {
-    const notif = `🔔 *Escalonamento Luna*\nCliente: ${contactName} | ${from}${detail ? `\n${detail}` : ''}`;
+    const motivo = detail || 'Dúvida ou solicitação especial';
+    const notif = [
+      `🔔 *Hóspede aguarda resposta*`,
+      `Nome: ${contactName} | Tel: wa.me/${from}`,
+      `Assunto: ${motivo}`,
+      ``,
+      `💬 Responda aqui no WhatsApp que Luna repassa automaticamente!`,
+    ].join('\n');
     await sendWhatsApp(EQUIPE_WHATSAPP_NUMBER, notif);
+
+    // Armazena contexto para resposta da equipe
+    const ctx = pendingTeamQueries.get('__ctx__');
+    if (ctx && ctx.from === from) {
+      pendingTeamQueries.set(from, { history: ctx.history, question: ctx.question, nome: contactName, ts: Date.now() });
+      pendingTeamQueries.delete('__ctx__');
+    }
   }
+}
+
+// ---------------------------------------------------------------------------
+// handleTeamReply — equipe respondeu → Luna reformula e envia ao hóspede
+// ---------------------------------------------------------------------------
+async function handleTeamReply(teamMessage) {
+  // Pega o guest pendente mais recente
+  let latestPhone = null;
+  let latestEntry = null;
+  for (const [phone, entry] of pendingTeamQueries) {
+    if (!latestEntry || entry.ts > latestEntry.ts) {
+      latestPhone = phone;
+      latestEntry = entry;
+    }
+  }
+
+  if (!latestPhone) {
+    // Sem guest pendente — equipe pode estar testando ou enviando nota interna
+    console.log('[team] Mensagem sem guest pendente:', teamMessage);
+    await sendWhatsApp(EQUIPE_WHATSAPP_NUMBER, '✅ Mensagem recebida. Sem hóspede aguardando no momento.');
+    return;
+  }
+
+  // Luna reformula a resposta da equipe de forma natural para o hóspede
+  const teamContext = buildClientContext(latestEntry.nome, false) +
+    `\n\nRESPOSTA DA EQUIPE (USE ESTA INFO): "${teamMessage}"\n→ Reformule de forma natural como Luna. Não mencione "equipe respondeu" — só transmita a informação.`;
+
+  const messages = [...(latestEntry.history || []), { role: 'user', content: latestEntry.question }];
+  const response = await callClaude(messages, teamContext);
+  const cleanResponse = response.replace(/\[NOME:\s*[^\]]+\]/, '').trim();
+
+  await sendWhatsApp(latestPhone, cleanResponse);
+
+  // Atualiza memória do hóspede
+  const updated = [...(latestEntry.history || []),
+    { role: 'user', content: latestEntry.question },
+    { role: 'assistant', content: cleanResponse }];
+  memorySet(latestPhone, updated);
+
+  pendingTeamQueries.delete(latestPhone);
+  console.log(`[team] Respondeu ${latestPhone} (${latestEntry.nome}): ${cleanResponse.substring(0, 80)}`);
 }
 
 async function handleConfirmar(userMsg, from, params, contactName) {
@@ -282,25 +399,30 @@ app.get('/webhook', (req, res) => {
 // processMessage — processamento assíncrono após 200 já enviado ao Meta
 // ---------------------------------------------------------------------------
 async function processMessage(from, contactName, text) {
+  console.log(`[process] iniciando para ${from}`);
   try {
-    // Carrega histórico e perfil em paralelo
-    const [fullHistory, clientProfile] = await Promise.all([
-      getConversationHistory(from),
-      getClientProfile(from),
+    // Carrega histórico e perfil em paralelo — timeout de 5s para não atrasar o Claude
+    const sheetsTimeout = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const [sheetsHistory, clientProfile] = await Promise.all([
+      Promise.race([getConversationHistory(from), sheetsTimeout(5000).then(() => [])]),
+      Promise.race([getClientProfile(from), sheetsTimeout(5000).then(() => ({ nome: null, isNew: true }))]),
     ]);
 
+    // Usa histórico do Sheets se disponível, senão usa memória RAM
+    const fullHistory = sheetsHistory.length > 0 ? sheetsHistory : memoryGet(from);
+
     // Determina o nome conhecido: preferência ao armazenado; fallback ao perfil do WhatsApp
+    // Só usa o nome do WhatsApp se parecer um nome real (sem emojis, números, etc.)
     let knownName = clientProfile.nome;
-    if (!knownName && contactName !== 'Hóspede') {
+    if (!knownName && looksLikeRealName(contactName)) {
       knownName = contactName;
-      // Salva o nome do perfil WhatsApp na primeira vez
       upsertClient(from, contactName).catch(() => {});
     }
 
     const isFirstMessage = fullHistory.length === 0;
     const clientContext = buildClientContext(knownName, isFirstMessage);
 
-    const history = fullHistory.slice(-6);
+    const history = fullHistory.slice(-10);
     history.push({ role: 'user', content: text });
 
     const response = await callClaude(history, clientContext);
@@ -316,6 +438,13 @@ async function processMessage(from, contactName, text) {
     const displayName = nomeCapturado || knownName || contactName;
     console.log(`[webhook] Luna → ${from} (${displayName}): ${cleanResponse.substring(0, 80)}`);
 
+    // Salva no Sheets (se configurado) e atualiza memória RAM
+    const updatedHistory = [...fullHistory, { role: 'user', content: text }, { role: 'assistant', content: cleanResponse }];
+    memorySet(from, updatedHistory);
+
+    // Disponibiliza contexto para handleEscalar (caso Luna use [ESCALAR])
+    pendingTeamQueries.set('__ctx__', { from, history: fullHistory, question: text });
+
     await Promise.all([
       (async () => {
         await appendMessage(from, displayName, 'user', text);
@@ -324,7 +453,8 @@ async function processMessage(from, contactName, text) {
       processResponse(cleanResponse, from, displayName),
     ]);
   } catch (err) {
-    console.error('[webhook] Erro ao processar mensagem:', err.message);
+    const cause = err.cause?.message || err.cause?.code || '';
+    console.error(`[webhook] Erro ao processar mensagem: ${err.message}${cause ? ` (causa: ${cause})` : ''}`);
     try {
       await sendWhatsApp(from, 'Estamos com uma instabilidade momentânea. Nossa equipe entrará em contato em breve! 🌙');
     } catch (e) {
@@ -338,7 +468,7 @@ async function processMessage(from, contactName, text) {
 // CRÍTICO: responder 200 IMEDIATAMENTE — Meta cancela se não receber em <5s
 //          Todo processamento é fire-and-forget após o 200
 // ---------------------------------------------------------------------------
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
   const body = req.body;
 
   // Objetos não-whatsapp
@@ -364,11 +494,22 @@ app.post('/webhook', (req, res) => {
   const from = message.from;
   const contactName = value.contacts?.[0]?.profile?.name || 'Hóspede';
 
-  // 200 imediato — Meta não tenta reenviar
-  res.sendStatus(200);
+  // Mensagem da equipe → modo relay: reformula e envia ao hóspede pendente
+  const teamNumber = (EQUIPE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
+  if (teamNumber && from === teamNumber && message.type === 'text') {
+    const teamText = message.text?.body || '';
+    console.log(`[team] Mensagem da equipe: ${teamText.substring(0, 60)}`);
+    try {
+      await handleTeamReply(teamText);
+    } catch (err) {
+      console.error('[team] Erro ao processar resposta da equipe:', err.message);
+    }
+    return res.sendStatus(200);
+  }
 
-  // Mensagem não-texto — responde de forma assíncrona
+  // Mensagem não-texto
   if (message.type !== 'text') {
+    res.sendStatus(200);
     sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙').catch(
       err => console.error('[webhook] Falha mensagem não-texto:', err.message)
     );
@@ -378,8 +519,19 @@ app.post('/webhook', (req, res) => {
   const text = message.text.body;
   console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
 
-  // Fire-and-forget — Vercel mantém a função ativa até processMessage concluir
-  processMessage(from, contactName, text);
+  // Processa ANTES de enviar 200 — Vercel mata o Lambda após res.sendStatus()
+  // Claude responde em ~600ms, bem dentro do limite de 5s da Meta
+  // Safety timeout de 4.5s garante que Meta sempre recebe o 200
+  try {
+    await Promise.race([
+      processMessage(from, contactName, text),
+      new Promise(resolve => setTimeout(resolve, 4500)),
+    ]);
+  } catch (err) {
+    console.error('[webhook] Erro no processamento:', err.message);
+  }
+
+  res.sendStatus(200);
 });
 
 // ---------------------------------------------------------------------------
@@ -397,6 +549,19 @@ app.post('/quote', (req, res) => {
   const message = formatWhatsAppMessage(result);
   console.log(`[quote] ${tipo} ${data_entrada}→${data_saida} R$${result.totalFinal}`);
   return res.json({ success: true, data: { ...result, message } });
+});
+
+// ---------------------------------------------------------------------------
+// POST /test-claude — diagnóstico: chama Claude de forma síncrona (remover após debug)
+// ---------------------------------------------------------------------------
+app.post('/test-claude', async (req, res) => {
+  try {
+    const start = Date.now();
+    const response = await callClaude([{ role: 'user', content: 'Responda apenas: ok' }]);
+    res.json({ ok: true, ms: Date.now() - start, response });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 // ---------------------------------------------------------------------------

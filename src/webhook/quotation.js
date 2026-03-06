@@ -30,11 +30,15 @@ const TIPO_LABEL = {
   ALA_C_CASAL: 'Casal Especial (Ala C)',
 };
 
-// Feriados com precificacao especial (atualizar anualmente)
+// Feriados/eventos com preço especial E mínimo de 2 noites (atualizar anualmente)
 const FERIADO_RANGES = [
-  { startMd: '02-20', endMd: '02-25' }, // Carnaval 2026
-  { startMd: '03-28', endMd: '04-06' }, // Semana Santa + Pascoa 2026
-  { startMd: '12-24', endMd: '01-02' }, // Natal/Reveillon (cruza ano)
+  { startMd: '02-13', endMd: '02-18', label: 'Carnaval 2026' },
+  { startMd: '03-28', endMd: '04-06', label: 'Semana Santa/Páscoa 2026' },
+  { startMd: '06-04', endMd: '06-07', label: 'EBAA/Corpus Christi 2026' },
+  { startMd: '09-05', endMd: '09-07', label: 'Independência 2026' },
+  { startMd: '10-10', endMd: '10-12', label: 'Aparecida 2026' },
+  { startMd: '11-20', endMd: '11-22', label: 'Consciência Negra 2026' },
+  { startMd: '12-24', endMd: '01-02', label: 'Natal/Réveillon' },
 ];
 
 function parseDate(ddmmyyyy) {
@@ -119,20 +123,26 @@ function calculateQuotation(params) {
 
   const numPessoas = parseInt(pessoas);
 
-  // Validacao de minimo de noites (DB-12)
+  // Validacao de minimo de noites — apenas em feriados/eventos especiais
   const entradaDate = parseDate(data_entrada);
-  const entradaDow = entradaDate.getDay();
   const entradaSeason = detectSeason(data_entrada);
-  const isWeekendStart = entradaDow === 5 || entradaDow === 6; // sexta ou sabado
-  const isAltaStart = entradaSeason === 'alta' || entradaSeason === 'feriado';
-  const minNights = (isWeekendStart || isAltaStart) ? 2 : 1;
+  const isFeriadoStart = entradaSeason === 'feriado';
+  const minNights = isFeriadoStart ? 2 : 1;
 
   if (nights < minNights) {
-    const reason = isWeekendStart ? 'fins de semana' : 'alta temporada';
+    // Identifica qual evento exige o mínimo
+    const feriadoInfo = FERIADO_RANGES.find(({ startMd, endMd }) => {
+      const mm = String(entradaDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(entradaDate.getDate()).padStart(2, '0');
+      const md = `${mm}-${dd}`;
+      if (startMd <= endMd) return md >= startMd && md <= endMd;
+      return md >= startMd || md <= endMd;
+    });
+    const reason = feriadoInfo?.label || 'este período especial';
     return {
-      error: `Para ${reason}, nossa estadia minima e de ${minNights} noite${minNights > 1 ? 's' : ''}`,
+      error: `Para ${reason}, nossa estadia mínima é de 2 noites`,
       minNights,
-      suggestion: `Posso montar a cotacao para ${minNights} noites?`,
+      suggestion: `Posso montar a cotação para 2 noites?`,
     };
   }
 
@@ -203,8 +213,7 @@ ${descontoLine}\uD83D\uDCB3 *Total: R$ ${q.totalFinal}*
 \u274C Cancelamento: gratuito at\u00E9 7 dias antes do check-in
 \uD83D\uDCCD Socorro-SP \u2014 Circuito das \u00C1guas Paulista
 
-Para reservar, acesse: https://pousadaluzdaluasp.com.br
-Ou responda *CONFIRMAR* para que nossa equipe finalize sua reserva! \uD83C\uDF3F`;
+Responda *CONFIRMAR* para reservar e nossa equipe finaliza! \uD83C\uDF3F`;
 }
 
 module.exports = { calculateQuotation, formatWhatsAppMessage };
