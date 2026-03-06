@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const { calculateQuotation, formatWhatsAppMessage } = require('./quotation');
 const LUNA_SYSTEM_PROMPT = require('./luna-system-prompt');
+const { getConversationHistory, appendMessage, recordEvent } = require('./sheets');
 
 const app = express();
 app.use(express.json());
@@ -18,13 +19,6 @@ const {
 } = process.env;
 
 const WA_API = `https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-// ---------------------------------------------------------------------------
-// Histórico de conversa em memória por número de telefone (MVP)
-// Limite: últimas 20 mensagens por contato
-// ---------------------------------------------------------------------------
-const conversations = new Map();
-const MAX_HISTORY = 20;
 
 // ---------------------------------------------------------------------------
 // WhatsApp — enviar mensagem via Meta Cloud API
@@ -117,7 +111,8 @@ function parseConfirmarParams(signal) {
   return params;
 }
 
-async function handleCotar(params, from) {
+async function handleCotar(params, from, contactName) {
+  await recordEvent(from, contactName, 'COTAR', params);
   const q = calculateQuotation(params);
 
   if (q.error) {
@@ -136,29 +131,34 @@ async function handleCotar(params, from) {
   await sendWhatsApp(from, formatWhatsAppMessage(q));
 }
 
-async function handleEscalar(userMsg, from, rawSignal) {
+async function handleEscalar(userMsg, from, rawSignal, contactName) {
   if (userMsg) await sendWhatsApp(from, userMsg);
 
+  const detail = rawSignal.includes(':')
+    ? rawSignal.replace(/^\[ESCALAR:\s*/, '').replace(/\]$/, '').trim()
+    : '';
+
+  await recordEvent(from, contactName, 'ESCALAR', { detail });
+
   if (EQUIPE_WHATSAPP_NUMBER) {
-    const detail = rawSignal.includes(':')
-      ? rawSignal.replace(/^\[ESCALAR:\s*/, '').replace(/\]$/, '').trim()
-      : '';
-    const notif = `🔔 *Escalonamento Luna*\nCliente: ${from}${detail ? `\n${detail}` : ''}`;
+    const notif = `🔔 *Escalonamento Luna*\nCliente: ${contactName} | ${from}${detail ? `\n${detail}` : ''}`;
     await sendWhatsApp(EQUIPE_WHATSAPP_NUMBER, notif);
   }
 }
 
-async function handleConfirmar(userMsg, from, params) {
+async function handleConfirmar(userMsg, from, params, contactName) {
   if (userMsg) await sendWhatsApp(from, userMsg);
 
+  const p = params || {};
+  await recordEvent(from, contactName, 'CONFIRMAR', p);
+
   if (EQUIPE_WHATSAPP_NUMBER) {
-    const p = params || {};
     const sinal = p.total
       ? `R$${Math.round(parseFloat(p.total.replace(/[^0-9.,]/g, '').replace(',', '.')) * 0.3)}`
       : 'a calcular';
     const notif = [
       '🔔 *Nova reserva solicitada!*',
-      `Hóspede: ${p.nome || 'N/A'} | Tel: ${from}`,
+      `Hóspede: ${p.nome || contactName || 'N/A'} | Tel: ${from}`,
       `Período: ${p.entrada || '?'} → ${p.saida || '?'}`,
       `Tipo: ${p.tipo || 'N/A'} | Hóspedes: ${p.pessoas || 'N/A'}`,
       `Total: ${p.total || 'N/A'} | Sinal (30%): ${sinal}`,
@@ -170,14 +170,14 @@ async function handleConfirmar(userMsg, from, params) {
 }
 
 // Detecta sinais na resposta e despacha para os handlers corretos
-async function processResponse(response, from) {
+async function processResponse(response, from, contactName) {
   // [COTAR: ...]
   const cotarMatch = response.match(/\[COTAR:[^\]]+\]/);
   if (cotarMatch) {
     const userMsg = response.replace(/\[COTAR:[^\]]+\]/, '').trim();
     if (userMsg) await sendWhatsApp(from, userMsg);
     const params = parseCotarParams(cotarMatch[0]);
-    if (params) await handleCotar(params, from);
+    if (params) await handleCotar(params, from, contactName);
     return;
   }
 
@@ -189,6 +189,7 @@ async function processResponse(response, from) {
       userMsg || 'Vou chamar nossa equipe para te ajudar! 🌙',
       from,
       escalarMatch[0],
+      contactName,
     );
     return;
   }
@@ -198,7 +199,7 @@ async function processResponse(response, from) {
   if (confirmarMatch) {
     const userMsg = response.replace(/\[CONFIRMAR:[^\]]+\]/, '').trim();
     const params = parseConfirmarParams(confirmarMatch[0]);
-    await handleConfirmar(userMsg, from, params);
+    await handleConfirmar(userMsg, from, params, contactName);
     return;
   }
 
@@ -228,55 +229,74 @@ app.get('/webhook', (req, res) => {
 // CRÍTICO: responder 200 IMEDIATAMENTE — Meta cancela se não receber em <5s
 // ---------------------------------------------------------------------------
 app.post('/webhook', async (req, res) => {
-  res.sendStatus(200);
-
   const body = req.body;
-  if (body.object !== 'whatsapp_business_account') return;
 
-  let from;
+  // Objetos não-whatsapp: responder 200 imediatamente e sair
+  if (body.object !== 'whatsapp_business_account') {
+    return res.sendStatus(200);
+  }
+
+  const value = body.entry?.[0]?.changes?.[0]?.value;
+
+  // Status de entrega, leitura, etc. — sem mensagem de texto
+  if (!value?.messages?.length) {
+    return res.sendStatus(200);
+  }
+
+  const message = value.messages[0];
+  const from = message.from;
+  const contactName = value.contacts?.[0]?.profile?.name || 'Hóspede';
+
+  // Mensagem não-texto
+  if (message.type !== 'text') {
+    await sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙');
+    return res.sendStatus(200);
+  }
+
+  const text = message.text.body;
+  console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
+
+  // ---------------------------------------------------------------------------
+  // Processar ANTES de responder 200 — Vercel congela execução após res.send()
+  // Timeout de 4.5s: Meta exige resposta em <5s; Claude tipicamente leva 1-3s
+  // ---------------------------------------------------------------------------
+  const TIMEOUT_MS = 4500;
+
   try {
-    const value = body.entry?.[0]?.changes?.[0]?.value;
-    if (!value?.messages?.length) return; // status de entrega, leitura, etc.
+    await Promise.race([
+      (async () => {
+        const history = await getConversationHistory(from);
+        history.push({ role: 'user', content: text });
 
-    const message = value.messages[0];
-    from = message.from;
-    const contactName = value.contacts?.[0]?.profile?.name || 'Hóspede';
+        const response = await callClaude(history);
+        console.log(`[webhook] Luna → ${from}: ${response.substring(0, 80)}`);
 
-    // Ignorar mensagens não-texto com aviso amigável
-    if (message.type !== 'text') {
-      await sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙');
-      return;
-    }
-
-    const text = message.text.body;
-    console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
-
-    // Histórico de conversa
-    if (!conversations.has(from)) conversations.set(from, []);
-    const history = conversations.get(from);
-    history.push({ role: 'user', content: text });
-    while (history.length > MAX_HISTORY) history.shift();
-
-    // Chamar Claude
-    const response = await callClaude([...history]);
-    console.log(`[webhook] Luna → ${from}: ${response.substring(0, 80)}`);
-
-    // Adicionar resposta ao histórico
-    history.push({ role: 'assistant', content: response });
-
-    // Processar sinais e enviar
-    await processResponse(response, from);
-
+        // Gravar histórico e enviar resposta em paralelo (não bloqueiam o 200)
+        await Promise.all([
+          (async () => {
+            await appendMessage(from, contactName, 'user', text);
+            await appendMessage(from, contactName, 'assistant', response);
+          })(),
+          processResponse(response, from, contactName),
+        ]);
+      })(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
+      ),
+    ]);
   } catch (err) {
     console.error('[webhook] Erro:', err.message);
-    try {
-      if (from) {
+    if (err.message !== 'timeout') {
+      try {
         await sendWhatsApp(from, 'Estamos com uma instabilidade momentânea. Nossa equipe entrará em contato em breve! 🌙');
+      } catch (e) {
+        console.error('[webhook] Falha ao enviar mensagem de erro:', e.message);
       }
-    } catch (e) {
-      console.error('[webhook] Falha ao enviar mensagem de erro:', e.message);
     }
   }
+
+  // 200 sempre enviado ao final — Meta não rejeita nem tenta reenviar
+  return res.sendStatus(200);
 });
 
 // ---------------------------------------------------------------------------
