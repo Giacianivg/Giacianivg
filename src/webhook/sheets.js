@@ -1,10 +1,11 @@
 'use strict';
 
 /**
- * Google Sheets — histórico de conversa + registro de leads
- * Sheets necessárias no spreadsheet:
- *   "Histórico"  → colunas: Timestamp | Telefone | Nome | Role | Mensagem
- *   "Leads"      → colunas: Timestamp | Telefone | Nome | Evento | Dados | Status
+ * Google Sheets — histórico de conversa + registro de leads + perfil do cliente
+ * Abas necessárias no spreadsheet:
+ *   "Histórico"  → A:Timestamp | B:Telefone | C:Nome | D:Role | E:Mensagem
+ *   "Leads"      → A:Timestamp | B:Telefone | C:Nome | D:Evento | E:Dados | F:Status
+ *   "Clientes"   → A:Telefone | B:Nome | C:Primeira_Conversa | D:Ultima_Conversa
  */
 
 const { google } = require('googleapis');
@@ -98,4 +99,64 @@ async function recordEvent(phone, contactName, evento, dados) {
   }
 }
 
-module.exports = { getConversationHistory, appendMessage, recordEvent };
+/**
+ * Retorna o perfil do cliente pela aba "Clientes".
+ * @returns {{ nome: string|null, isNew: boolean }}
+ */
+async function getClientProfile(phone) {
+  if (!SPREADSHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+    return { nome: null, isNew: true };
+  }
+  try {
+    const sheets = await getSheets();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Clientes!A:D',
+    });
+    const rows = res.data.values || [];
+    const row = rows.find(r => r[0] === phone);
+    if (!row) return { nome: null, isNew: true };
+    return { nome: row[1] || null, isNew: false };
+  } catch (err) {
+    console.error('[sheets] Erro ao ler perfil cliente:', err.message);
+    return { nome: null, isNew: true };
+  }
+}
+
+/**
+ * Cria ou atualiza o perfil do cliente na aba "Clientes".
+ */
+async function upsertClient(phone, nome) {
+  if (!SPREADSHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) return;
+  try {
+    const sheets = await getSheets();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Clientes!A:D',
+    });
+    const rows = res.data.values || [];
+    const rowIndex = rows.findIndex(r => r[0] === phone);
+    const ts = new Date().toISOString();
+
+    if (rowIndex === -1) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Clientes!A:D',
+        valueInputOption: 'RAW',
+        requestBody: { values: [[phone, nome, ts, ts]] },
+      });
+    } else {
+      const sheetRow = rowIndex + 1;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `Clientes!B${sheetRow}:D${sheetRow}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[nome, rows[rowIndex][2] || ts, ts]] },
+      });
+    }
+  } catch (err) {
+    console.error('[sheets] Erro ao salvar perfil cliente:', err.message);
+  }
+}
+
+module.exports = { getConversationHistory, appendMessage, recordEvent, getClientProfile, upsertClient };

@@ -4,7 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const { calculateQuotation, formatWhatsAppMessage } = require('./quotation');
 const LUNA_SYSTEM_PROMPT = require('./luna-system-prompt');
-const { getConversationHistory, appendMessage, recordEvent } = require('./sheets');
+const { getConversationHistory, appendMessage, recordEvent, getClientProfile, upsertClient } = require('./sheets');
 
 const app = express();
 app.use(express.json());
@@ -71,8 +71,12 @@ async function sendWhatsApp(to, text) {
 // ---------------------------------------------------------------------------
 // Anthropic — chamar Claude com histórico de conversa
 // ---------------------------------------------------------------------------
-async function callClaude(messages) {
+async function callClaude(messages, clientContext = '') {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY não configurada');
+
+  const system = clientContext
+    ? `${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`
+    : LUNA_SYSTEM_PROMPT;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -84,7 +88,7 @@ async function callClaude(messages) {
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
-      system: LUNA_SYSTEM_PROMPT,
+      system,
       messages,
     }),
   });
@@ -96,6 +100,39 @@ async function callClaude(messages) {
 
   const data = await res.json();
   return data.content[0].text;
+}
+
+// ---------------------------------------------------------------------------
+// Contexto dinâmico do cliente — injetado no system prompt a cada chamada
+// ---------------------------------------------------------------------------
+
+function buildClientContext(nome, isFirstMessage) {
+  const lines = [
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    'CONTEXTO DO CLIENTE ATUAL',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+  ];
+  if (nome) {
+    lines.push(`Nome: ${nome}`);
+    lines.push('→ SEMPRE use o nome do cliente nas respostas de forma natural.');
+    lines.push('→ NÃO pergunte o nome novamente — você já sabe.');
+  } else {
+    lines.push('Nome: (não informado ainda)');
+    if (isFirstMessage) {
+      lines.push('→ Esta é a PRIMEIRA mensagem. Pergunte o nome do cliente de forma casual.');
+      lines.push('→ Quando ele responder o nome, inclua [NOME: NomeInformado] no final da sua resposta.');
+    } else {
+      lines.push('→ O nome foi solicitado anteriormente. NÃO peça de novo.');
+      lines.push('→ Se o cliente mencionou o nome em mensagens anteriores, use-o.');
+    }
+  }
+  return lines.join('\n');
+}
+
+// Extrai o nome capturado do sinal [NOME: ...] na resposta da Luna
+function parseNomeSignal(response) {
+  const match = response.match(/\[NOME:\s*([^\]]+)\]/);
+  return match ? match[1].trim() : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -246,20 +283,45 @@ app.get('/webhook', (req, res) => {
 // ---------------------------------------------------------------------------
 async function processMessage(from, contactName, text) {
   try {
-    const fullHistory = await getConversationHistory(from);
-    // Últimas 6 mensagens — contexto suficiente, Claude mais rápido
+    // Carrega histórico e perfil em paralelo
+    const [fullHistory, clientProfile] = await Promise.all([
+      getConversationHistory(from),
+      getClientProfile(from),
+    ]);
+
+    // Determina o nome conhecido: preferência ao armazenado; fallback ao perfil do WhatsApp
+    let knownName = clientProfile.nome;
+    if (!knownName && contactName !== 'Hóspede') {
+      knownName = contactName;
+      // Salva o nome do perfil WhatsApp na primeira vez
+      upsertClient(from, contactName).catch(() => {});
+    }
+
+    const isFirstMessage = fullHistory.length === 0;
+    const clientContext = buildClientContext(knownName, isFirstMessage);
+
     const history = fullHistory.slice(-6);
     history.push({ role: 'user', content: text });
 
-    const response = await callClaude(history);
-    console.log(`[webhook] Luna → ${from}: ${response.substring(0, 80)}`);
+    const response = await callClaude(history, clientContext);
+
+    // Captura [NOME: ...] se Luna identificou o nome nesta mensagem
+    const nomeCapturado = parseNomeSignal(response);
+    const cleanResponse = response.replace(/\[NOME:\s*[^\]]+\]/, '').trim();
+
+    if (nomeCapturado) {
+      upsertClient(from, nomeCapturado).catch(() => {});
+    }
+
+    const displayName = nomeCapturado || knownName || contactName;
+    console.log(`[webhook] Luna → ${from} (${displayName}): ${cleanResponse.substring(0, 80)}`);
 
     await Promise.all([
       (async () => {
-        await appendMessage(from, contactName, 'user', text);
-        await appendMessage(from, contactName, 'assistant', response);
+        await appendMessage(from, displayName, 'user', text);
+        await appendMessage(from, displayName, 'assistant', cleanResponse);
       })(),
-      processResponse(response, from, contactName),
+      processResponse(cleanResponse, from, displayName),
     ]);
   } catch (err) {
     console.error('[webhook] Erro ao processar mensagem:', err.message);
