@@ -21,6 +21,23 @@ const {
 const WA_API = `https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
 
 // ---------------------------------------------------------------------------
+// Deduplicação de mensagens — evita reprocessamento por retry do Meta
+// ---------------------------------------------------------------------------
+const processedIds = new Map(); // messageId → timestamp
+const DEDUP_TTL_MS = 60_000;   // 60s — janela segura para retries do Meta
+
+function isDuplicate(messageId) {
+  const now = Date.now();
+  // Limpa entradas expiradas
+  for (const [id, ts] of processedIds) {
+    if (now - ts > DEDUP_TTL_MS) processedIds.delete(id);
+  }
+  if (processedIds.has(messageId)) return true;
+  processedIds.set(messageId, now);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // WhatsApp — enviar mensagem via Meta Cloud API
 // ---------------------------------------------------------------------------
 async function sendWhatsApp(to, text) {
@@ -66,7 +83,7 @@ async function callClaude(messages) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 600,
       system: LUNA_SYSTEM_PROMPT,
       messages,
     }),
@@ -225,78 +242,82 @@ app.get('/webhook', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// processMessage — processamento assíncrono após 200 já enviado ao Meta
+// ---------------------------------------------------------------------------
+async function processMessage(from, contactName, text) {
+  try {
+    const fullHistory = await getConversationHistory(from);
+    // Últimas 6 mensagens — contexto suficiente, Claude mais rápido
+    const history = fullHistory.slice(-6);
+    history.push({ role: 'user', content: text });
+
+    const response = await callClaude(history);
+    console.log(`[webhook] Luna → ${from}: ${response.substring(0, 80)}`);
+
+    await Promise.all([
+      (async () => {
+        await appendMessage(from, contactName, 'user', text);
+        await appendMessage(from, contactName, 'assistant', response);
+      })(),
+      processResponse(response, from, contactName),
+    ]);
+  } catch (err) {
+    console.error('[webhook] Erro ao processar mensagem:', err.message);
+    try {
+      await sendWhatsApp(from, 'Estamos com uma instabilidade momentânea. Nossa equipe entrará em contato em breve! 🌙');
+    } catch (e) {
+      console.error('[webhook] Falha ao enviar mensagem de erro:', e.message);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // POST /webhook — Recebimento de mensagens WhatsApp
 // CRÍTICO: responder 200 IMEDIATAMENTE — Meta cancela se não receber em <5s
+//          Todo processamento é fire-and-forget após o 200
 // ---------------------------------------------------------------------------
-app.post('/webhook', async (req, res) => {
+app.post('/webhook', (req, res) => {
   const body = req.body;
 
-  // Objetos não-whatsapp: responder 200 imediatamente e sair
+  // Objetos não-whatsapp
   if (body.object !== 'whatsapp_business_account') {
     return res.sendStatus(200);
   }
 
   const value = body.entry?.[0]?.changes?.[0]?.value;
 
-  // Status de entrega, leitura, etc. — sem mensagem de texto
+  // Status de entrega, leitura, etc. — sem mensagem
   if (!value?.messages?.length) {
     return res.sendStatus(200);
   }
 
   const message = value.messages[0];
+
+  // Deduplicação: ignora retries do Meta para a mesma mensagem
+  if (isDuplicate(message.id)) {
+    console.log(`[webhook] Duplicata ignorada: ${message.id}`);
+    return res.sendStatus(200);
+  }
+
   const from = message.from;
   const contactName = value.contacts?.[0]?.profile?.name || 'Hóspede';
 
-  // Mensagem não-texto
+  // 200 imediato — Meta não tenta reenviar
+  res.sendStatus(200);
+
+  // Mensagem não-texto — responde de forma assíncrona
   if (message.type !== 'text') {
-    await sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙');
-    return res.sendStatus(200);
+    sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙').catch(
+      err => console.error('[webhook] Falha mensagem não-texto:', err.message)
+    );
+    return;
   }
 
   const text = message.text.body;
   console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
 
-  // ---------------------------------------------------------------------------
-  // Processar ANTES de responder 200 — Vercel congela execução após res.send()
-  // Timeout de 4.5s: Meta exige resposta em <5s; Claude tipicamente leva 1-3s
-  // ---------------------------------------------------------------------------
-  const TIMEOUT_MS = 4500;
-
-  try {
-    await Promise.race([
-      (async () => {
-        const history = await getConversationHistory(from);
-        history.push({ role: 'user', content: text });
-
-        const response = await callClaude(history);
-        console.log(`[webhook] Luna → ${from}: ${response.substring(0, 80)}`);
-
-        // Gravar histórico e enviar resposta em paralelo (não bloqueiam o 200)
-        await Promise.all([
-          (async () => {
-            await appendMessage(from, contactName, 'user', text);
-            await appendMessage(from, contactName, 'assistant', response);
-          })(),
-          processResponse(response, from, contactName),
-        ]);
-      })(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS)
-      ),
-    ]);
-  } catch (err) {
-    console.error('[webhook] Erro:', err.message);
-    if (err.message !== 'timeout') {
-      try {
-        await sendWhatsApp(from, 'Estamos com uma instabilidade momentânea. Nossa equipe entrará em contato em breve! 🌙');
-      } catch (e) {
-        console.error('[webhook] Falha ao enviar mensagem de erro:', e.message);
-      }
-    }
-  }
-
-  // 200 sempre enviado ao final — Meta não rejeita nem tenta reenviar
-  return res.sendStatus(200);
+  // Fire-and-forget — Vercel mantém a função ativa até processMessage concluir
+  processMessage(from, contactName, text);
 });
 
 // ---------------------------------------------------------------------------
