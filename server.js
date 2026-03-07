@@ -1,0 +1,199 @@
+'use strict';
+
+require('dotenv').config();
+
+const express = require('express');
+const app = express();
+
+const PORT = process.env.API_PORT || 3001;
+
+// ─── Colors for terminal logging ───────────────────────────────────────────────
+const C = {
+  reset:  '\x1b[0m',
+  bold:   '\x1b[1m',
+  dim:    '\x1b[2m',
+  green:  '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue:   '\x1b[34m',
+  cyan:   '\x1b[36m',
+  red:    '\x1b[31m',
+  gray:   '\x1b[90m',
+};
+
+function methodColor(m) {
+  return { GET: C.cyan, POST: C.green, PATCH: C.yellow, DELETE: C.red }[m] || C.blue;
+}
+
+function statusColor(s) {
+  if (s < 300) return C.green;
+  if (s < 400) return C.yellow;
+  return C.red;
+}
+
+// ─── Request logger ────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  const mc = methodColor(req.method);
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    const sc = statusColor(res.statusCode);
+    const ts = new Date().toTimeString().slice(0, 8);
+    console.log(
+      `${C.gray}${ts}${C.reset}  ` +
+      `${mc}${C.bold}${req.method.padEnd(6)}${C.reset}  ` +
+      `${C.bold}${req.path}${C.reset}` +
+      (Object.keys(req.query).length ? C.dim + '?' + new URLSearchParams(req.query).toString() + C.reset : '') +
+      `  ${sc}${res.statusCode}${C.reset}  ${C.gray}${ms}ms${C.reset}`
+    );
+  });
+  next();
+});
+
+app.use(express.json());
+
+// ─── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/leads',                      require('./api/leads/route'));
+app.use('/api/conversations',              require('./api/conversations/route'));
+app.use('/api/availability/calendar',      require('./api/availability/calendar/route'));
+app.use('/api/availability/block',         require('./api/availability/block/route'));
+app.use('/api/availability/unblock',       require('./api/availability/unblock/route'));
+app.use('/api/availability',               require('./api/availability/route'));
+app.use('/api/proposals',                  require('./api/proposals/route'));
+app.use('/api/reservations/confirm',       require('./api/reservations/confirm/route'));
+app.use('/api/reservations',               require('./api/reservations/route'));
+app.use('/api/payments',                   require('./api/payments/route'));
+
+// ─── Health ────────────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'pousada-crm-api',
+    supabase_url: process.env.SUPABASE_URL ? '✅ configured' : '⚠️  not set',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ─── Dashboard (HTML) ──────────────────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  const supabaseOk = !!process.env.SUPABASE_URL;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>CRM API — Pousada Luz da Lua</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:2rem}
+    h1{font-size:1.5rem;color:#f8fafc;margin-bottom:.25rem}
+    .sub{color:#94a3b8;font-size:.875rem;margin-bottom:2rem}
+    .badge{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .75rem;border-radius:9999px;font-size:.75rem;font-weight:600;margin-bottom:1.5rem}
+    .badge.ok{background:#16a34a22;color:#4ade80;border:1px solid #16a34a44}
+    .badge.warn{background:#b4530022;color:#fb923c;border:1px solid #b4530044}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1.25rem}
+    .card h2{font-size:.875rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem}
+    .route{display:flex;align-items:baseline;gap:.75rem;padding:.4rem 0;border-bottom:1px solid #1e293b}
+    .route:last-child{border:none}
+    .method{font-size:.7rem;font-weight:700;padding:.15rem .45rem;border-radius:.3rem;min-width:3.5rem;text-align:center}
+    .GET{background:#0e7490;color:#e0f2fe} .POST{background:#15803d;color:#dcfce7}
+    .PATCH{background:#b45309;color:#fef9c3} .DELETE{background:#991b1b;color:#fee2e2}
+    .path{font-family:'Cascadia Code','Fira Code',monospace;font-size:.8rem;color:#cbd5e1}
+    .desc{font-size:.75rem;color:#64748b;margin-left:auto;text-align:right}
+    .env{margin-top:1.5rem;background:#1e293b;border:1px solid #334155;border-radius:.75rem;padding:1.25rem}
+    .env h2{font-size:.875rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:.75rem}
+    .env-row{display:flex;justify-content:space-between;padding:.3rem 0;font-size:.8rem;border-bottom:1px solid #0f172a}
+    .env-row:last-child{border:none}
+    .var{font-family:monospace;color:#94a3b8}
+    .set{color:#4ade80} .unset{color:#f87171}
+    .footer{margin-top:2rem;text-align:center;color:#334155;font-size:.75rem}
+  </style>
+</head>
+<body>
+  <h1>🏨 CRM API — Pousada Luz da Lua</h1>
+  <p class="sub">Local dev server · http://localhost:${PORT}</p>
+  <span class="badge ${supabaseOk ? 'ok' : 'warn'}">${supabaseOk ? '✅ Supabase connected' : '⚠️  Supabase not configured — set SUPABASE_URL in .env'}</span>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Leads &amp; Conversations</h2>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/leads/upsert</span><span class="desc">Upsert lead</span></div>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/conversations</span><span class="desc">Record message</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Availability</h2>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/availability</span><span class="desc">Check dates</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/availability/calendar</span><span class="desc">Full calendar</span></div>
+      <div class="route"><span class="method PATCH">PATCH</span><span class="path">/api/availability/block</span><span class="desc">Block dates</span></div>
+      <div class="route"><span class="method PATCH">PATCH</span><span class="path">/api/availability/unblock</span><span class="desc">Unblock dates</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Proposals</h2>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/proposals</span><span class="desc">Create proposal</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/proposals</span><span class="desc">List proposals</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/proposals/:id</span><span class="desc">Get proposal</span></div>
+      <div class="route"><span class="method PATCH">PATCH</span><span class="path">/api/proposals/:id/expire</span><span class="desc">Expire proposal</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Reservations</h2>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/reservations/confirm</span><span class="desc">Atomic confirm</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/reservations</span><span class="desc">List reservations</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/reservations/:id</span><span class="desc">Get reservation</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Payments (MercadoPago PIX)</h2>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/payments/pix</span><span class="desc">Create PIX link</span></div>
+      <div class="route"><span class="method GET">GET</span><span class="path">/api/payments/:id</span><span class="desc">Get payment status</span></div>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/payments/webhook</span><span class="desc">MP notification</span></div>
+    </div>
+  </div>
+
+  <div class="env">
+    <h2>Environment</h2>
+    <div class="env-row"><span class="var">SUPABASE_URL</span><span class="${process.env.SUPABASE_URL ? 'set' : 'unset'}">${process.env.SUPABASE_URL ? '✅ set' : '✗ not set'}</span></div>
+    <div class="env-row"><span class="var">SUPABASE_SERVICE_ROLE_KEY</span><span class="${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'unset'}">${process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ set' : '✗ not set'}</span></div>
+    <div class="env-row"><span class="var">SUPABASE_ANON_KEY</span><span class="${process.env.SUPABASE_ANON_KEY ? 'set' : 'unset'}">${process.env.SUPABASE_ANON_KEY ? '✅ set' : '✗ not set'}</span></div>
+    <div class="env-row"><span class="var">NODE_ENV</span><span class="set">${process.env.NODE_ENV || 'development'}</span></div>
+  </div>
+
+  <p class="footer">PLU-06 CRM Foundation · Pousada Luz da Lua</p>
+</body>
+</html>`);
+});
+
+// ─── 404 catch-all ─────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: 'not_found', message: `No route for ${req.method} ${req.path}` });
+});
+
+// ─── Error handler ─────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  console.error('[unhandled]', err);
+  res.status(500).json({ success: false, error: 'internal_error', message: err.message });
+});
+
+// ─── Boot — only when run directly, not when required by tests ────────────────
+if (require.main === module) app.listen(PORT, () => {
+  console.log('');
+  console.log(`${C.bold}${C.cyan}🏨 Pousada Luz da Lua — CRM API${C.reset}`);
+  console.log(`${C.gray}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`);
+  console.log(`${C.green}✓ Server running${C.reset}   http://localhost:${PORT}`);
+  console.log(`${C.green}✓ Dashboard${C.reset}        http://localhost:${PORT}/`);
+  console.log(`${C.green}✓ Health${C.reset}           http://localhost:${PORT}/health`);
+  console.log('');
+  if (!process.env.SUPABASE_URL) {
+    console.log(`${C.yellow}⚠  SUPABASE_URL not set — add to .env to connect DB${C.reset}`);
+    console.log(`${C.gray}   Copy .env.example to .env and fill in your Supabase credentials${C.reset}`);
+    console.log('');
+  }
+  console.log(`${C.gray}Waiting for requests...${C.reset}`);
+  console.log('');
+});
+
+module.exports = app;

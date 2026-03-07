@@ -11,22 +11,21 @@ The only managed code lives in `src/`. Everything else is no-code SaaS (Make.com
 
 ## Commands
 
-All commands must be run from `src/webhook/` (the only Node.js package):
+All commands run from the project root (`meu-projeto/`):
 
 ```bash
-cd src/webhook
-
 npm install          # install dependencies
 npm run dev          # run locally with hot-reload (node --watch)
-npm test             # run 7 unit tests (node:test native runner)
+npm test             # run 11 unit tests (node:test native runner)
 npm run lint         # ESLint check
-npx vercel --prod    # deploy to Vercel
+npm run setup-sheets # initialize Google Sheets tabs and headers
+npx vercel --prod    # deploy to Vercel (run from project root)
 ```
 
 Test the chatbot system prompt (from `src/chatbot/`):
 ```bash
 cd src/chatbot
-node test-system-prompt.js   # 32 automated tests against Claude API
+node test-system-prompt.js   # automated tests against Claude API
 ```
 
 ## Architecture
@@ -35,34 +34,42 @@ node test-system-prompt.js   # 32 automated tests against Claude API
 
 ```
 Guest (WhatsApp) → Meta Cloud API
-  → POST /webhook (Vercel, handler.js)   ← must respond 200 in <5s
-  → async forward to Make.com
-  → Make.com orchestrates:
-      ├─ Airtable (read history / write lead)
-      ├─ Anthropic API "Luna" (Claude Sonnet 4.6)
-      └─ Meta Cloud API (send reply to guest)
+  → POST /webhook (Vercel, services/whatsapp/webhook.js)  ← must respond 200 in <5s
+  → Claude Haiku (claude-haiku-4-5-20251001) ~600ms
+  → Meta Cloud API (send reply to guest)
+  → Google Sheets (history async)
+  → WhatsApp equipe (19998400306) on [ESCALAR] or [CONFIRMAR]
 ```
 
-### Key files
+### Project structure
 
-| File | Purpose |
-|------|---------|
-| `src/webhook/handler.js` | Express app: `/webhook` (Meta), `/quote` (cotação), `/health`, `/privacy` |
-| `src/webhook/quotation.js` | Pricing logic: `calculateQuotation()` + `formatWhatsAppMessage()` |
-| `src/webhook/vercel.json` | Serverless deploy config |
-| `src/webhook/.env.example` | Required env vars template |
-| `docs/architecture/claude-system-prompt.md` | System prompt for "Luna" (the AI chatbot) |
-| `docs/architecture/airtable-schema.md` | Airtable CRM schema + Make.com query patterns |
-| `docs/make-com/blueprint-pousada-atendimento.json` | Make.com scenario blueprint (ready to import) |
-| `docs/make-com/blueprint-pousada-followup.json` | Make.com follow-up scenario blueprint |
+```
+meu-projeto/
+├── agents/                          # AI agent definitions
+│   ├── luna.md                      # [ACTIVE] WhatsApp chatbot
+│   ├── reservations-agent.md        # [PLANNED] booking flow
+│   ├── crm-agent.md                 # [PLANNED] retention
+│   └── ads-agent.md                 # [PLANNED] marketing
+├── services/
+│   ├── whatsapp/webhook.js          # Express app: /webhook, /quote, /health, /privacy
+│   ├── luna/system-prompt.js        # Luna identity, rules, and control signals
+│   └── quotation/engine.js          # Pricing: calculateQuotation() + formatWhatsAppMessage()
+├── database/
+│   ├── sheets.js                    # Google Sheets client (Histórico, Leads, Clientes)
+│   └── setup.js                     # Initialize Sheets tabs/headers (run once)
+├── api/index.js                     # Vercel thin wrapper (maxDuration 30s)
+├── tests/handler.test.js            # 11 unit tests
+├── vercel.json                      # Serverless deploy config
+└── .env.example                     # AIOS framework env vars (see src/webhook/.env.example for pousada vars)
+```
 
-### handler.js critical constraint
+### webhook.js critical constraint
 
 **NEVER add processing before `res.sendStatus(200)` in `POST /webhook`.** Meta will retry and potentially block the number if it doesn't receive 200 within 5 seconds. All processing is async after the 200 response.
 
 ### Luna control signals
 
-The Claude system prompt outputs control tokens parsed by Make.com before sending to the guest:
+The Claude system prompt (`services/luna/system-prompt.js`) outputs control tokens parsed by `webhook.js` before sending to the guest:
 
 | Signal | Trigger | Make.com action |
 |--------|---------|-----------------|
