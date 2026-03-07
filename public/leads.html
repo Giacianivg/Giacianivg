@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Leads — Pousada Luz da Lua</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌙</span>
+        <div><p class="font-semibold text-white text-sm">Luz da Lua</p><p class="text-xs text-slate-400">CRM</p></div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" data-nav="dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </a>
+      <a href="leads.html" data-nav="leads" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-slate-700 text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Leads
+      </a>
+      <a href="reservations.html" data-nav="reservations" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Reservas
+      </a>
+      <a href="proposals.html" data-nav="proposals" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Propostas
+      </a>
+    </nav>
+    <div class="p-3 border-t border-slate-700">
+      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-auto">
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-semibold text-white">Leads</h1>
+      <div class="flex items-center gap-3">
+        <!-- Search -->
+        <input type="text" id="searchInput" placeholder="Buscar por nome ou telefone..."
+          class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 w-64">
+        <!-- Status filter -->
+        <select id="statusFilter" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">Todos status</option>
+          <option value="new">Novos</option>
+          <option value="qualified">Qualificados</option>
+          <option value="proposal">Com proposta</option>
+          <option value="negotiation">Em negociação</option>
+          <option value="confirmed">Confirmados</option>
+          <option value="lost">Perdidos</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <!-- Table -->
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Lead</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">WhatsApp</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Conversas</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Última atividade</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="leadsTable" class="divide-y divide-slate-700">
+            <tr><td colspan="6" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="px-5 py-3 border-t border-slate-700 flex items-center justify-between text-sm text-slate-400">
+          <span id="paginationInfo"></span>
+          <div class="flex gap-2">
+            <button id="prevBtn" class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
+            <button id="nextBtn" class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">Próximo →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Lead detail modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[80vh] overflow-auto">
+      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h2 class="font-semibold text-white" id="modalTitle">Lead</h2>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-6" id="modalBody">
+        <div class="text-slate-500 text-sm">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/public/app.js"></script>
+  <script>
+    let allLeads = [];
+    let page = 0;
+    const PAGE_SIZE = 20;
+
+    async function init() {
+      await requireAuth();
+      loadLeads();
+
+      document.getElementById('searchInput').addEventListener('input', renderTable);
+      document.getElementById('statusFilter').addEventListener('change', () => { page = 0; renderTable(); });
+      document.getElementById('prevBtn').addEventListener('click', () => { if (page > 0) { page--; renderTable(); } });
+      document.getElementById('nextBtn').addEventListener('click', () => { page++; renderTable(); });
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+    }
+
+    async function loadLeads() {
+      const res = await api('/leads?limit=200');
+      if (!res.ok) {
+        document.getElementById('leadsTable').innerHTML =
+          '<tr><td colspan="6" class="px-5 py-8 text-center text-amber-400">Banco de dados não configurado. Execute as migrations no Supabase.</td></tr>';
+        return;
+      }
+      allLeads = res.data.leads || [];
+      renderTable();
+    }
+
+    function renderTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+
+      let filtered = allLeads.filter(l => {
+        const matchSearch = !search ||
+          (l.name || '').toLowerCase().includes(search) ||
+          (l.whatsapp_number || '').includes(search);
+        const matchStatus = !status || l.funnel_stage === status;
+        return matchSearch && matchStatus;
+      });
+
+      const total = filtered.length;
+      const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+      document.getElementById('paginationInfo').textContent =
+        `${total} lead${total !== 1 ? 's' : ''} · página ${page + 1} de ${Math.ceil(total / PAGE_SIZE) || 1}`;
+
+      document.getElementById('prevBtn').disabled = page === 0;
+      document.getElementById('nextBtn').disabled = (page + 1) * PAGE_SIZE >= total;
+
+      if (!paginated.length) {
+        document.getElementById('leadsTable').innerHTML =
+          '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-500">Nenhum lead encontrado</td></tr>';
+        return;
+      }
+
+      document.getElementById('leadsTable').innerHTML = paginated.map(l => `
+        <tr class="hover:bg-slate-700/40 transition-colors">
+          <td class="px-5 py-3">
+            <p class="font-medium text-white text-sm">${l.name || '<span class="text-slate-500">Sem nome</span>'}</p>
+            <p class="text-xs text-slate-500">${l.id.slice(0, 8)}...</p>
+          </td>
+          <td class="px-5 py-3 text-sm text-slate-300">${l.whatsapp_number}</td>
+          <td class="px-5 py-3">${statusBadge(l.funnel_stage)}</td>
+          <td class="px-5 py-3 text-sm text-slate-400">${l.conversation_count || '—'}</td>
+          <td class="px-5 py-3 text-sm text-slate-400">${relativeTime(l.updated_at)}</td>
+          <td class="px-5 py-3">
+            <button onclick="viewLead('${l.id}')" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Ver →</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function viewLead(id) {
+      document.getElementById('modal').classList.remove('hidden');
+      document.getElementById('modalTitle').textContent = 'Carregando...';
+      document.getElementById('modalBody').innerHTML = '<div class="text-slate-500 text-sm">Carregando...</div>';
+
+      const lead = allLeads.find(l => l.id === id);
+      if (!lead) return;
+
+      document.getElementById('modalTitle').textContent = lead.name || lead.whatsapp_number;
+      document.getElementById('modalBody').innerHTML = `
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><p class="text-slate-400 mb-0.5">WhatsApp</p><p class="text-white font-mono">${lead.whatsapp_number}</p></div>
+            <div><p class="text-slate-400 mb-0.5">Funil</p>${statusBadge(lead.funnel_stage)}</div>
+            <div><p class="text-slate-400 mb-0.5">Criado em</p><p class="text-white">${formatDatetime(lead.created_at)}</p></div>
+            <div><p class="text-slate-400 mb-0.5">Atualizado</p><p class="text-white">${relativeTime(lead.updated_at)}</p></div>
+          </div>
+
+          <!-- Status update -->
+          <div class="border-t border-slate-700 pt-4">
+            <p class="text-sm font-medium text-slate-300 mb-2">Atualizar status</p>
+            <div class="flex gap-2 flex-wrap">
+              ${['new','qualified','proposal','negotiation','confirmed','lost'].map(s =>
+                `<button onclick="updateStatus('${lead.id}','${s}')" class="px-3 py-1.5 rounded-lg text-xs font-medium border ${lead.funnel_stage === s ? 'border-purple-500 text-purple-300 bg-purple-900/30' : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200'} transition-colors">${STATUS_LABELS[s]?.label || s}</button>`
+              ).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function updateStatus(leadId, status) {
+      // Update in local array optimistically
+      const lead = allLeads.find(l => l.id === leadId);
+      if (lead) lead.funnel_stage = status;
+      renderTable();
+      closeModal();
+      toast('Status atualizado (requer chamada API PATCH)');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal')) closeModal();
+    });
+
+    init();
+  </script>
+</body>
+</html>

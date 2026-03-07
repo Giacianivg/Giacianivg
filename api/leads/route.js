@@ -7,10 +7,10 @@ const { ok, fail, serverError } = require('../../services/utils/response');
 const router = Router();
 
 // POST /api/leads/upsert
-// Body: { whatsapp_number, name?, status? }
+// Body: { whatsapp_number, name?, funnel_stage? }
 // Returns: { lead_id }
 router.post('/upsert', async (req, res) => {
-  const { whatsapp_number, name, status = 'active' } = req.body;
+  const { whatsapp_number, name, funnel_stage = 'new' } = req.body;
 
   if (!whatsapp_number) {
     return fail(res, 'missing_field', 'whatsapp_number is required');
@@ -19,14 +19,69 @@ router.post('/upsert', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('leads')
     .upsert(
-      { whatsapp_number, name, status, updated_at: new Date().toISOString() },
+      { whatsapp_number, name, funnel_stage, updated_at: new Date().toISOString() },
       { onConflict: 'whatsapp_number', ignoreDuplicates: false }
     )
-    .select('id, whatsapp_number, name, status')
+    .select('id, whatsapp_number, name, funnel_stage')
     .single();
 
   if (error) return serverError(res, error);
   return ok(res, { lead_id: data.id, lead: data }, 200);
+});
+
+// GET /api/leads?funnel_stage=new&limit=50&offset=0
+router.get('/', async (req, res) => {
+  const { funnel_stage, limit = 50, offset = 0 } = req.query;
+
+  let query = supabaseAdmin
+    .from('leads')
+    .select('id, whatsapp_number, name, email, funnel_stage, created_at, updated_at')
+    .order('updated_at', { ascending: false })
+    .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+  if (funnel_stage) query = query.eq('funnel_stage', funnel_stage);
+
+  const { data, error } = await query;
+  if (error) return serverError(res, error);
+  return ok(res, { leads: data, count: data.length });
+});
+
+// GET /api/leads/:id
+router.get('/:id', async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('leads')
+    .select(`
+      *,
+      conversations(id, role, content, created_at),
+      reservations(id, reservation_number, room_type, checkin_date, checkout_date, status, total_amount)
+    `)
+    .eq('id', req.params.id)
+    .single();
+
+  if (error || !data) return fail(res, 'not_found', 'Lead not found', 404);
+  return ok(res, { lead: data });
+});
+
+// PATCH /api/leads/:id
+router.patch('/:id', async (req, res) => {
+  const allowed = ['name', 'email', 'funnel_stage', 'notes'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+  if (!Object.keys(updates).length) return fail(res, 'no_updates', 'No valid fields to update');
+
+  updates.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabaseAdmin
+    .from('leads')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select('id, whatsapp_number, name, funnel_stage, updated_at')
+    .single();
+
+  if (error) return serverError(res, error);
+  return ok(res, { lead: data });
 });
 
 module.exports = router;

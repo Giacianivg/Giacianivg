@@ -13,11 +13,11 @@ const { toDB } = require('../utils/dates');
 // Leads
 // ---------------------------------------------------------------------------
 
-async function upsertLead(whatsapp, name, status = 'active') {
+async function upsertLead(whatsapp, name, funnel_stage = 'new') {
   const { data, error } = await supabaseAdmin
     .from('leads')
     .upsert(
-      { whatsapp_number: whatsapp, name, status, updated_at: new Date().toISOString() },
+      { whatsapp_number: whatsapp, name, funnel_stage, updated_at: new Date().toISOString() },
       { onConflict: 'whatsapp_number', ignoreDuplicates: false }
     )
     .select('id')
@@ -30,11 +30,11 @@ async function upsertLead(whatsapp, name, status = 'active') {
   return data.id;
 }
 
-async function updateLeadStatus(leadId, status) {
+async function updateLeadStatus(leadId, funnel_stage) {
   if (!leadId) return;
   const { error } = await supabaseAdmin
     .from('leads')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ funnel_stage, updated_at: new Date().toISOString() })
     .eq('id', leadId);
   if (error) console.error('[crm] updateLeadStatus failed:', error.message);
 }
@@ -52,22 +52,12 @@ async function updateLeadName(leadId, name) {
 // Conversations
 // ---------------------------------------------------------------------------
 
-async function recordConversation(leadId, role, content, messageId = null) {
+async function recordConversation(leadId, role, content) {
   if (!leadId || !content) return;
 
-  const payload = {
-    lead_id: leadId,
-    role,
-    content,
-    source: 'webhook',
-  };
-  if (messageId) payload.message_id = messageId;
+  const payload = { lead_id: leadId, role, content };
 
-  const query = messageId
-    ? supabaseAdmin.from('conversations').upsert(payload, { onConflict: 'message_id', ignoreDuplicates: true })
-    : supabaseAdmin.from('conversations').insert(payload);
-
-  const { error } = await query;
+  const { error } = await supabaseAdmin.from('conversations').insert(payload);
   if (error) console.error('[crm] recordConversation failed:', error.message);
 }
 

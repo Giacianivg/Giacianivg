@@ -1,35 +1,48 @@
 -- =============================================================================
 -- Migration: 001_schema_initial.sql
 -- PLU-06.1: Supabase Schema — Pousada Luz da Lua
--- Author: @data-engineer | Reviewed by: @architect
--- Created: 2026-03-06
 --
--- How to run:
---   Supabase Dashboard > SQL Editor > paste and execute
---   OR: supabase db push (with local CLI)
---
--- Execution order:
---   1. Sequences and helpers
---   2. Tables (without circular FKs)
---   3. Circular FKs (ALTER TABLE)
---   4. Indexes
---   5. Triggers
---   6. RLS policies
---   7. RPCs (business logic functions)
---   8. Views
---   9. Settings seed
+-- ATENÇÃO: Dropa e recria tudo do zero.
+-- Seguro para setup inicial (sem dados reais ainda).
 -- =============================================================================
 
+-- ─── DROP tudo (ordem inversa de dependência) ─────────────────────────────────
+DROP VIEW IF EXISTS vw_urgent_proposals    CASCADE;
+DROP VIEW IF EXISTS vw_revenue             CASCADE;
+DROP VIEW IF EXISTS vw_occupancy_calendar  CASCADE;
+DROP VIEW IF EXISTS vw_active_leads        CASCADE;
+
+DROP TABLE IF EXISTS ai_logs       CASCADE;
+DROP TABLE IF EXISTS daily_metrics CASCADE;
+DROP TABLE IF EXISTS followups     CASCADE;
+DROP TABLE IF EXISTS payments      CASCADE;
+DROP TABLE IF EXISTS proposals     CASCADE;
+DROP TABLE IF EXISTS reservations  CASCADE;
+DROP TABLE IF EXISTS availability  CASCADE;
+DROP TABLE IF EXISTS conversations CASCADE;
+DROP TABLE IF EXISTS leads         CASCADE;
+DROP TABLE IF EXISTS settings      CASCADE;
+
+DROP FUNCTION IF EXISTS release_reservation(UUID, TEXT)                                                           CASCADE;
+DROP FUNCTION IF EXISTS create_reservation_atomic(UUID, VARCHAR, VARCHAR, DATE, DATE, SMALLINT, DECIMAL, DECIMAL, UUID) CASCADE;
+DROP FUNCTION IF EXISTS initialize_calendar(DATE, DATE)                                                           CASCADE;
+DROP FUNCTION IF EXISTS generate_reservation_number()                                                             CASCADE;
+DROP FUNCTION IF EXISTS generate_proposal_number()                                                                CASCADE;
+DROP FUNCTION IF EXISTS touch_updated_at()                                                                        CASCADE;
+
+DROP SEQUENCE IF EXISTS seq_reservations CASCADE;
+DROP SEQUENCE IF EXISTS seq_proposals    CASCADE;
+
+-- ─── EXTENSÃO ─────────────────────────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =============================================================================
--- SEQUENCES — reservation and proposal numbering
+-- SEQUENCES
 -- =============================================================================
 
-CREATE SEQUENCE IF NOT EXISTS seq_reservations  START 1 INCREMENT 1;
-CREATE SEQUENCE IF NOT EXISTS seq_proposals     START 1 INCREMENT 1;
+CREATE SEQUENCE seq_reservations START 1 INCREMENT 1;
+CREATE SEQUENCE seq_proposals    START 1 INCREMENT 1;
 
--- Generates: RES-YYYY-NNNNN
 CREATE OR REPLACE FUNCTION generate_reservation_number()
 RETURNS TEXT LANGUAGE plpgsql AS $$
 BEGIN
@@ -38,7 +51,6 @@ BEGIN
 END;
 $$;
 
--- Generates: PROP-YYYY-NNNNN
 CREATE OR REPLACE FUNCTION generate_proposal_number()
 RETURNS TEXT LANGUAGE plpgsql AS $$
 BEGIN
@@ -47,7 +59,6 @@ BEGIN
 END;
 $$;
 
--- Trigger helper: auto-update updated_at
 CREATE OR REPLACE FUNCTION touch_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -57,23 +68,21 @@ END;
 $$;
 
 -- =============================================================================
--- 1. LEADS — WhatsApp contacts and funnel stage
+-- 1. LEADS
 -- =============================================================================
 
 CREATE TABLE leads (
-  id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  whatsapp_number       VARCHAR(20) UNIQUE NOT NULL,
-  name                  VARCHAR(150),
-  email                 VARCHAR(150),
-  lead_source           VARCHAR(50)  DEFAULT 'whatsapp',
-  -- values: whatsapp, facebook, instagram, google, organic, referral
-  funnel_stage          VARCHAR(30)  NOT NULL DEFAULT 'new',
-  -- values: new, qualified, proposal, negotiation, confirmed, lost
-  qualification_score   SMALLINT     DEFAULT 0,
-  notes                 TEXT,
-  created_at            TIMESTAMPTZ  DEFAULT NOW(),
-  updated_at            TIMESTAMPTZ  DEFAULT NOW(),
-  deleted_at            TIMESTAMPTZ,
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  whatsapp_number     VARCHAR(20) UNIQUE NOT NULL,
+  name                VARCHAR(150),
+  email               VARCHAR(150),
+  lead_source         VARCHAR(50)  DEFAULT 'whatsapp',
+  funnel_stage        VARCHAR(30)  NOT NULL DEFAULT 'new',
+  qualification_score SMALLINT     DEFAULT 0,
+  notes               TEXT,
+  created_at          TIMESTAMPTZ  DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ  DEFAULT NOW(),
+  deleted_at          TIMESTAMPTZ,
 
   CONSTRAINT leads_whatsapp_fmt CHECK (whatsapp_number ~ '^\d{10,15}$'),
   CONSTRAINT leads_funnel_check CHECK (
@@ -90,7 +99,7 @@ CREATE TRIGGER trg_leads_updated
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 -- =============================================================================
--- 2. CONVERSATIONS — WhatsApp message history + AI-extracted data
+-- 2. CONVERSATIONS
 -- =============================================================================
 
 CREATE TABLE conversations (
@@ -100,9 +109,7 @@ CREATE TABLE conversations (
   role             VARCHAR(10) NOT NULL CHECK (role IN ('user', 'assistant')),
   content          TEXT        NOT NULL,
   extracted_data   JSONB,
-  -- e.g. {"room_type":"ALA_A","checkin":"07/03/2026","guests":2}
   token_usage      JSONB,
-  -- e.g. {"input_tokens":120,"output_tokens":85,"model":"claude-haiku-4-5-20251001"}
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -111,31 +118,20 @@ CREATE INDEX idx_conversations_number  ON conversations(whatsapp_number);
 CREATE INDEX idx_conversations_created ON conversations(created_at DESC);
 
 -- =============================================================================
--- 3. AVAILABILITY — per-room per-date calendar
---
--- Design: one row per (room_type, date).
--- Physical rooms: ALA_A (1 unit), ALA_B (1 unit), ALA_C_1 (1 unit), ALA_C_2 (1 unit)
--- ALA_C_1 and ALA_C_2 are the two rooms inside Ala C wing.
--- ALA_C_CASAL requests allocate the first available ALA_C_x.
--- Calendar must be pre-populated via initialize_calendar().
+-- 3. AVAILABILITY
 -- =============================================================================
 
 CREATE TABLE availability (
-  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_type        VARCHAR(20) NOT NULL,
-  date             DATE        NOT NULL,
-  status           VARCHAR(20) NOT NULL DEFAULT 'available',
-  reservation_id   UUID,
-  -- FK added after creating reservations table (see ALTER TABLE below)
-  block_reason     TEXT,
-  updated_at       TIMESTAMPTZ DEFAULT NOW(),
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_type      VARCHAR(20) NOT NULL,
+  date           DATE        NOT NULL,
+  status         VARCHAR(20) NOT NULL DEFAULT 'available',
+  reservation_id UUID,
+  block_reason   TEXT,
+  updated_at     TIMESTAMPTZ DEFAULT NOW(),
 
-  CONSTRAINT avail_room_check CHECK (
-    room_type IN ('ALA_A', 'ALA_B', 'ALA_C_1', 'ALA_C_2')
-  ),
-  CONSTRAINT avail_status_check CHECK (
-    status IN ('available', 'reserved', 'blocked')
-  ),
+  CONSTRAINT avail_room_check   CHECK (room_type IN ('ALA_A','ALA_B','ALA_C_1','ALA_C_2')),
+  CONSTRAINT avail_status_check CHECK (status    IN ('available','reserved','blocked')),
   UNIQUE (room_type, date)
 );
 
@@ -144,82 +140,77 @@ CREATE INDEX idx_avail_room_date   ON availability(room_type, date);
 CREATE INDEX idx_avail_status_date ON availability(status, date);
 
 -- =============================================================================
--- 4. RESERVATIONS — confirmed bookings
+-- 4. RESERVATIONS
 -- =============================================================================
 
 CREATE TABLE reservations (
-  id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  reservation_number TEXT         UNIQUE NOT NULL DEFAULT generate_reservation_number(),
-  lead_id           UUID          NOT NULL REFERENCES leads(id),
-  whatsapp_number   VARCHAR(20)   NOT NULL,
-  room_type         VARCHAR(20)   NOT NULL,
-  -- reflects the physical room allocated (ALA_A, ALA_B, ALA_C_1, ALA_C_2)
-  checkin_date      DATE          NOT NULL,
-  checkout_date     DATE          NOT NULL,
-  guests            SMALLINT      NOT NULL CHECK (guests > 0),
-  total_amount      DECIMAL(10,2) NOT NULL CHECK (total_amount > 0),
-  deposit_amount    DECIMAL(10,2) NOT NULL CHECK (deposit_amount > 0),
-  balance_amount    DECIMAL(10,2) GENERATED ALWAYS AS (total_amount - deposit_amount) STORED,
-  status            VARCHAR(30)   NOT NULL DEFAULT 'pending',
-  payment_method    VARCHAR(30),
-  guest_notes       TEXT,
-  internal_notes    TEXT,
-  created_at        TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ   DEFAULT NOW(),
-  cancelled_at      TIMESTAMPTZ,
+  id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_number TEXT          UNIQUE NOT NULL DEFAULT generate_reservation_number(),
+  lead_id            UUID          NOT NULL REFERENCES leads(id),
+  whatsapp_number    VARCHAR(20)   NOT NULL,
+  room_type          VARCHAR(20)   NOT NULL,
+  checkin_date       DATE          NOT NULL,
+  checkout_date      DATE          NOT NULL,
+  guests             SMALLINT      NOT NULL CHECK (guests > 0),
+  total_amount       DECIMAL(10,2) NOT NULL CHECK (total_amount > 0),
+  deposit_amount     DECIMAL(10,2) NOT NULL CHECK (deposit_amount > 0),
+  balance_amount     DECIMAL(10,2) GENERATED ALWAYS AS (total_amount - deposit_amount) STORED,
+  status             VARCHAR(30)   NOT NULL DEFAULT 'pending',
+  payment_method     VARCHAR(30),
+  guest_notes        TEXT,
+  internal_notes     TEXT,
+  created_at         TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ   DEFAULT NOW(),
+  cancelled_at       TIMESTAMPTZ,
 
   CONSTRAINT res_dates_check  CHECK (checkout_date > checkin_date),
-  CONSTRAINT res_room_check   CHECK (
-    room_type IN ('ALA_A', 'ALA_B', 'ALA_C_1', 'ALA_C_2')
-  ),
+  CONSTRAINT res_room_check   CHECK (room_type IN ('ALA_A','ALA_B','ALA_C_1','ALA_C_2')),
   CONSTRAINT res_status_check CHECK (
     status IN ('pending','deposit_paid','confirmed','checked_in','completed','cancelled')
   )
 );
 
-CREATE INDEX idx_res_lead     ON reservations(lead_id);
-CREATE INDEX idx_res_number   ON reservations(whatsapp_number);
-CREATE INDEX idx_res_status   ON reservations(status);
-CREATE INDEX idx_res_checkin  ON reservations(checkin_date);
-CREATE INDEX idx_res_res_num  ON reservations(reservation_number);
+CREATE INDEX idx_res_lead    ON reservations(lead_id);
+CREATE INDEX idx_res_number  ON reservations(whatsapp_number);
+CREATE INDEX idx_res_status  ON reservations(status);
+CREATE INDEX idx_res_checkin ON reservations(checkin_date);
+CREATE INDEX idx_res_res_num ON reservations(reservation_number);
 
 CREATE TRIGGER trg_reservations_updated
   BEFORE UPDATE ON reservations
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
--- Resolve circular FK: availability.reservation_id → reservations.id
+-- FK circular: availability → reservations
 ALTER TABLE availability
   ADD CONSTRAINT fk_avail_reservation
   FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE SET NULL;
 
 -- =============================================================================
--- 5. PROPOSALS — quotes generated by Luna before confirmation
+-- 5. PROPOSALS
 -- =============================================================================
 
 CREATE TABLE proposals (
-  id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  proposal_number   TEXT          UNIQUE NOT NULL DEFAULT generate_proposal_number(),
-  lead_id           UUID          NOT NULL REFERENCES leads(id),
-  whatsapp_number   VARCHAR(20)   NOT NULL,
-  room_type         VARCHAR(20)   NOT NULL,
-  checkin_date      DATE          NOT NULL,
-  checkout_date     DATE          NOT NULL,
-  guests            SMALLINT      NOT NULL,
-  nights            SMALLINT      NOT NULL
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  proposal_number TEXT          UNIQUE NOT NULL DEFAULT generate_proposal_number(),
+  lead_id         UUID          NOT NULL REFERENCES leads(id),
+  whatsapp_number VARCHAR(20)   NOT NULL,
+  room_type       VARCHAR(20)   NOT NULL,
+  checkin_date    DATE          NOT NULL,
+  checkout_date   DATE          NOT NULL,
+  guests          SMALLINT      NOT NULL,
+  nights          SMALLINT      NOT NULL
     GENERATED ALWAYS AS ((checkout_date - checkin_date)::INT) STORED,
-  gross_amount      DECIMAL(10,2) NOT NULL,
-  discount_pct      SMALLINT      DEFAULT 0,
-  discount_amount   DECIMAL(10,2) DEFAULT 0,
-  final_amount      DECIMAL(10,2) NOT NULL CHECK (final_amount > 0),
-  deposit_amount    DECIMAL(10,2) NOT NULL,
-  breakdown         JSONB,
-  -- Output of calculateQuotation(): [{season, price, nights}]
-  status            VARCHAR(20)   NOT NULL DEFAULT 'sent',
-  validity_days     SMALLINT      DEFAULT 7,
-  reservation_id    UUID          REFERENCES reservations(id),
-  -- populated when proposal is accepted and reservation is created
-  created_at        TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ   DEFAULT NOW(),
+  gross_amount    DECIMAL(10,2) NOT NULL,
+  discount_pct    SMALLINT      DEFAULT 0,
+  discount_amount DECIMAL(10,2) DEFAULT 0,
+  final_amount    DECIMAL(10,2) NOT NULL CHECK (final_amount > 0),
+  deposit_amount  DECIMAL(10,2) NOT NULL,
+  breakdown       JSONB,
+  status          VARCHAR(20)   NOT NULL DEFAULT 'sent',
+  validity_days   SMALLINT      DEFAULT 7,
+  reservation_id  UUID          REFERENCES reservations(id),
+  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ   DEFAULT NOW(),
 
   CONSTRAINT prop_status_check CHECK (
     status IN ('sent','viewed','accepted','rejected','expired')
@@ -236,27 +227,27 @@ CREATE TRIGGER trg_proposals_updated
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 -- =============================================================================
--- 6. PAYMENTS — PIX / card transactions
+-- 6. PAYMENTS
 -- =============================================================================
 
 CREATE TABLE payments (
-  id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  reservation_id   UUID          NOT NULL REFERENCES reservations(id),
-  payment_type     VARCHAR(20)   NOT NULL CHECK (payment_type IN ('deposit', 'balance', 'full')),
-  amount           DECIMAL(10,2) NOT NULL CHECK (amount > 0),
-  method           VARCHAR(20)   NOT NULL DEFAULT 'pix'
-    CHECK (method IN ('pix', 'card', 'cash', 'transfer')),
-  status           VARCHAR(20)   NOT NULL DEFAULT 'pending'
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  reservation_id  UUID          NOT NULL REFERENCES reservations(id),
+  payment_type    VARCHAR(20)   NOT NULL CHECK (payment_type IN ('deposit','balance','full')),
+  amount          DECIMAL(10,2) NOT NULL CHECK (amount > 0),
+  method          VARCHAR(20)   NOT NULL DEFAULT 'pix'
+    CHECK (method IN ('pix','card','cash','transfer')),
+  status          VARCHAR(20)   NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','processing','confirmed','failed','refunded')),
-  external_id      VARCHAR(100),          -- MercadoPago transaction ID
-  qr_code_url      TEXT,                  -- PIX QR Code image URL
-  pix_copy_paste   TEXT,                  -- PIX copy-and-paste string
-  expires_at       TIMESTAMPTZ,           -- QR Code expiry (default 48h)
-  confirmed_at     TIMESTAMPTZ,
-  webhook_payload  JSONB,                 -- raw MercadoPago webhook payload
-  error_message    TEXT,
-  created_at       TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at       TIMESTAMPTZ   DEFAULT NOW()
+  external_id     VARCHAR(100),
+  qr_code_url     TEXT,
+  pix_copy_paste  TEXT,
+  expires_at      TIMESTAMPTZ,
+  confirmed_at    TIMESTAMPTZ,
+  webhook_payload JSONB,
+  error_message   TEXT,
+  created_at      TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ   DEFAULT NOW()
 );
 
 CREATE INDEX idx_pay_reservation ON payments(reservation_id);
@@ -268,7 +259,7 @@ CREATE TRIGGER trg_payments_updated
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 -- =============================================================================
--- 7. FOLLOWUPS — scheduled automated messages (n8n or cron)
+-- 7. FOLLOWUPS
 -- =============================================================================
 
 CREATE TABLE followups (
@@ -276,7 +267,6 @@ CREATE TABLE followups (
   lead_id          UUID        NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
   whatsapp_number  VARCHAR(20) NOT NULL,
   followup_type    VARCHAR(50) NOT NULL,
-  -- values: qualification, proposal_followup, pre_checkin, post_checkout, upsell
   status           VARCHAR(20) NOT NULL DEFAULT 'scheduled'
     CHECK (status IN ('scheduled','sent','replied','cancelled','failed')),
   scheduled_for    TIMESTAMPTZ NOT NULL,
@@ -290,50 +280,49 @@ CREATE TABLE followups (
 );
 
 CREATE INDEX idx_followup_lead      ON followups(lead_id);
-CREATE INDEX idx_followup_scheduled ON followups(scheduled_for)
-  WHERE status = 'scheduled';
+CREATE INDEX idx_followup_scheduled ON followups(scheduled_for) WHERE status = 'scheduled';
 
 -- =============================================================================
--- 8. AI_LOGS — Claude API cost and latency monitoring
+-- 8. AI_LOGS
 -- =============================================================================
 
 CREATE TABLE ai_logs (
-  id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  lead_id          UUID        REFERENCES leads(id),
-  whatsapp_number  VARCHAR(20),
-  model            VARCHAR(60) NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
-  input_tokens     INT,
-  output_tokens    INT,
-  latency_ms       INT,
-  cost_usd         DECIMAL(10,6),
-  status           VARCHAR(20) DEFAULT 'success'
+  id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  lead_id         UUID        REFERENCES leads(id),
+  whatsapp_number VARCHAR(20),
+  model           VARCHAR(60) NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+  input_tokens    INT,
+  output_tokens   INT,
+  latency_ms      INT,
+  cost_usd        DECIMAL(10,6),
+  status          VARCHAR(20) DEFAULT 'success'
     CHECK (status IN ('success','error','timeout')),
-  error_message    TEXT,
-  created_at       TIMESTAMPTZ DEFAULT NOW()
+  error_message   TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_ailogs_lead    ON ai_logs(lead_id) WHERE lead_id IS NOT NULL;
 CREATE INDEX idx_ailogs_created ON ai_logs(created_at DESC);
 
 -- =============================================================================
--- 9. DAILY_METRICS — KPIs aggregated per day (populated via n8n cron)
+-- 9. DAILY_METRICS
 -- =============================================================================
 
 CREATE TABLE daily_metrics (
-  id                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  date                  DATE          NOT NULL UNIQUE,
-  new_leads             INT           DEFAULT 0,
-  qualified_leads       INT           DEFAULT 0,
-  proposals_sent        INT           DEFAULT 0,
-  proposals_accepted    INT           DEFAULT 0,
-  reservations_confirmed INT          DEFAULT 0,
-  lead_conversion_rate  DECIMAL(5,2),
+  id                       UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  date                     DATE          NOT NULL UNIQUE,
+  new_leads                INT           DEFAULT 0,
+  qualified_leads          INT           DEFAULT 0,
+  proposals_sent           INT           DEFAULT 0,
+  proposals_accepted       INT           DEFAULT 0,
+  reservations_confirmed   INT           DEFAULT 0,
+  lead_conversion_rate     DECIMAL(5,2),
   proposal_conversion_rate DECIMAL(5,2),
-  revenue_day           DECIMAL(12,2) DEFAULT 0,
-  rooms_occupied        SMALLINT      DEFAULT 0,
-  ai_cost_usd           DECIMAL(8,4)  DEFAULT 0,
-  created_at            TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at            TIMESTAMPTZ   DEFAULT NOW()
+  revenue_day              DECIMAL(12,2) DEFAULT 0,
+  rooms_occupied           SMALLINT      DEFAULT 0,
+  ai_cost_usd              DECIMAL(8,4)  DEFAULT 0,
+  created_at               TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at               TIMESTAMPTZ   DEFAULT NOW()
 );
 
 CREATE INDEX idx_metrics_date ON daily_metrics(date DESC);
@@ -343,7 +332,7 @@ CREATE TRIGGER trg_metrics_updated
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 -- =============================================================================
--- 10. SETTINGS — dynamic system configuration
+-- 10. SETTINGS
 -- =============================================================================
 
 CREATE TABLE settings (
@@ -361,12 +350,7 @@ CREATE TRIGGER trg_settings_updated
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 -- =============================================================================
--- RLS — ROW LEVEL SECURITY
---
--- Access model:
---   service_role  → bypasses RLS (webhook / API backend uses this role in Supabase)
---   authenticated → inn manager via dashboard (read + write)
---   anon          → no access (guests don't authenticate directly)
+-- RLS
 -- =============================================================================
 
 ALTER TABLE leads          ENABLE ROW LEVEL SECURITY;
@@ -380,7 +364,6 @@ ALTER TABLE ai_logs        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_metrics  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings       ENABLE ROW LEVEL SECURITY;
 
--- Authenticated manager: full access to all tables
 CREATE POLICY "manager_leads"         ON leads         FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "manager_conversations" ON conversations  FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "manager_availability"  ON availability  FOR ALL TO authenticated USING (true) WITH CHECK (true);
@@ -394,22 +377,12 @@ CREATE POLICY "manager_settings"      ON settings      FOR ALL TO authenticated 
 
 -- =============================================================================
 -- RPC: initialize_calendar
---
--- Populates the availability table for all rooms over a date range.
--- Must be called once at system setup and repeated annually.
---
--- Usage:
---   SELECT initialize_calendar('2026-01-01', '2027-01-01');
---   → returns the number of rows inserted
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION initialize_calendar(
-  p_start DATE,
-  p_end   DATE
-)
+CREATE OR REPLACE FUNCTION initialize_calendar(p_start DATE, p_end DATE)
 RETURNS INT LANGUAGE plpgsql AS $$
 DECLARE
-  v_rooms TEXT[] := ARRAY['ALA_A', 'ALA_B', 'ALA_C_1', 'ALA_C_2'];
+  v_rooms TEXT[] := ARRAY['ALA_A','ALA_B','ALA_C_1','ALA_C_2'];
   v_room  TEXT;
   v_date  DATE;
   v_count INT := 0;
@@ -420,7 +393,6 @@ BEGIN
       INSERT INTO availability (room_type, date, status)
       VALUES (v_room, v_date, 'available')
       ON CONFLICT (room_type, date) DO NOTHING;
-
       v_date  := v_date + INTERVAL '1 day';
       v_count := v_count + 1;
     END LOOP;
@@ -431,20 +403,6 @@ $$;
 
 -- =============================================================================
 -- RPC: create_reservation_atomic
---
--- Checks availability, locks dates, and creates a reservation in a single
--- transaction. Prevents race conditions / overbooking in serverless (Vercel).
---
--- Parameters:
---   p_room_type: ALA_A | ALA_B | ALA_C_CASAL
---               ALA_C_CASAL → allocates the first free ALA_C_1 or ALA_C_2
---
--- Returns JSON:
---   { success: true,  reservation_id, reservation_number, room_type }
---   { success: false, error: "no_availability"|"concurrency"|"internal_error", message }
---
--- Usage in webhook.js:
---   const { data } = await supabase.rpc('create_reservation_atomic', { ... });
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION create_reservation_atomic(
@@ -460,144 +418,86 @@ CREATE OR REPLACE FUNCTION create_reservation_atomic(
 )
 RETURNS JSON LANGUAGE plpgsql AS $$
 DECLARE
-  v_physical_room    VARCHAR(20);
-  v_nights_required  INT;
-  v_nights_free      INT;
-  v_reservation_id   UUID;
-  v_res_number       TEXT;
+  v_physical_room   VARCHAR(20);
+  v_nights_required INT;
+  v_nights_free     INT;
+  v_reservation_id  UUID;
+  v_res_number      TEXT;
 BEGIN
   v_nights_required := (p_checkout - p_checkin)::INT;
 
-  -- Resolve physical room
-  -- ALA_A and ALA_B have 1 unit each; ALA_C has 2 units (ALA_C_1, ALA_C_2)
-  IF p_room_type IN ('ALA_A', 'ALA_B') THEN
+  IF p_room_type IN ('ALA_A','ALA_B') THEN
     v_physical_room := p_room_type;
-
   ELSIF p_room_type = 'ALA_C_CASAL' THEN
-    -- Find first ALA_C_x fully free for the requested period
     SELECT q INTO v_physical_room
-    FROM (VALUES ('ALA_C_1'), ('ALA_C_2')) AS t(q)
+    FROM (VALUES ('ALA_C_1'),('ALA_C_2')) AS t(q)
     WHERE (
-      SELECT COUNT(*)
-      FROM availability
+      SELECT COUNT(*) FROM availability
       WHERE room_type = t.q
-        AND date >= p_checkin
-        AND date <  p_checkout
+        AND date >= p_checkin AND date < p_checkout
         AND status = 'available'
     ) = v_nights_required
     LIMIT 1;
-
   ELSE
-    RETURN json_build_object(
-      'success', false,
-      'error',   'invalid_room_type',
-      'message', 'Invalid room type. Use ALA_A, ALA_B or ALA_C_CASAL.'
-    );
+    RETURN json_build_object('success',false,'error','invalid_room_type','message','Use ALA_A, ALA_B ou ALA_C_CASAL.');
   END IF;
 
-  -- Check if a free room was found
   IF v_physical_room IS NULL THEN
-    RETURN json_build_object(
-      'success', false,
-      'error',   'no_availability',
-      'message', 'Room not available for the requested period.'
-    );
+    RETURN json_build_object('success',false,'error','no_availability','message','Quarto indisponível para o período.');
   END IF;
 
-  -- Lock availability rows with FOR UPDATE NOWAIT
-  -- (fails immediately if another process is locking the same room)
   SELECT COUNT(*) INTO v_nights_free
   FROM availability
   WHERE room_type = v_physical_room
-    AND date >= p_checkin
-    AND date <  p_checkout
+    AND date >= p_checkin AND date < p_checkout
     AND status = 'available'
   FOR UPDATE NOWAIT;
 
-  -- Verify all nights are still free after acquiring the lock
   IF v_nights_free < v_nights_required THEN
-    RETURN json_build_object(
-      'success', false,
-      'error',   'no_availability',
-      'message', 'Room not available for the requested period.'
-    );
+    RETURN json_build_object('success',false,'error','no_availability','message','Quarto indisponível para o período.');
   END IF;
 
-  -- Create reservation
   INSERT INTO reservations (
     lead_id, whatsapp_number, room_type,
     checkin_date, checkout_date, guests,
     total_amount, deposit_amount, status
-  )
-  VALUES (
+  ) VALUES (
     p_lead_id, p_whatsapp, v_physical_room,
     p_checkin, p_checkout, p_guests,
     p_total_amount, p_deposit_amount, 'pending'
-  )
-  RETURNING id, reservation_number INTO v_reservation_id, v_res_number;
+  ) RETURNING id, reservation_number INTO v_reservation_id, v_res_number;
 
-  -- Mark dates as reserved
   UPDATE availability
-  SET
-    status         = 'reserved',
-    reservation_id = v_reservation_id,
-    updated_at     = NOW()
-  WHERE room_type = v_physical_room
-    AND date >= p_checkin
-    AND date <  p_checkout;
+  SET status = 'reserved', reservation_id = v_reservation_id, updated_at = NOW()
+  WHERE room_type = v_physical_room AND date >= p_checkin AND date < p_checkout;
 
-  -- Link proposal if provided
   IF p_proposal_id IS NOT NULL THEN
-    UPDATE proposals
-    SET
-      reservation_id = v_reservation_id,
-      status         = 'accepted',
-      updated_at     = NOW()
+    UPDATE proposals SET reservation_id = v_reservation_id, status = 'accepted', updated_at = NOW()
     WHERE id = p_proposal_id;
   END IF;
 
-  -- Advance lead funnel stage
-  UPDATE leads
-  SET
-    funnel_stage = 'confirmed',
-    updated_at   = NOW()
-  WHERE id = p_lead_id;
+  UPDATE leads SET funnel_stage = 'confirmed', updated_at = NOW() WHERE id = p_lead_id;
 
   RETURN json_build_object(
-    'success',            true,
-    'reservation_id',     v_reservation_id,
-    'reservation_number', v_res_number,
-    'room_type',          v_physical_room
+    'success',true,
+    'reservation_id',v_reservation_id,
+    'reservation_number',v_res_number,
+    'room_type',v_physical_room
   );
 
 EXCEPTION
   WHEN lock_not_available THEN
-    RETURN json_build_object(
-      'success', false,
-      'error',   'concurrency',
-      'message', 'Another process is confirming this room. Please try again shortly.'
-    );
+    RETURN json_build_object('success',false,'error','concurrency','message','Outro processo está confirmando este quarto. Tente novamente.');
   WHEN OTHERS THEN
-    RETURN json_build_object(
-      'success', false,
-      'error',   'internal_error',
-      'message', SQLERRM
-    );
+    RETURN json_build_object('success',false,'error','internal_error','message',SQLERRM);
 END;
 $$;
 
 -- =============================================================================
 -- RPC: release_reservation
---
--- Cancels a reservation and returns dates to the availability calendar.
--- Called when deposit is not paid within the deadline (n8n cron)
--- or when the manager cancels manually.
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION release_reservation(
-  p_reservation_id UUID,
-  p_reason         TEXT DEFAULT 'cancelled'
-)
+CREATE OR REPLACE FUNCTION release_reservation(p_reservation_id UUID, p_reason TEXT DEFAULT 'cancelled')
 RETURNS JSON LANGUAGE plpgsql AS $$
 DECLARE
   v_res reservations%ROWTYPE;
@@ -605,116 +505,78 @@ BEGIN
   SELECT * INTO v_res FROM reservations WHERE id = p_reservation_id FOR UPDATE;
 
   IF NOT FOUND THEN
-    RETURN json_build_object('success', false, 'error', 'not_found');
+    RETURN json_build_object('success',false,'error','not_found');
   END IF;
 
-  IF v_res.status IN ('cancelled', 'completed') THEN
-    RETURN json_build_object(
-      'success', false,
-      'error',   'invalid_status',
-      'message', 'Reservation is already ' || v_res.status
-    );
+  IF v_res.status IN ('cancelled','completed') THEN
+    RETURN json_build_object('success',false,'error','invalid_status','message','Reserva já está ' || v_res.status);
   END IF;
 
-  -- Return dates to calendar
   UPDATE availability
-  SET
-    status         = 'available',
-    reservation_id = NULL,
-    block_reason   = NULL,
-    updated_at     = NOW()
+  SET status = 'available', reservation_id = NULL, block_reason = NULL, updated_at = NOW()
   WHERE reservation_id = p_reservation_id;
 
-  -- Cancel reservation
   UPDATE reservations
-  SET
-    status         = 'cancelled',
-    cancelled_at   = NOW(),
-    internal_notes = COALESCE(internal_notes || ' | ', '') || 'Cancelled: ' || p_reason,
-    updated_at     = NOW()
+  SET status = 'cancelled', cancelled_at = NOW(),
+      internal_notes = COALESCE(internal_notes || ' | ','') || 'Cancelled: ' || p_reason,
+      updated_at = NOW()
   WHERE id = p_reservation_id;
 
-  RETURN json_build_object('success', true, 'reservation_id', p_reservation_id);
+  RETURN json_build_object('success',true,'reservation_id',p_reservation_id);
 END;
 $$;
 
 -- =============================================================================
--- VIEWS — common queries for dashboard and API
+-- VIEWS
 -- =============================================================================
 
--- Active leads (not deleted, not lost)
 CREATE OR REPLACE VIEW vw_active_leads AS
-SELECT *
-FROM leads
-WHERE deleted_at IS NULL
-  AND funnel_stage != 'lost';
+SELECT * FROM leads WHERE deleted_at IS NULL AND funnel_stage != 'lost';
 
--- Occupancy calendar (for dashboard calendar component)
 CREATE OR REPLACE VIEW vw_occupancy_calendar AS
-SELECT
-  a.date,
-  a.room_type,
-  a.status,
-  r.reservation_number,
-  r.guests,
-  l.name              AS guest_name,
-  l.whatsapp_number
+SELECT a.date, a.room_type, a.status,
+       r.reservation_number, r.guests,
+       l.name AS guest_name, l.whatsapp_number
 FROM availability a
 LEFT JOIN reservations r ON r.id = a.reservation_id
 LEFT JOIN leads        l ON l.id = r.lead_id
 ORDER BY a.date, a.room_type;
 
--- Revenue summary
 CREATE OR REPLACE VIEW vw_revenue AS
 SELECT
-  COUNT(*)                                                                      AS total_reservations,
-  COALESCE(SUM(CASE WHEN status IN ('confirmed','checked_in','completed')
-    THEN total_amount ELSE 0 END), 0)                                           AS confirmed_revenue,
-  COALESCE(SUM(CASE WHEN status = 'pending'
-    THEN total_amount ELSE 0 END), 0)                                           AS pending_revenue,
-  COALESCE(SUM(CASE WHEN status IN ('confirmed','checked_in','completed')
-    THEN deposit_amount ELSE 0 END), 0)                                         AS deposits_received
-FROM reservations
-WHERE status != 'cancelled';
+  COUNT(*) AS total_reservations,
+  COALESCE(SUM(CASE WHEN status IN ('confirmed','checked_in','completed') THEN total_amount   ELSE 0 END),0) AS confirmed_revenue,
+  COALESCE(SUM(CASE WHEN status = 'pending'                               THEN total_amount   ELSE 0 END),0) AS pending_revenue,
+  COALESCE(SUM(CASE WHEN status IN ('confirmed','checked_in','completed') THEN deposit_amount ELSE 0 END),0) AS deposits_received
+FROM reservations WHERE status != 'cancelled';
 
--- Proposals without response for more than 48h (urgent for dashboard)
 CREATE OR REPLACE VIEW vw_urgent_proposals AS
-SELECT
-  p.proposal_number,
-  p.created_at,
-  p.final_amount,
-  p.checkin_date,
-  p.checkout_date,
-  l.name             AS lead_name,
-  l.whatsapp_number,
-  EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 AS hours_without_reply
-FROM proposals p
-JOIN leads l ON l.id = p.lead_id
-WHERE p.status = 'sent'
-  AND p.created_at < NOW() - INTERVAL '48 hours'
+SELECT p.proposal_number, p.created_at, p.final_amount, p.checkin_date, p.checkout_date,
+       l.name AS lead_name, l.whatsapp_number,
+       EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 AS hours_without_reply
+FROM proposals p JOIN leads l ON l.id = p.lead_id
+WHERE p.status = 'sent' AND p.created_at < NOW() - INTERVAL '48 hours'
 ORDER BY p.created_at ASC;
 
 -- =============================================================================
--- SEED: default system settings
+-- SEED: configurações padrão
 -- =============================================================================
 
 INSERT INTO settings (key, value, value_type, description) VALUES
-  ('inn_name',                   'Pousada Luz da Lua', 'string',  'Inn name'),
-  ('team_whatsapp',              '5519998400306',      'string',  'Team WhatsApp number (no +)'),
-  ('deposit_percentage',         '30',                 'number',  'Deposit percentage required to confirm reservation'),
-  ('checkin_time',               '14:00',              'string',  'Default check-in time'),
-  ('checkout_time',              '11:00',              'string',  'Default check-out time'),
-  ('late_checkout_fee',          '50',                 'number',  'Late check-out fee (BRL)'),
-  ('late_checkin_fee',           '50',                 'number',  'Check-in after 18h fee (BRL)'),
-  ('proposal_followup_hours',    '24',                 'number',  'Hours before sending follow-up after proposal'),
-  ('checkin_reminder_hours',     '48',                 'number',  'Hours before check-in to send D-1 reminder'),
-  ('pix_expiry_hours',           '48',                 'number',  'PIX QR Code validity in hours'),
-  ('mercadopago_sandbox',        'true',               'boolean', 'Use MercadoPago sandbox environment')
+  ('inn_name',               'Pousada Luz da Lua','string', 'Nome da pousada'),
+  ('team_whatsapp',          '5519998400306',     'string', 'WhatsApp da equipe'),
+  ('deposit_percentage',     '30',                'number', '% de sinal para confirmar reserva'),
+  ('checkin_time',           '14:00',             'string', 'Horário padrão de check-in'),
+  ('checkout_time',          '11:00',             'string', 'Horário padrão de check-out'),
+  ('late_checkout_fee',      '50',                'number', 'Taxa check-out tardio (R$)'),
+  ('late_checkin_fee',       '50',                'number', 'Taxa check-in após 18h (R$)'),
+  ('proposal_followup_hours','24',                'number', 'Horas para follow-up após proposta'),
+  ('checkin_reminder_hours', '48',                'number', 'Horas antes do check-in para lembrete'),
+  ('pix_expiry_hours',       '48',                'number', 'Validade do QR Code PIX em horas'),
+  ('mercadopago_sandbox',    'true',              'boolean','Usar sandbox do MercadoPago')
 ON CONFLICT (key) DO NOTHING;
 
 -- =============================================================================
--- Initialize calendar for 2026
--- Run separately after schema is created:
---   SELECT initialize_calendar('2026-01-01', '2027-01-01');
--- Generates: 4 rooms × 365 days = 1460 rows
+-- Inicializar calendário 2026-2027
+-- (executado pelo 002_calendar_seed.sql)
 -- =============================================================================

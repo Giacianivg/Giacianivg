@@ -7,6 +7,79 @@ const app = express();
 
 const PORT = process.env.API_PORT || 3001;
 
+// ─── CORS ───────────────────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.ALLOWED_ORIGIN,
+].filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const inProd = process.env.NODE_ENV === 'production';
+  if (!inProd || !origin || ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Internal-Key');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// ─── Rate limiting (in-memory, per-IP) ─────────────────────────────────────────
+const _rateStore = new Map();
+function rateLimiter(windowMs = 60_000, max = 120) {
+  return (req, res, next) => {
+    if (process.env.NODE_ENV === 'test') return next();
+    const key = req.ip || 'unknown';
+    const now  = Date.now();
+    let rec = _rateStore.get(key);
+    if (!rec || now > rec.resetAt) {
+      rec = { count: 1, resetAt: now + windowMs };
+    } else {
+      rec.count++;
+    }
+    _rateStore.set(key, rec);
+    res.setHeader('X-RateLimit-Limit', max);
+    res.setHeader('X-RateLimit-Remaining', Math.max(0, max - rec.count));
+    if (rec.count > max) {
+      return res.status(429).json({ success: false, error: 'rate_limit', message: 'Too many requests, try again later' });
+    }
+    next();
+  };
+}
+
+// ─── Auth middleware (Supabase JWT) ────────────────────────────────────────────
+async function requireCrmAuth(req, res, next) {
+  // Skip in test environment
+  if (process.env.NODE_ENV === 'test') return next();
+
+  // Internal service calls (e.g. webhook → CRM)
+  const internalKey = req.headers['x-internal-key'];
+  if (internalKey && process.env.INTERNAL_API_KEY && internalKey === process.env.INTERNAL_API_KEY) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'unauthorized', message: 'Missing Authorization header' });
+  }
+
+  try {
+    const { supabaseAdmin } = require('./services/supabase/client');
+    const token = authHeader.slice(7);
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ success: false, error: 'unauthorized', message: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    return res.status(503).json({ success: false, error: 'service_unavailable', message: 'Auth service error' });
+  }
+}
+
 // ─── Colors for terminal logging ───────────────────────────────────────────────
 const C = {
   reset:  '\x1b[0m',
@@ -50,6 +123,14 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// Apply rate limiting and auth to all /api/* routes
+app.use('/api', rateLimiter());
+app.use('/api', (req, res, next) => {
+  // MercadoPago webhook has its own signature validation
+  if (req.method === 'POST' && req.path === '/payments/webhook') return next();
+  return requireCrmAuth(req, res, next);
+});
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/leads',                      require('./api/leads/route'));

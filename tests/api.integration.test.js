@@ -1,5 +1,8 @@
 'use strict';
 
+// Set test environment before any module loads so auth middleware is bypassed
+process.env.NODE_ENV = 'test';
+
 /**
  * API Integration Tests — PLU-06.2 / PLU-06.3 / PLU-06.4 / PLU-06.5
  *

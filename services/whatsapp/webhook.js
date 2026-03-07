@@ -288,7 +288,7 @@ function parseEscalarParams(rawSignal) {
 
 async function handleCotar(params, from, contactName, leadId) {
   if (SHEETS_ENABLED) await recordEvent(from, contactName, 'COTAR', params);
-  if (leadId) crmService.updateLeadStatus(leadId, 'quoted').catch(() => {});
+  if (leadId) crmService.updateLeadStatus(leadId, 'proposal').catch(() => {});
 
   // Check real availability if CRM configured — fallback gracefully on timeout/error
   let availabilityContext = '';
@@ -427,7 +427,7 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
   // Full CRM flow when Supabase is configured
   if (process.env.SUPABASE_URL && leadId && p.entrada && p.saida && p.tipo && totalAmount) {
     try {
-      if (leadId) crmService.updateLeadStatus(leadId, 'negotiating').catch(() => {});
+      if (leadId) crmService.updateLeadStatus(leadId, 'negotiation').catch(() => {});
 
       // 1. Create reservation via atomic RPC
       const reservation = await crmService.createReservation({
@@ -461,7 +461,7 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
         throw new Error(reservation.message || reservation.error);
       }
 
-      crmService.updateLeadStatus(leadId, 'reserved').catch(() => {});
+      crmService.updateLeadStatus(leadId, 'confirmed').catch(() => {});
 
       // 2. Register pending payment in DB (PIX manual — guest pays to fixed key)
       try {
@@ -660,8 +660,8 @@ async function processMessage(from, contactName, text, messageId) {
       // CRM conversations
       leadId
         ? Promise.all([
-            crmService.recordConversation(leadId, 'user', text, messageId),
-            crmService.recordConversation(leadId, 'assistant', cleanResponse, null),
+            crmService.recordConversation(leadId, 'user', text),
+            crmService.recordConversation(leadId, 'assistant', cleanResponse),
           ])
         : Promise.resolve(),
 

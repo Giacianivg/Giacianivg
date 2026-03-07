@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Propostas — Pousada Luz da Lua</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+
+  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌙</span>
+        <div><p class="font-semibold text-white text-sm">Luz da Lua</p><p class="text-xs text-slate-400">CRM</p></div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </a>
+      <a href="leads.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Leads
+      </a>
+      <a href="reservations.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Reservas
+      </a>
+      <a href="proposals.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-slate-700 text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Propostas
+      </a>
+    </nav>
+    <div class="p-3 border-t border-slate-700">
+      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <main class="flex-1 overflow-auto">
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-semibold text-white">Propostas</h1>
+      <select id="statusFilter" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+        <option value="">Todos status</option>
+        <option value="sent">Enviadas</option>
+        <option value="viewed">Visualizadas</option>
+        <option value="accepted">Aceitas</option>
+        <option value="rejected">Recusadas</option>
+        <option value="expired">Expiradas</option>
+      </select>
+    </header>
+
+    <div class="p-6">
+      <!-- Alert: expiring soon -->
+      <div id="expiringAlert" class="hidden mb-4 bg-orange-900/30 border border-orange-700 rounded-xl p-4">
+        <div class="flex items-center gap-2">
+          <span>⏰</span>
+          <p class="text-orange-300 text-sm font-medium"><span id="expiringCount">0</span> propostas expiram nas próximas 24h</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Nº Proposta</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Lead</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Quarto</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Período</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Valor</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Sinal</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Expira</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody id="proposalsTable" class="divide-y divide-slate-700">
+            <tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/public/app.js"></script>
+  <script>
+    let allProposals = [];
+
+    async function init() {
+      await requireAuth();
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+      document.getElementById('statusFilter').addEventListener('change', renderTable);
+      loadProposals();
+    }
+
+    async function loadProposals() {
+      const res = await api('/proposals');
+      if (!res.ok) {
+        document.getElementById('proposalsTable').innerHTML =
+          '<tr><td colspan="8" class="px-5 py-8 text-center text-amber-400">Banco de dados não configurado.</td></tr>';
+        return;
+      }
+      allProposals = res.data.proposals || [];
+
+      // Check expiring soon
+      const expiring = allProposals.filter(p => {
+        const exp = new Date(p.expires_at);
+        return (p.status === 'sent' || p.status === 'viewed') && exp > new Date() && exp < new Date(Date.now() + 24 * 3600000);
+      });
+      if (expiring.length) {
+        document.getElementById('expiringCount').textContent = expiring.length;
+        document.getElementById('expiringAlert').classList.remove('hidden');
+      }
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const status = document.getElementById('statusFilter').value;
+      let filtered = status ? allProposals.filter(p => p.status === status) : allProposals;
+
+      if (!filtered.length) {
+        document.getElementById('proposalsTable').innerHTML =
+          '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Nenhuma proposta encontrada</td></tr>';
+        return;
+      }
+
+      document.getElementById('proposalsTable').innerHTML = filtered.map(p => {
+        const expDate  = new Date(p.expires_at);
+        const isExpiring = (p.status === 'sent' || p.status === 'viewed') && expDate > new Date() && expDate < new Date(Date.now() + 24 * 3600000);
+        const isExpired  = expDate < new Date();
+
+        return `
+          <tr class="hover:bg-slate-700/40 transition-colors ${isExpiring ? 'bg-orange-900/10' : ''}">
+            <td class="px-5 py-3 text-sm font-mono text-purple-300">${p.proposal_number || '—'}</td>
+            <td class="px-5 py-3 text-sm text-slate-300">${p.leads?.name || p.lead_id?.slice(0,8) || '—'}</td>
+            <td class="px-5 py-3 text-sm text-slate-300">${roomLabel(p.room_type)}</td>
+            <td class="px-5 py-3 text-sm text-white">${formatDate(p.checkin_date)} → ${formatDate(p.checkout_date)}</td>
+            <td class="px-5 py-3 text-sm font-medium text-white">${formatCurrency(p.total_amount)}</td>
+            <td class="px-5 py-3 text-sm text-slate-400">${formatCurrency(p.deposit_amount)}</td>
+            <td class="px-5 py-3 text-sm ${isExpiring ? 'text-orange-400 font-medium' : isExpired ? 'text-red-400' : 'text-slate-400'}">${formatDatetime(p.expires_at)}</td>
+            <td class="px-5 py-3">${statusBadge(p.status)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>

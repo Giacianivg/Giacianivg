@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Dashboard — Pousada Luz da Lua</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌙</span>
+        <div>
+          <p class="font-semibold text-white text-sm">Luz da Lua</p>
+          <p class="text-xs text-slate-400">CRM</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" data-nav="dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors bg-slate-700 text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </a>
+      <a href="leads.html" data-nav="leads" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Leads
+      </a>
+      <a href="reservations.html" data-nav="reservations" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Reservas
+      </a>
+      <a href="proposals.html" data-nav="proposals" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Propostas
+      </a>
+    </nav>
+
+    <div class="p-3 border-t border-slate-700">
+      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-auto">
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-semibold text-white">Dashboard</h1>
+        <p class="text-xs text-slate-400" id="headerDate"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="userEmail" class="text-sm text-slate-400"></span>
+        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold text-white" id="userAvatar">?</div>
+      </div>
+    </header>
+
+    <div class="p-6 space-y-6">
+
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Leads Ativos</p>
+          <p class="text-3xl font-bold text-white" id="kpiLeads">—</p>
+          <p class="text-xs text-slate-500 mt-1" id="kpiLeadsNew"></p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Reservas (30d)</p>
+          <p class="text-3xl font-bold text-white" id="kpiReservations">—</p>
+          <p class="text-xs text-slate-500 mt-1" id="kpiReservationsStatus"></p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Receita (30d)</p>
+          <p class="text-3xl font-bold text-white" id="kpiRevenue">—</p>
+          <p class="text-xs text-slate-500 mt-1">reservas confirmadas</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Propostas Ativas</p>
+          <p class="text-3xl font-bold text-white" id="kpiProposals">—</p>
+          <p class="text-xs text-slate-500 mt-1" id="kpiProposalsExpiring"></p>
+        </div>
+      </div>
+
+      <!-- Quick actions + Recent -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Recent leads -->
+        <div class="lg:col-span-2 bg-slate-800 rounded-xl border border-slate-700">
+          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+            <h2 class="font-semibold text-white">Leads Recentes</h2>
+            <a href="leads.html" class="text-xs text-purple-400 hover:text-purple-300">Ver todos →</a>
+          </div>
+          <div id="recentLeads" class="divide-y divide-slate-700">
+            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
+          </div>
+        </div>
+
+        <!-- Upcoming reservations -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700">
+          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+            <h2 class="font-semibold text-white">Próximas Entradas</h2>
+            <a href="reservations.html" class="text-xs text-purple-400 hover:text-purple-300">Ver →</a>
+          </div>
+          <div id="upcomingReservations" class="divide-y divide-slate-700">
+            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DB status warning -->
+      <div id="dbWarning" class="hidden bg-amber-900/30 border border-amber-700 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+          <span class="text-xl">⚠️</span>
+          <div>
+            <p class="font-medium text-amber-300">Banco de dados não configurado</p>
+            <p class="text-sm text-amber-400/80 mt-1">
+              As tabelas do Supabase ainda não foram criadas. Execute as migrations via
+              <a href="https://app.supabase.com/project/vwgqhonbbiqubuahkyij/sql/new" target="_blank" class="underline hover:text-amber-200">Supabase Dashboard</a>:
+              execute <code class="bg-amber-900/50 px-1 rounded">001_schema_initial.sql</code> e depois <code class="bg-amber-900/50 px-1 rounded">002_calendar_seed.sql</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/public/app.js"></script>
+  <script>
+    const today = new Date();
+    document.getElementById('headerDate').textContent = today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+
+      const email = session.user.email;
+      document.getElementById('userEmail').textContent = email;
+      document.getElementById('userAvatar').textContent = email[0].toUpperCase();
+
+      loadKPIs();
+      loadRecentLeads();
+      loadUpcomingReservations();
+    }
+
+    async function loadKPIs() {
+      const since30 = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+
+      // Reservations
+      const res = await api(`/reservations?limit=100&checkin_from=${since30}`);
+      if (!res.ok) { showDbWarning(); return; }
+
+      const reservations = res.data.reservations || [];
+      const confirmed = reservations.filter(r => r.status === 'confirmed');
+      const revenue = confirmed.reduce((sum, r) => sum + Number(r.total_amount || 0), 0);
+
+      document.getElementById('kpiReservations').textContent = reservations.length;
+      document.getElementById('kpiReservationsStatus').textContent = `${confirmed.length} confirmadas`;
+      document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
+
+      // Leads
+      const leadsRes = await api('/leads?limit=200');
+      if (leadsRes.ok) {
+        const leads = leadsRes.data.leads || [];
+        const active = leads.filter(l => l.status !== 'lost');
+        const newOnes = leads.filter(l => l.status === 'new');
+        document.getElementById('kpiLeads').textContent = active.length;
+        document.getElementById('kpiLeadsNew').textContent = `${newOnes.length} novos hoje`;
+      }
+
+      // Proposals
+      const propsRes = await api('/proposals?status=pending');
+      if (propsRes.ok) {
+        const proposals = propsRes.data.proposals || [];
+        const expiring = proposals.filter(p => {
+          const exp = new Date(p.expires_at);
+          return exp > new Date() && exp < new Date(Date.now() + 24 * 3600000);
+        });
+        document.getElementById('kpiProposals').textContent = proposals.length;
+        document.getElementById('kpiProposalsExpiring').textContent = expiring.length
+          ? `${expiring.length} expiram em 24h`
+          : 'nenhuma expirando';
+      }
+    }
+
+    async function loadRecentLeads() {
+      const res = await api('/leads?limit=8');
+      const container = document.getElementById('recentLeads');
+
+      if (!res.ok) {
+        container.innerHTML = '<div class="px-5 py-4 text-amber-400 text-sm">Banco de dados não configurado</div>';
+        showDbWarning();
+        return;
+      }
+
+      const leads = res.data.leads || [];
+      if (!leads.length) {
+        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">Nenhum lead ainda</div>';
+        return;
+      }
+
+      container.innerHTML = leads.map(l => `
+        <div class="px-5 py-3 hover:bg-slate-700/50 transition-colors flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-white">${l.name || 'Sem nome'}</p>
+            <p class="text-xs text-slate-400">${l.whatsapp_number} · ${relativeTime(l.updated_at)}</p>
+          </div>
+          ${statusBadge(l.status)}
+        </div>
+      `).join('');
+    }
+
+    async function loadUpcomingReservations() {
+      const from = new Date().toISOString().split('T')[0];
+      const to   = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+      const res  = await api(`/reservations?checkin_from=${from}&checkin_to=${to}&limit=5`);
+      const container = document.getElementById('upcomingReservations');
+
+      if (!res.ok) {
+        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">—</div>';
+        return;
+      }
+
+      const reservations = res.data.reservations || [];
+      if (!reservations.length) {
+        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">Nenhuma entrada nos próximos 14 dias</div>';
+        return;
+      }
+
+      container.innerHTML = reservations.map(r => `
+        <div class="px-5 py-3">
+          <div class="flex items-center justify-between mb-0.5">
+            <p class="text-sm font-medium text-white">${r.leads?.name || 'Hóspede'}</p>
+            ${statusBadge(r.status)}
+          </div>
+          <p class="text-xs text-slate-400">${formatDate(r.checkin_date)} · ${roomLabel(r.room_type)}</p>
+        </div>
+      `).join('');
+    }
+
+    function showDbWarning() {
+      document.getElementById('dbWarning').classList.remove('hidden');
+    }
+
+    // Add leads endpoint support
+    const _api = api;
+    window.api = async function(path, opts) {
+      // Route /leads to correct endpoint
+      if (path.startsWith('/leads')) {
+        return _api(path.replace('/leads', '/leads'), opts);
+      }
+      return _api(path, opts);
+    };
+
+    init();
+  </script>
+</body>
+</html>
