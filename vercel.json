@@ -6,10 +6,9 @@
     "api/crm.js":   { "maxDuration": 30, "includeFiles": "public/**" }
   },
   "routes": [
-    { "src": "/api/(.*)",    "dest": "/api/crm.js" },
-    { "src": "/public/(.*)", "dest": "/api/crm.js" },
     { "handle": "filesystem" },
-    { "src": "/(.*)",        "dest": "/api/index.js" }
+    { "src": "/api/(.*)", "dest": "/api/crm.js" },
+    { "src": "/(.*)",     "dest": "/api/index.js" }
   ],
   "env": {
     "NODE_ENV": "production"
