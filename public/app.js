@@ -19,7 +19,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 async function requireAuth() {
   const { data } = await sb.auth.getSession();
   if (!data.session) {
-    window.location.href = '/public/login.html';
+    window.location.href = '/login.html';
     return null;
   }
   return data.session;
@@ -28,7 +28,7 @@ async function requireAuth() {
 async function logout() {
   await sb.auth.signOut();
   localStorage.removeItem('sb_session');
-  window.location.href = '/public/login.html';
+  window.location.href = '/login.html';
 }
 
 // ── API helper ─────────────────────────────────────────────────────────────────

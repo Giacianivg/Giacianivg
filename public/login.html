@@ -96,7 +96,7 @@
       const email = document.getElementById('email').value.trim();
       if (!email) { showError('Digite seu e-mail primeiro'); return; }
       const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: `${location.origin}/public/reset-password.html`
+        redirectTo: `${location.origin}/reset-password.html`
       });
       if (error) { showError(error.message); return; }
       document.getElementById('resetSuccess').classList.remove('hidden');
@@ -127,12 +127,12 @@
 
       // Store session and redirect
       localStorage.setItem('sb_session', JSON.stringify(data.session));
-      window.location.href = '/public/dashboard.html';
+      window.location.href = '/dashboard.html';
     });
 
     // Check if already logged in
     sb.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = '/public/dashboard.html';
+      if (data.session) window.location.href = '/dashboard.html';
     });
 
     function showError(msg) {
