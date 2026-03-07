@@ -95,8 +95,9 @@ const STATUS_LABELS = {
   pending:     { label: 'Pendente',    cls: 'bg-yellow-900/50 text-yellow-300' },
   cancelled:   { label: 'Cancelado',   cls: 'bg-red-900/50 text-red-300' },
   completed:   { label: 'Concluído',   cls: 'bg-slate-600 text-slate-300' },
-  // payments
-  approved:    { label: 'Aprovado',    cls: 'bg-green-900/50 text-green-300' },
+  // payments (schema: pending|processing|confirmed|failed|refunded)
+  processing:  { label: 'Processando', cls: 'bg-yellow-900/50 text-yellow-300' },
+  failed:      { label: 'Falhou',      cls: 'bg-red-900/50 text-red-300' },
   refunded:    { label: 'Reembolsado', cls: 'bg-slate-600 text-slate-300' },
 };
 

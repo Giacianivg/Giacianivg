@@ -30,3 +30,6 @@ Thumbs.db
 
 .vercel
 .env*.local
+
+# Temporary deploy/migration experiments
+database/.temp-deploy/

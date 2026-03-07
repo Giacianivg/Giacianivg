@@ -3,6 +3,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path    = require('path');
 const app = express();
 
 const PORT = process.env.API_PORT || 3001;
@@ -123,7 +124,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
@@ -261,21 +262,31 @@ app.use((err, req, res, _next) => {
 });
 
 // ─── Boot — only when run directly, not when required by tests ────────────────
-if (require.main === module) app.listen(PORT, () => {
-  console.log('');
-  console.log(`${C.bold}${C.cyan}🏨 Pousada Luz da Lua — CRM API${C.reset}`);
-  console.log(`${C.gray}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`);
-  console.log(`${C.green}✓ Server running${C.reset}   http://localhost:${PORT}`);
-  console.log(`${C.green}✓ Dashboard${C.reset}        http://localhost:${PORT}/`);
-  console.log(`${C.green}✓ Health${C.reset}           http://localhost:${PORT}/health`);
-  console.log('');
-  if (!process.env.SUPABASE_URL) {
-    console.log(`${C.yellow}⚠  SUPABASE_URL not set — add to .env to connect DB${C.reset}`);
-    console.log(`${C.gray}   Copy .env.example to .env and fill in your Supabase credentials${C.reset}`);
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
     console.log('');
-  }
-  console.log(`${C.gray}Waiting for requests...${C.reset}`);
-  console.log('');
-});
+    console.log(`${C.bold}${C.cyan}🏨 Pousada Luz da Lua — CRM API${C.reset}`);
+    console.log(`${C.gray}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`);
+    console.log(`${C.green}✓ Server running${C.reset}   http://localhost:${PORT}`);
+    console.log(`${C.green}✓ Dashboard${C.reset}        http://localhost:${PORT}/`);
+    console.log(`${C.green}✓ Health${C.reset}           http://localhost:${PORT}/health`);
+    console.log('');
+    if (!process.env.SUPABASE_URL) {
+      console.log(`${C.yellow}⚠  SUPABASE_URL not set — add to .env to connect DB${C.reset}`);
+      console.log(`${C.gray}   Copy .env.example to .env and fill in your Supabase credentials${C.reset}`);
+      console.log('');
+    }
+    console.log(`${C.gray}Waiting for requests...${C.reset}`);
+    console.log('');
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`${C.red}✗ Port ${PORT} already in use.${C.reset} Try: API_PORT=3002 npm run dev:api`);
+      process.exit(1);
+    }
+    throw err;
+  });
+}
 
 module.exports = app;

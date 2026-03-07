@@ -23,16 +23,21 @@ router.post('/pix', async (req, res) => {
     return serverError(res, err);
   }
 
+  // Map MercadoPago status to schema enum: pending|processing|confirmed|failed|refunded
+  const statusMap = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed' };
+  const dbStatus  = statusMap[pixData.status] || 'pending';
+
   const { data, error } = await supabaseAdmin
     .from('payments')
     .insert({
       reservation_id,
+      payment_type:   'deposit',
       amount:         Number(amount),
-      payment_method: 'pix',
-      status:         pixData.status || 'pending',
+      method:         'pix',
+      status:         dbStatus,
       external_id:    String(pixData.payment_id),
-      pix_link:       pixData.pix_link,
-      pix_qr_code:    pixData.pix_qr_code,
+      qr_code_url:    pixData.pix_link,
+      pix_copy_paste: pixData.pix_qr_code,
       expires_at:     pixData.expires_at,
     })
     .select('id')
@@ -93,15 +98,17 @@ router.post('/webhook', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // Idempotency: skip if already in final state
-    if (['approved', 'cancelled', 'rejected'].includes(payment.status)) {
+    // Idempotency: skip if already in final state (schema: confirmed|failed|refunded)
+    if (['confirmed', 'failed', 'refunded'].includes(payment.status)) {
       return res.sendStatus(200);
     }
 
-    const newStatus = mpStatus.status === 'approved' ? 'approved' : mpStatus.status;
-    const updates = { status: newStatus };
+    // Map MercadoPago status to schema enum
+    const mpToDb = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed', refunded: 'refunded' };
+    const newStatus = mpToDb[mpStatus.status] || 'pending';
+    const updates = { status: newStatus, webhook_payload: req.body };
     if (mpStatus.status === 'approved' && mpStatus.paid_at) {
-      updates.paid_at = mpStatus.paid_at;
+      updates.confirmed_at = mpStatus.paid_at;
     }
 
     // Update payment status
