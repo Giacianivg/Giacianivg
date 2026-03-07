@@ -2,7 +2,7 @@
 
 const { Router } = require('express');
 const { supabaseAdmin } = require('../../services/supabase/client');
-const { ok, fail, notFound, serverError } = require('../../services/utils/response');
+const { ok, notFound, serverError } = require('../../services/utils/response');
 
 const router = Router();
 
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
   if (checkin_to)   query = query.lte('checkin_date', checkin_to);
   if (room_type)    query = query.eq('room_type', room_type);
 
-  const { data, error, count } = await query;
+  const { data, error } = await query;
   if (error) return serverError(res, error);
   return ok(res, { reservations: data, count: data.length });
 });
