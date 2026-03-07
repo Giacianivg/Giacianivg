@@ -3,6 +3,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path    = require('path');
 const app = express();
 
 const PORT = process.env.API_PORT || 3001;
@@ -123,6 +124,9 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// ─── Static dashboard files ─────────────────────────────────────────────────
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
