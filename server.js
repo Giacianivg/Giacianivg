@@ -126,7 +126,24 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // ─── Static dashboard files ─────────────────────────────────────────────────
-app.use('/public', express.static(path.join(__dirname, 'public')));
+// Try process.cwd() first (Vercel sets cwd to /var/task), fallback to __dirname
+const publicDir = path.join(process.cwd(), 'public');
+app.use('/public', express.static(publicDir));
+
+// Debug route — remove after confirming paths
+app.get('/_debug', (req, res) => {
+  const fs = require('fs');
+  const cwdPub  = path.join(process.cwd(), 'public');
+  const dirnPub = path.join(__dirname, 'public');
+  res.json({
+    __dirname,
+    cwd: process.cwd(),
+    cwdPublicExists:   fs.existsSync(cwdPub),
+    dirnPublicExists:  fs.existsSync(dirnPub),
+    cwdFiles:   fs.existsSync(cwdPub)  ? fs.readdirSync(cwdPub)  : 'not found',
+    dirnFiles:  fs.existsSync(dirnPub) ? fs.readdirSync(dirnPub) : 'not found',
+  });
+});
 
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
