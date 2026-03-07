@@ -26,8 +26,8 @@ const mockData = {
 
 // Lightweight Supabase mock — returns controlled data per test
 let _mockOverride = null;
-function setMock(override) { _mockOverride = override; }
-function clearMock() { _mockOverride = null; }
+function _setMock(override) { _mockOverride = override; }  // eslint-disable-line no-unused-vars
+function _clearMock() { _mockOverride = null; }  // eslint-disable-line no-unused-vars
 
 function buildMockChain(defaultResult) {
   const result = _mockOverride || defaultResult;
@@ -56,7 +56,7 @@ function buildMockChain(defaultResult) {
 require.extensions['.js']  // ensure module system is active
 const Module = require('module');
 const origLoad = Module._load;
-Module._load = function(request, parent, isMain) {
+Module._load = function(request, _parent, _isMain) {
   if (request.includes('services/supabase/client') || request.includes('supabase/client')) {
     return {
       supabaseAdmin: {
@@ -85,13 +85,10 @@ Module._load = function(request, parent, isMain) {
   return origLoad.apply(this, arguments);
 };
 
-// Also mock mercadopago to avoid real API calls
-const origMPLoad = Module._load;
-// Chained: both mocks active
+// Both mocks active via Module._load override above
 
 // ── Import server after mocks ─────────────────────────────────────────────────
 const app = require('../server');
-const http = require('http');
 
 let server;
 let baseUrl;

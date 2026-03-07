@@ -2,6 +2,7 @@
 
 require('dotenv').config();
 const express = require('express');
+const crypto = require('crypto');
 const { calculateQuotation, formatWhatsAppMessage } = require('../quotation/engine');
 const LUNA_SYSTEM_PROMPT = require('../luna/system-prompt');
 const { getConversationHistory, appendMessage, recordEvent, getClientProfile, upsertClient } = require('../../database/sheets');
@@ -11,7 +12,45 @@ const { parseCurrency, formatCurrency } = require('../utils/currency');
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
 
 const app = express();
+
+// ─── X-Hub-Signature-256 Validation Middleware (QA-01) ─────────────────────────
+// Meta sends X-Hub-Signature header: sha256=<hex>
+// We validate against WHATSAPP_ACCESS_TOKEN as the secret
 app.use(express.json());
+app.use((req, res, next) => {
+  // Skip validation for GET requests (challenge verification)
+  if (req.method === 'GET') return next();
+
+  // Only validate /webhook POST requests
+  if (req.method !== 'POST' || req.path !== '/webhook') return next();
+
+  const signature = req.headers['x-hub-signature-256'];
+  const appSecret = process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!appSecret) {
+    console.warn('[security] WHATSAPP_ACCESS_TOKEN not configured — skipping signature validation');
+    return next();
+  }
+
+  if (!signature) {
+    console.error('[security] Missing X-Hub-Signature-256 header');
+    return res.status(403).json({ error: 'missing_signature' });
+  }
+
+  // Body is already parsed by express.json(), reconstruct for HMAC
+  const rawBody = JSON.stringify(req.body);
+  const expectedSignature = 'sha256=' + crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    console.error('[security] Invalid X-Hub-Signature-256');
+    return res.status(403).json({ error: 'invalid_signature' });
+  }
+
+  next();
+});
 
 const {
   WHATSAPP_VERIFY_TOKEN,
