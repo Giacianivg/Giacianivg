@@ -131,6 +131,8 @@ app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
   // MercadoPago webhook has its own signature validation
   if (req.method === 'POST' && req.path === '/payments/webhook') return next();
+  // Debug endpoint for troubleshooting (temporary)
+  if (req.path.startsWith('/conversations/debug/')) return next();
   return requireCrmAuth(req, res, next);
 });
 
