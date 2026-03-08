@@ -18,13 +18,16 @@ router.get('/', async (req, res) => {
   // Parse limit: default 100, max 1000
   const parsedLimit = Math.min(parseInt(limit) || 100, 1000);
 
-  const { data, error } = await supabaseAdmin
+  // Fetch LAST N messages (most recent first), then reverse to show oldest first
+  const { data: rawData, error } = await supabaseAdmin
     .from('conversations')
     .select('id, lead_id, role, content, created_at')
     .eq('lead_id', lead_id)
-    .order('created_at', { ascending: true })
-    .order('id', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(parsedLimit);
+
+  // Reverse to get chronological order (oldest first)
+  const data = rawData ? rawData.reverse() : [];
 
   if (error) {
     console.error('[conversations] GET error:', error);
