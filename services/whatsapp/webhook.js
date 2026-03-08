@@ -604,7 +604,7 @@ app.get('/webhook', (req, res) => {
 // ---------------------------------------------------------------------------
 // processMessage — processamento assíncrono após 200 já enviado ao Meta
 // ---------------------------------------------------------------------------
-async function processMessage(from, contactName, text, messageId) {
+async function processMessage(from, contactName, text, messageId, timestamp) {
   console.log(`[process] iniciando para ${from}`);
   try {
     const sheetsTimeout = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -671,8 +671,8 @@ async function processMessage(from, contactName, text, messageId) {
       // CRM conversations
       leadId
         ? Promise.all([
-            crmService.recordConversation(leadId, from, 'user', text),
-            crmService.recordConversation(leadId, from, 'assistant', cleanResponse),
+            crmService.recordConversation(leadId, from, 'user', text, timestamp),
+            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, null),
           ])
         : Promise.resolve(),
 
@@ -750,6 +750,7 @@ app.post('/webhook', async (req, res) => {
   }
 
   const text = message.text.body;
+  const timestamp = message.timestamp; // Timestamp real da mensagem do WhatsApp (Unix)
   console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
 
   // Processa ANTES de enviar 200 — Vercel mata o Lambda após res.sendStatus()
@@ -757,7 +758,7 @@ app.post('/webhook', async (req, res) => {
   // Safety timeout de 4.5s garante que Meta sempre recebe o 200
   try {
     await Promise.race([
-      processMessage(from, contactName, text, message.id),
+      processMessage(from, contactName, text, message.id, timestamp),
       new Promise(resolve => setTimeout(resolve, 4500)),
     ]);
   } catch (err) {
