@@ -271,14 +271,21 @@
       // Garantir ordem cronológica (antigo → recente)
       conversations.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-      document.getElementById('chatModalBody').innerHTML = conversations.map(msg => `
-        <div class="flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-          <div class="${msg.role === 'user' ? 'bg-purple-900/40 border border-purple-700 text-purple-100' : 'bg-slate-700/40 border border-slate-600 text-slate-100'} rounded-lg px-4 py-2.5 max-w-md text-sm">
-            <p class="leading-relaxed">${escapeHtml(msg.content)}</p>
-            <p class="text-xs ${msg.role === 'user' ? 'text-purple-300/60' : 'text-slate-400/60'} mt-1.5">${formatDatetime(msg.created_at)}</p>
+      document.getElementById('chatModalBody').innerHTML = conversations.map(msg => {
+        const isUser = msg.role === 'user';
+        return `
+          <div class="flex gap-2 ${isUser ? 'justify-end' : 'justify-start'} mb-2">
+            <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-xs">
+              <div class="${isUser
+                ? 'bg-purple-600 text-white rounded-3xl rounded-tr-none'
+                : 'bg-slate-600 text-white rounded-3xl rounded-tl-none'} px-4 py-2.5 text-sm leading-relaxed">
+                ${escapeHtml(msg.content)}
+              </div>
+              <span class="text-xs text-slate-400 mt-1 px-2">${formatDatetime(msg.created_at)}</span>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     function escapeHtml(text) {
