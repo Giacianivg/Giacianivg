@@ -7,6 +7,11 @@
   <title>Leads — Pousada Luz da Lua</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    #chatModalBody {
+      scroll-behavior: smooth;
+    }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex">
 
@@ -292,6 +297,12 @@
           </div>
         `;
       }).join('');
+
+      // Auto-scroll para a última mensagem (como WhatsApp)
+      const chatBody = document.getElementById('chatModalBody');
+      setTimeout(() => {
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }, 0);
     }
 
     function escapeHtml(text) {
