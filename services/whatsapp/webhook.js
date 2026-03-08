@@ -661,8 +661,8 @@ async function processMessage(from, contactName, text, messageId) {
       // CRM conversations
       leadId
         ? Promise.all([
-            crmService.recordConversation(leadId, 'user', text),
-            crmService.recordConversation(leadId, 'assistant', cleanResponse),
+            crmService.recordConversation(leadId, from, 'user', text),
+            crmService.recordConversation(leadId, from, 'assistant', cleanResponse),
           ])
         : Promise.resolve(),
 

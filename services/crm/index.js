@@ -52,10 +52,10 @@ async function updateLeadName(leadId, name) {
 // Conversations
 // ---------------------------------------------------------------------------
 
-async function recordConversation(leadId, role, content) {
-  if (!leadId || !content) return;
+async function recordConversation(leadId, whatsapp, role, content) {
+  if (!leadId || !whatsapp || !content) return;
 
-  const payload = { lead_id: leadId, role, content };
+  const payload = { lead_id: leadId, whatsapp_number: whatsapp, role, content };
 
   const { error } = await supabaseAdmin.from('conversations').insert(payload);
   if (error) console.error('[crm] recordConversation failed:', error.message);
