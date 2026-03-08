@@ -60,13 +60,23 @@ async function recordConversation(leadId, whatsapp, role, content, timestamp) {
   // Use timestamp from WhatsApp if provided (Unix seconds → ISO 8601)
   // Note: timestamps for Luna responses are already offset by +1s at the webhook level
   if (timestamp) {
-    const unixMs = parseInt(timestamp) * 1000;
-    const isoDate = new Date(unixMs).toISOString();
-    payload.created_at = isoDate;
+    const ts = parseInt(timestamp);
+    if (!isNaN(ts) && ts > 0) {
+      const unixMs = ts * 1000;
+      const isoDate = new Date(unixMs).toISOString();
+      payload.created_at = isoDate;
+    }
   }
 
-  const { error } = await supabaseAdmin.from('conversations').insert(payload);
-  if (error) console.error('[crm] recordConversation failed:', error.message);
+  try {
+    const { error } = await supabaseAdmin.from('conversations').insert(payload);
+    if (error) {
+      console.error('[crm] recordConversation failed:', error.message);
+      console.error('[crm] payload:', JSON.stringify(payload));
+    }
+  } catch (err) {
+    console.error('[crm] recordConversation exception:', err.message);
+  }
 }
 
 // ---------------------------------------------------------------------------

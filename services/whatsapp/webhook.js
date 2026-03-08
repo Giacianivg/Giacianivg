@@ -668,12 +668,16 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
           })().catch(() => {})
         : Promise.resolve(),
 
-      // CRM conversations
+      // CRM conversations (fire-and-forget — errors logged but don't block Luna response)
       leadId
         ? Promise.all([
-            crmService.recordConversation(leadId, from, 'user', text, timestamp),
+            crmService.recordConversation(leadId, from, 'user', text, timestamp).catch(err => {
+              console.error('[crm] Failed to record client message:', err);
+            }),
             // Luna response: use client timestamp + 1s to ensure ordering
-            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, timestamp ? (parseInt(timestamp) + 1) : Math.floor(Date.now() / 1000) + 1),
+            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, timestamp ? (parseInt(timestamp) + 1) : Math.floor(Date.now() / 1000) + 1).catch(err => {
+              console.error('[crm] Failed to record Luna response:', err);
+            }),
           ])
         : Promise.resolve(),
 
