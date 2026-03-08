@@ -6,6 +6,26 @@ const { ok, fail, serverError } = require('../../services/utils/response');
 
 const router = Router();
 
+// GET /api/conversations?lead_id=X&limit=100
+// Fetch conversation history for a lead
+router.get('/', async (req, res) => {
+  const { lead_id, limit = 100 } = req.query;
+
+  if (!lead_id) {
+    return fail(res, 'missing_fields', 'lead_id is required');
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('conversations')
+    .select('id, lead_id, role, content, created_at')
+    .eq('lead_id', lead_id)
+    .order('created_at', { ascending: true })
+    .limit(Math.min(parseInt(limit) || 100, 500));
+
+  if (error) return serverError(res, error);
+  return ok(res, { conversations: data || [] });
+});
+
 // POST /api/conversations
 // Body: { lead_id, role ('user'|'assistant'|'system'), content, message_id? }
 // Idempotent via message_id
