@@ -126,13 +126,46 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+// ─── Public Debug Endpoint (no auth required) ──────────────────────────────────
+// MUST be before auth middleware
+app.get('/api/conversations/debug/:lead_id', async (req, res) => {
+  const { supabaseAdmin } = require('./services/supabase/client');
+  const { ok, serverError } = require('./services/utils/response');
+  const lead_id = req.params.lead_id;
+
+  // Count total messages
+  const { count, error: countError } = await supabaseAdmin
+    .from('conversations')
+    .select('id', { count: 'exact' })
+    .eq('lead_id', lead_id);
+
+  // Get the 10 most recent messages
+  const { data, error } = await supabaseAdmin
+    .from('conversations')
+    .select('id, lead_id, role, content, created_at')
+    .eq('lead_id', lead_id)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('[conversations/debug] Error:', error);
+    return serverError(res, error);
+  }
+
+  console.log(`[conversations/debug] Total: ${count}, Last 10:`, data?.length || 0);
+  return ok(res, {
+    total_count: count || 0,
+    last_10_messages: (data || []).reverse(), // Reverse to show oldest first
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
   // MercadoPago webhook has its own signature validation
   if (req.method === 'POST' && req.path === '/payments/webhook') return next();
-  // Debug endpoint for troubleshooting (temporary)
-  if (req.path.startsWith('/conversations/debug/')) return next();
   return requireCrmAuth(req, res, next);
 });
 
