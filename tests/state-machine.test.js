@@ -104,31 +104,46 @@ describe('ConversationStateMachine', () => {
       await fsm.load();
     });
 
-    it('should allow valid transition GREETING → ASK_DATES', async () => {
-      await fsm.transition('ASK_DATES');
-      assert.strictEqual(fsm.currentState, 'ASK_DATES');
+    it('should allow valid transition GREETING → COLLECT_NAME', async () => {
+      await fsm.transition('COLLECT_NAME');
+      assert.strictEqual(fsm.currentState, 'COLLECT_NAME');
     });
 
-    it('should block invalid transition GREETING → SEND_QUOTE', async () => {
+    it('should block invalid transition GREETING → ASK_DATES (must go through COLLECT_NAME)', async () => {
       assert.rejects(
-        () => fsm.transition('SEND_QUOTE'),
+        () => fsm.transition('ASK_DATES'),
         /Invalid transition/
       );
     });
 
+    it('should allow COLLECT_NAME → ASK_DATES', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.transition('ASK_DATES');
+      assert.strictEqual(fsm.currentState, 'ASK_DATES');
+    });
+
+    it('should allow COLLECT_NAME → HANDOFF_HUMAN (escalation)', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.transition('HANDOFF_HUMAN');
+      assert.strictEqual(fsm.currentState, 'HANDOFF_HUMAN');
+    });
+
     it('should allow ASK_DATES → ASK_GUESTS', async () => {
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('ASK_GUESTS');
       assert.strictEqual(fsm.currentState, 'ASK_GUESTS');
     });
 
     it('should allow ASK_DATES → HANDOFF_HUMAN (escalation)', async () => {
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('HANDOFF_HUMAN');
       assert.strictEqual(fsm.currentState, 'HANDOFF_HUMAN');
     });
 
     it('should be terminal state (HANDOFF_HUMAN → no transitions allowed)', async () => {
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('HANDOFF_HUMAN');
       assert.strictEqual(
@@ -186,13 +201,13 @@ describe('ConversationStateMachine', () => {
       assert.match(injection, /Nome/);
     });
 
-    it('should show current funnel step (X/7)', async () => {
+    it('should show current funnel step (X/8)', async () => {
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /Etapa do funil: 1\/7/);
+      assert.match(injection, /Etapa do funil: 1\/8/);
 
-      await fsm.transition('ASK_DATES');
+      await fsm.transition('COLLECT_NAME');
       const injectionAfter = fsm.getPromptInjection();
-      assert.match(injectionAfter, /Etapa do funil: 2\/7/);
+      assert.match(injectionAfter, /Etapa do funil: 2\/8/);
     });
   });
 
@@ -239,8 +254,8 @@ describe('ConversationStateMachine', () => {
   // ─────────────────────────────────────────────────────────────────
 
   describe('isValidTransition()', () => {
-    it('should validate GREETING → ASK_DATES', () => {
-      assert.strictEqual(ConversationStateMachine.isValidTransition('GREETING', 'ASK_DATES'), true);
+    it('should validate GREETING → COLLECT_NAME', () => {
+      assert.strictEqual(ConversationStateMachine.isValidTransition('GREETING', 'COLLECT_NAME'), true);
     });
 
     it('should reject GREETING → SEND_QUOTE', () => {
@@ -248,7 +263,8 @@ describe('ConversationStateMachine', () => {
     });
 
     it('should validate full happy path', () => {
-      assert.strictEqual(ConversationStateMachine.isValidTransition('GREETING', 'ASK_DATES'), true);
+      assert.strictEqual(ConversationStateMachine.isValidTransition('GREETING', 'COLLECT_NAME'), true);
+      assert.strictEqual(ConversationStateMachine.isValidTransition('COLLECT_NAME', 'ASK_DATES'), true);
       assert.strictEqual(ConversationStateMachine.isValidTransition('ASK_DATES', 'ASK_GUESTS'), true);
       assert.strictEqual(ConversationStateMachine.isValidTransition('ASK_GUESTS', 'SHOW_ROOMS'), true);
       assert.strictEqual(ConversationStateMachine.isValidTransition('SHOW_ROOMS', 'SEND_QUOTE'), true);
@@ -260,7 +276,7 @@ describe('ConversationStateMachine', () => {
   describe('getValidNextStates()', () => {
     it('should return valid next states for GREETING', () => {
       const valid = ConversationStateMachine.getValidNextStates('GREETING');
-      assert.deepStrictEqual(valid, ['ASK_DATES']);
+      assert.deepStrictEqual(valid, ['COLLECT_NAME']);
     });
 
     it('should return multiple valid states for ASK_DATES', () => {
@@ -279,39 +295,43 @@ describe('ConversationStateMachine', () => {
   // ─────────────────────────────────────────────────────────────────
 
   describe('Integration: Happy Path (Full Reservation Flow)', () => {
-    it('should complete full 7-state flow: GREETING → HANDOFF_HUMAN', async () => {
+    it('should complete full 8-state flow: GREETING → HANDOFF_HUMAN', async () => {
       // 1. Load (new guest) → GREETING
       await fsm.load();
       assert.strictEqual(fsm.currentState, 'GREETING');
 
       // 2. Collect name
+      await fsm.transition('COLLECT_NAME');
+      assert.strictEqual(fsm.currentState, 'COLLECT_NAME');
       await fsm.updateContext({ nome: 'João Silva' });
+
+      // 3. Ask dates
       await fsm.transition('ASK_DATES');
       assert.strictEqual(fsm.currentState, 'ASK_DATES');
 
-      // 3. Collect dates
+      // 4. Collect dates
       await fsm.updateContext({ data_entrada: '15/03/2026', data_saida: '17/03/2026' });
       await fsm.transition('ASK_GUESTS');
       assert.strictEqual(fsm.currentState, 'ASK_GUESTS');
 
-      // 4. Collect guests
+      // 5. Collect guests
       await fsm.updateContext({ pessoas: 2 });
       await fsm.transition('SHOW_ROOMS');
       assert.strictEqual(fsm.currentState, 'SHOW_ROOMS');
 
-      // 5. Collect room type
+      // 6. Collect room type
       await fsm.updateContext({ tipo_quarto: 'ALA_A' });
       await fsm.transition('SEND_QUOTE');
       assert.strictEqual(fsm.currentState, 'SEND_QUOTE');
 
-      // 6. Final confirmation
+      // 7. Final confirmation
       await fsm.updateContext({
         quote: { total: 600, currency: 'BRL', breakdown: {} },
       });
       await fsm.transition('CONFIRM_BOOKING');
       assert.strictEqual(fsm.currentState, 'CONFIRM_BOOKING');
 
-      // 7. Handoff to human
+      // 8. Handoff to human
       await fsm.transition('HANDOFF_HUMAN');
       assert.strictEqual(fsm.currentState, 'HANDOFF_HUMAN');
 
@@ -327,6 +347,7 @@ describe('ConversationStateMachine', () => {
 
     it('should allow backtracking ASK_GUESTS → ASK_DATES', async () => {
       await fsm.load();
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('ASK_GUESTS');
 
@@ -339,6 +360,7 @@ describe('ConversationStateMachine', () => {
   describe('Integration: Escalation Path', () => {
     it('should escalate after 3 failed attempts', async () => {
       await fsm.load();
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
 
       // Simulate 3 failed attempts
@@ -360,6 +382,7 @@ describe('ConversationStateMachine', () => {
 
     it('should allow escalation from any state', async () => {
       await fsm.load();
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('ASK_GUESTS'); // Middle of flow
 
@@ -372,20 +395,27 @@ describe('ConversationStateMachine', () => {
   describe('Integration: Prompt Injection Quality', () => {
     it('should generate proper prompt injection at each stage', async () => {
       await fsm.load();
-      await fsm.updateContext({ nome: 'João Silva' });
 
       // At GREETING
       let inj = fsm.getPromptInjection();
       assert.match(inj, /CONVERSATION STATE CONTEXT/);
       assert.match(inj, /Estado atual: GREETING/);
-      assert.match(inj, /João Silva/);
+
+      // At COLLECT_NAME
+      await fsm.transition('COLLECT_NAME');
+      await fsm.updateContext({ nome: 'João Silva' });
+      inj = fsm.getPromptInjection();
+      assert.match(inj, /Estado atual: COLLECT_NAME/);
+      assert.match(inj, /Etapa do funil: 2\/8/);
+      assert.match(inj, /ETAPA ATUAL: Coletar nome/);
 
       // At ASK_DATES
       await fsm.transition('ASK_DATES');
       inj = fsm.getPromptInjection();
       assert.match(inj, /Estado atual: ASK_DATES/);
-      assert.match(inj, /Etapa do funil: 2\/7/);
+      assert.match(inj, /Etapa do funil: 3\/8/);
       assert.match(inj, /NÃO REPITA perguntas sobre/);
+      assert.match(inj, /João Silva/);
     });
   });
 
@@ -424,6 +454,7 @@ describe('ConversationStateMachine', () => {
       await fsm.load();
       assert.strictEqual(fsm.isTerminal, false);
 
+      await fsm.transition('COLLECT_NAME');
       await fsm.transition('ASK_DATES');
       await fsm.transition('ASK_GUESTS');
       await fsm.transition('SHOW_ROOMS');
@@ -435,14 +466,118 @@ describe('ConversationStateMachine', () => {
       assert.strictEqual(fsm.isTerminal, true);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────────
+  // COLLECT_NAME Specific Tests
+  // ─────────────────────────────────────────────────────────────────
+
+  describe('COLLECT_NAME State (New)', () => {
+    it('should capture name and transition to ASK_DATES', async () => {
+      await fsm.load();
+      await fsm.transition('COLLECT_NAME');
+      await fsm.updateContext({ nome: 'Maria Santos' });
+
+      assert.strictEqual(fsm.currentState, 'COLLECT_NAME');
+      assert.strictEqual(fsm.collectedData.nome, 'Maria Santos');
+
+      await fsm.transition('ASK_DATES');
+      assert.strictEqual(fsm.currentState, 'ASK_DATES');
+      assert.strictEqual(fsm.collectedData.nome, 'Maria Santos'); // Name persists
+    });
+
+    it('should allow fallback to ASK_DATES after 2 failed attempts', async () => {
+      await fsm.load();
+      await fsm.transition('COLLECT_NAME');
+
+      // Simulate 2 failed attempts without name
+      const esc1 = await fsm.trackAttempt('attempts_collect_name');
+      assert.strictEqual(esc1, false); // 1 < 3, no escalation yet
+
+      const esc2 = await fsm.trackAttempt('attempts_collect_name');
+      assert.strictEqual(esc2, false); // 2 < 3, still no escalation
+
+      const esc3 = await fsm.trackAttempt('attempts_collect_name');
+      assert.strictEqual(esc3, true); // 3 === MAX (auto-escalate)
+
+      // After 2 attempts, can still transition to ASK_DATES
+      assert.strictEqual(fsm.metadata.attempts_collect_name, 3);
+    });
+
+    it('should escalate from COLLECT_NAME to HANDOFF_HUMAN', async () => {
+      await fsm.load();
+      await fsm.transition('COLLECT_NAME');
+
+      // Escalate without providing name
+      await fsm.setEscalationReason('Hóspede não responde com nome');
+      await fsm.transition('HANDOFF_HUMAN');
+
+      assert.strictEqual(fsm.currentState, 'HANDOFF_HUMAN');
+      assert.match(fsm.metadata.escalation_reason, /não responde/i);
+    });
+
+    it('should maintain backward compatibility with existing states', async () => {
+      // Simulate loading an older conversation_state record (pre-COLLECT_NAME)
+      mockDb._mockInsert(testLeadId, {
+        lead_id: testLeadId,
+        phone: testPhone,
+        state: 'ASK_DATES',
+        data: { nome: 'João Silva', data_entrada: '15/03/2026' },
+        metadata: { attempts_asking_dates: 1 },
+        created_at: new Date(),
+        updated_at: new Date(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+
+      await fsm.load();
+      assert.strictEqual(fsm.currentState, 'ASK_DATES');
+      assert.strictEqual(fsm.collectedData.nome, 'João Silva');
+      assert.strictEqual(fsm.metadata.attempts_asking_dates, 1);
+
+      // Should be able to transition normally
+      await fsm.transition('ASK_GUESTS');
+      assert.strictEqual(fsm.currentState, 'ASK_GUESTS');
+    });
+
+    it('should include COLLECT_NAME in prompt injection (8/8 states)', async () => {
+      await fsm.load();
+      let injection = fsm.getPromptInjection();
+
+      // GREETING state should reference 8 total states
+      assert.match(injection, /Etapa do funil: 1\/8/);
+
+      // Transition to COLLECT_NAME
+      await fsm.transition('COLLECT_NAME');
+      injection = fsm.getPromptInjection();
+
+      assert.match(injection, /Etapa do funil: 2\/8/);
+      assert.match(injection, /ETAPA ATUAL: Coletar nome/);
+      assert.match(injection, /Se receber nome.*NOME: NomeCapturado/);
+    });
+
+    it('should not allow COLLECT_NAME → non-adjacent states', async () => {
+      await fsm.load();
+      await fsm.transition('COLLECT_NAME');
+
+      // COLLECT_NAME can only go to ASK_DATES or HANDOFF_HUMAN
+      const validNext = ConversationStateMachine.getValidNextStates('COLLECT_NAME');
+      assert.deepStrictEqual(validNext, ['ASK_DATES', 'HANDOFF_HUMAN']);
+
+      // Trying invalid transitions should fail
+      assert.rejects(
+        () => fsm.transition('ASK_GUESTS'),
+        /Invalid transition/
+      );
+    });
+  });
 });
 
-describe('State Machine: All 7 States Validation', () => {
-  it('should define exactly 7 states', () => {
+describe('State Machine: All 8 States Validation', () => {
+  it('should define exactly 8 states', () => {
     const states = Object.keys(ConversationStateMachine.STATES);
-    assert.strictEqual(states.length, 7);
+    assert.strictEqual(states.length, 8);
     assert.deepStrictEqual(states, [
       'GREETING',
+      'COLLECT_NAME',
       'ASK_DATES',
       'ASK_GUESTS',
       'SHOW_ROOMS',

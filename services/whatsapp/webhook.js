@@ -676,6 +676,29 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
         await fsm.updateContext({ nome: nomeCapturado }).catch(err =>
           console.warn(`[fsm] Failed to update name: ${err.message}`)
         );
+        // If in COLLECT_NAME state and name captured → transition to ASK_DATES
+        if (fsm.currentState === 'COLLECT_NAME') {
+          try {
+            await fsm.transition('ASK_DATES');
+            console.log(`[fsm] Name captured, transitioned COLLECT_NAME → ASK_DATES`);
+          } catch (err) {
+            console.warn(`[fsm] Failed to transition from COLLECT_NAME: ${err.message}`);
+          }
+        }
+      }
+    }
+
+    // Handle COLLECT_NAME state: auto-transition after 2 attempts without name (PLU-01.3.1)
+    if (fsm && fsm.currentState === 'COLLECT_NAME' && !nomeCapturado) {
+      try {
+        const escalateFromCollectName = await fsm.trackAttempt('attempts_collect_name');
+        // After 2 attempts (>= 2), auto-transition to ASK_DATES
+        if (escalateFromCollectName) {
+          console.log(`[fsm] COLLECT_NAME: 2+ attempts without name, auto-transitioning to ASK_DATES`);
+          await fsm.transition('ASK_DATES');
+        }
+      } catch (err) {
+        console.warn(`[fsm] Failed to track COLLECT_NAME attempt: ${err.message}`);
       }
     }
 
