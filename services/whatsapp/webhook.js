@@ -25,7 +25,7 @@ app.use((req, res, next) => {
   if (req.method !== 'POST' || req.path !== '/webhook') return next();
 
   const signature = req.headers['x-hub-signature-256'];
-  const appSecret = process.env.WHATSAPP_ACCESS_TOKEN;
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
 
   if (!appSecret) {
     console.warn('[security] WHATSAPP_ACCESS_TOKEN not configured — skipping signature validation');
@@ -56,6 +56,7 @@ const {
   WHATSAPP_VERIFY_TOKEN,
   WHATSAPP_PHONE_NUMBER_ID,
   WHATSAPP_ACCESS_TOKEN,
+  WHATSAPP_APP_SECRET,
   ANTHROPIC_API_KEY,
   EQUIPE_WHATSAPP_NUMBER,
   PORT = 3000,
