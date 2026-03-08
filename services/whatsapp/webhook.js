@@ -762,14 +762,17 @@ app.post('/webhook', async (req, res) => {
   // Claude responde em ~600ms, bem dentro do limite de 5s da Meta
   // Safety timeout de 4.5s garante que Meta sempre recebe o 200
   try {
+    console.log(`[webhook] iniciando processMessage para ${from}`);
     await Promise.race([
       processMessage(from, contactName, text, message.id, timestamp),
       new Promise(resolve => setTimeout(resolve, 4500)),
     ]);
+    console.log(`[webhook] processMessage completado para ${from}`);
   } catch (err) {
     console.error('[webhook] Erro no processamento:', err.message);
   }
 
+  console.log(`[webhook] enviando 200 para ${from}`);
   res.sendStatus(200);
 });
 
