@@ -346,13 +346,16 @@ async function handleCotar(params, from, contactName, leadId) {
   await sendWhatsApp(from, formatWhatsAppMessage(q));
 }
 
-async function handleEscalar(userMsg, from, rawSignal, contactName) {
+async function handleEscalar(userMsg, from, rawSignal, contactName, leadId) {
   if (userMsg) await sendWhatsApp(from, userMsg);
 
   const escalParams = parseEscalarParams(rawSignal);
   const motivo = escalParams.motivo || 'Dúvida ou solicitação especial';
   const nomeHospede = escalParams.nome || contactName;
   const interesse = escalParams.interesse;
+
+  // Update lead status to negotiation when escalated
+  if (leadId) crmService.updateLeadStatus(leadId, 'negotiation').catch(() => {});
 
   await recordEvent(from, contactName, 'ESCALAR', escalParams);
 
@@ -563,6 +566,7 @@ async function processResponse(response, from, contactName, leadId) {
       from,
       escalarMatch[0],
       contactName,
+      leadId,
     );
     return;
   }
@@ -675,6 +679,12 @@ async function processMessage(from, contactName, text, messageId) {
       // Signal dispatch (COTAR / ESCALAR / CONFIRMAR / plain text)
       processResponse(cleanResponse, from, displayName, leadId),
     ]);
+
+    // Auto-qualify lead after first Luna response (if no special signals)
+    const hasSpecialSignal = /\[(COTAR|CONFIRMAR|ESCALAR)[^\]]*\]/.test(cleanResponse);
+    if (leadId && !hasSpecialSignal && isFirstMessage) {
+      crmService.updateLeadStatus(leadId, 'qualified').catch(() => {});
+    }
   } catch (err) {
     const cause = err.cause?.message || err.cause?.code || '';
     console.error(`[webhook] Erro ao processar mensagem: ${err.message}${cause ? ` (causa: ${cause})` : ''}`);
