@@ -670,16 +670,26 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
 
       // CRM conversations (fire-and-forget — errors logged but don't block Luna response)
       leadId
-        ? Promise.all([
-            crmService.recordConversation(leadId, from, 'user', text, timestamp).catch(err => {
-              console.error('[crm] Failed to record client message:', err);
-            }),
-            // Luna response: use client timestamp + 1s to ensure ordering
-            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, timestamp ? (parseInt(timestamp) + 1) : Math.floor(Date.now() / 1000) + 1).catch(err => {
-              console.error('[crm] Failed to record Luna response:', err);
-            }),
-          ])
-        : Promise.resolve(),
+        ? (() => {
+            console.log(`[crm] Recording messages for lead ${leadId}, from ${from}`);
+            console.log(`[crm] User timestamp: ${timestamp} (type: ${typeof timestamp})`);
+            const userTs = timestamp ? parseInt(timestamp) : null;
+            const assistantTs = userTs ? (userTs + 1) : Math.floor(Date.now() / 1000) + 1;
+            console.log(`[crm] Parsed user timestamp: ${userTs}, assistant timestamp: ${assistantTs}`);
+
+            return Promise.all([
+              crmService.recordConversation(leadId, from, 'user', text, userTs).catch(err => {
+                console.error('[crm] Failed to record client message:', err);
+              }),
+              crmService.recordConversation(leadId, from, 'assistant', cleanResponse, assistantTs).catch(err => {
+                console.error('[crm] Failed to record Luna response:', err);
+              }),
+            ]);
+          })()
+        : (() => {
+            console.log(`[crm] ⚠️  leadId is null — messages will NOT be saved to CRM`);
+            return Promise.resolve();
+          })(),
 
       // Signal dispatch (COTAR / ESCALAR / CONFIRMAR / plain text)
       processResponse(cleanResponse, from, displayName, leadId),

@@ -53,33 +53,43 @@ async function updateLeadName(leadId, name) {
 // ---------------------------------------------------------------------------
 
 async function recordConversation(leadId, whatsapp, role, content, timestamp) {
-  if (!leadId || !whatsapp || !content) return;
+  if (!leadId || !whatsapp || !content) {
+    console.error(`[crm] recordConversation validation failed: leadId=${leadId}, whatsapp=${whatsapp}, content=${content ? 'present' : 'missing'}`);
+    return;
+  }
 
   const payload = { lead_id: leadId, whatsapp_number: whatsapp, role, content };
 
   // Use timestamp from WhatsApp if provided (Unix seconds → ISO 8601)
   // Note: timestamps for Luna responses are already offset by +1s at the webhook level
+  console.log(`[crm] recordConversation called: role=${role}, timestamp=${timestamp} (type: ${typeof timestamp})`);
+
   if (timestamp) {
     const ts = parseInt(timestamp);
     if (!isNaN(ts) && ts > 0) {
       const unixMs = ts * 1000;
       const isoDate = new Date(unixMs).toISOString();
       payload.created_at = isoDate;
-      console.log(`[crm] Recording ${role}: ${content.substring(0, 50)}... at ${isoDate}`);
+      console.log(`[crm] Setting created_at: ${isoDate} (from Unix ${ts})`);
+    } else {
+      console.warn(`[crm] Invalid timestamp ${timestamp}: isNaN=${isNaN(ts)}, ts=${ts}`);
     }
+  } else {
+    console.warn(`[crm] No timestamp provided for ${role} message`);
   }
 
   try {
+    console.log(`[crm] Inserting ${role} message: "${content.substring(0, 50)}..."`);
     const { error } = await supabaseAdmin.from('conversations').insert(payload);
     if (error) {
-      console.error('[crm] recordConversation FAILED:', error.message);
+      console.error('[crm] ❌ recordConversation FAILED:', error.message);
       console.error('[crm] payload:', JSON.stringify(payload));
       return { error: error.message };
     }
     console.log(`[crm] ✅ Recorded ${role} message successfully`);
     return { success: true };
   } catch (err) {
-    console.error('[crm] recordConversation EXCEPTION:', err.message);
+    console.error('[crm] ❌ recordConversation EXCEPTION:', err.message);
     return { error: err.message };
   }
 }
