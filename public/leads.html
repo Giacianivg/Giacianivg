@@ -261,7 +261,7 @@
       document.getElementById('chatModalTitle').textContent = `Conversa: ${leadName}`;
       document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Carregando mensagens...</div>';
 
-      const res = await api(`/conversations?lead_id=${leadId}&limit=100`);
+      const res = await api(`/conversations?lead_id=${leadId}&limit=10000`);
       if (!res.ok || !res.data.conversations) {
         document.getElementById('chatModalBody').innerHTML = '<div class="text-red-400 text-sm text-center py-8">Erro ao carregar conversas</div>';
         return;

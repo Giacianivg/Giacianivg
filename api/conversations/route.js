@@ -15,8 +15,8 @@ router.get('/', async (req, res) => {
     return fail(res, 'missing_fields', 'lead_id is required');
   }
 
-  // Parse limit: default 100, max 1000
-  const parsedLimit = Math.min(parseInt(limit) || 100, 1000);
+  // Parse limit: default 100, max 10000 (show all conversations)
+  const parsedLimit = Math.min(parseInt(limit) || 100, 10000);
 
   // Fetch LAST N messages (most recent first), then reverse to show oldest first
   const { data: rawData, error } = await supabaseAdmin
