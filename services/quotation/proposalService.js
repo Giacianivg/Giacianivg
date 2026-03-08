@@ -39,7 +39,7 @@ async function createProposalFromQuotation({ leadId, roomType, checkin, checkout
       checkin_date:   toDB(checkin),
       checkout_date:  toDB(checkout),
       guests:         Number(guests),
-      total_amount:   quotation.totalFinal,
+      final_amount:   quotation.totalFinal,
       deposit_amount: deposit,
       expires_at,
     })
