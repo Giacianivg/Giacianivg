@@ -268,6 +268,12 @@
       }
 
       const conversations = res.data.conversations;
+      console.log('[viewConversations] Received', conversations.length, 'messages for lead', leadId);
+      if (conversations.length > 0) {
+        console.log('[viewConversations] First message from API:', conversations[0]);
+        console.log('[viewConversations] Last message from API:', conversations[conversations.length - 1]);
+      }
+
       if (!conversations.length) {
         document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Nenhuma mensagem ainda</div>';
         return;
@@ -281,6 +287,9 @@
         // Se timestamps iguais, usa id como tiebreaker (orden de criação no banco)
         return a.id.localeCompare(b.id);
       });
+
+      console.log('[viewConversations] After sort - first:', conversations[0]);
+      console.log('[viewConversations] After sort - last:', conversations[conversations.length - 1]);
 
       document.getElementById('chatModalBody').innerHTML = conversations.map(msg => {
         const isUser = msg.role === 'user'; // true = Cliente, false = Luna

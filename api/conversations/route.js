@@ -23,7 +23,17 @@ router.get('/', async (req, res) => {
     .order('id', { ascending: true })
     .limit(Math.min(parseInt(limit) || 100, 500));
 
-  if (error) return serverError(res, error);
+  if (error) {
+    console.error('[conversations] GET error:', error);
+    return serverError(res, error);
+  }
+
+  console.log(`[conversations] GET returned ${data?.length || 0} messages for lead ${lead_id}`);
+  if (data && data.length > 0) {
+    console.log('[conversations] First message:', JSON.stringify(data[0], null, 2));
+    console.log('[conversations] Last message:', JSON.stringify(data[data.length - 1], null, 2));
+  }
+
   return ok(res, { conversations: data || [] });
 });
 
