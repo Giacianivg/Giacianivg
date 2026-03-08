@@ -672,7 +672,8 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
       leadId
         ? Promise.all([
             crmService.recordConversation(leadId, from, 'user', text, timestamp),
-            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, null),
+            // Luna response: use client timestamp + 1s to ensure ordering
+            crmService.recordConversation(leadId, from, 'assistant', cleanResponse, timestamp ? (parseInt(timestamp) + 1) : Math.floor(Date.now() / 1000) + 1),
           ])
         : Promise.resolve(),
 
