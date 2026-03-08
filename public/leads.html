@@ -268,20 +268,16 @@
       }
 
       const conversations = res.data.conversations;
-      console.log('[viewConversations] Received', conversations.length, 'messages for lead', leadId);
+
+      console.log(`%c[viewConversations] ✅ Received ${conversations.length} messages for lead ${leadId}`, 'color: green; font-weight: bold');
+
       if (conversations.length > 0) {
-        console.log('[viewConversations] First message from API:', {
-          role: conversations[0].role,
-          content: conversations[0].content.substring(0, 50),
-          created_at: conversations[0].created_at,
-          id: conversations[0].id
-        });
-        console.log('[viewConversations] Last message from API:', {
-          role: conversations[conversations.length - 1].role,
-          content: conversations[conversations.length - 1].content.substring(0, 50),
-          created_at: conversations[conversations.length - 1].created_at,
-          id: conversations[conversations.length - 1].id
-        });
+        console.table(conversations.slice(-5).map(m => ({
+          role: m.role,
+          content: m.content.substring(0, 40) + '...',
+          created_at: m.created_at,
+          id: m.id.substring(0, 8) + '...',
+        })));
       }
 
       if (!conversations.length) {
@@ -290,26 +286,15 @@
       }
 
       // Garantir ordem cronológica por timestamp + id (como tiebreaker para colisões)
+      console.log('%c[viewConversations] Sorting by created_at ASC, then id ASC...', 'color: blue');
       conversations.sort((a, b) => {
         const timeA = new Date(a.created_at).getTime();
         const timeB = new Date(b.created_at).getTime();
         if (timeA !== timeB) return timeA - timeB;
-        // Se timestamps iguais, usa id como tiebreaker (orden de criação no banco)
         return a.id.localeCompare(b.id);
       });
 
-      console.log('[viewConversations] After sort - first:', {
-        role: conversations[0].role,
-        content: conversations[0].content.substring(0, 50),
-        created_at: conversations[0].created_at,
-        id: conversations[0].id
-      });
-      console.log('[viewConversations] After sort - last:', {
-        role: conversations[conversations.length - 1].role,
-        content: conversations[conversations.length - 1].content.substring(0, 50),
-        created_at: conversations[conversations.length - 1].created_at,
-        id: conversations[conversations.length - 1].id
-      });
+      console.log(`%c[viewConversations] ✅ After sort: first=${conversations[0].role} at ${conversations[0].created_at}, last=${conversations[conversations.length - 1].role} at ${conversations[conversations.length - 1].created_at}`, 'color: green');
 
       document.getElementById('chatModalBody').innerHTML = conversations.map(msg => {
         const isUser = msg.role === 'user'; // true = Cliente, false = Luna

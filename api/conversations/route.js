@@ -15,13 +15,16 @@ router.get('/', async (req, res) => {
     return fail(res, 'missing_fields', 'lead_id is required');
   }
 
+  // Parse limit: default 100, max 1000
+  const parsedLimit = Math.min(parseInt(limit) || 100, 1000);
+
   const { data, error } = await supabaseAdmin
     .from('conversations')
     .select('id, lead_id, role, content, created_at')
     .eq('lead_id', lead_id)
     .order('created_at', { ascending: true })
     .order('id', { ascending: true })
-    .limit(Math.min(parseInt(limit) || 100, 500));
+    .limit(parsedLimit);
 
   if (error) {
     console.error('[conversations] GET error:', error);
@@ -35,6 +38,52 @@ router.get('/', async (req, res) => {
   }
 
   return ok(res, { conversations: data || [] });
+});
+
+// GET /api/conversations/debug/:lead_id
+// Debug endpoint: shows raw database state without filtering
+router.get('/debug/:lead_id', async (req, res) => {
+  const { lead_id } = req.params;
+
+  if (!lead_id) {
+    return fail(res, 'missing_fields', 'lead_id is required');
+  }
+
+  // Count total messages
+  const { count, error: countError } = await supabaseAdmin
+    .from('conversations')
+    .select('id', { count: 'exact' })
+    .eq('lead_id', lead_id);
+
+  if (countError) {
+    console.error('[conversations/debug] Count error:', countError);
+  }
+
+  // Get the 10 most recent messages (DESC order)
+  const { data, error } = await supabaseAdmin
+    .from('conversations')
+    .select('id, lead_id, role, content, created_at')
+    .eq('lead_id', lead_id)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error('[conversations/debug] Error:', error);
+    return serverError(res, error);
+  }
+
+  console.log(`[conversations/debug] Total messages for ${lead_id}: ${count || 0}`);
+  console.log('[conversations/debug] 10 most recent:', JSON.stringify(data, null, 2));
+
+  return ok(res, {
+    total_count: count || 0,
+    last_10_messages: data || [],
+    debug_info: {
+      query_timestamp: new Date().toISOString(),
+      lead_id,
+    },
+  });
 });
 
 // POST /api/conversations
