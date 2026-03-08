@@ -19,7 +19,7 @@ Implementar um **Conversation State Manager** para controlar o estado da convers
 
 **Objetivo:**
 - Persistir estado por telefone em Supabase
-- Transições determinísticas entre 7 estados
+- Transições determinísticas entre 8 estados
 - Contexto injetado em Claude (sabe qual etapa do funil estamos)
 - Fallback automático para humano quando necessário
 
@@ -31,7 +31,7 @@ Implementar um **Conversation State Manager** para controlar o estado da convers
 - [x] Criar tabela `conversation_states` em Supabase com campos:
   - `lead_id` (PK, UUID)
   - `phone` (string, unique + indexed)
-  - `state` (enum: GREETING | ASK_DATES | ASK_GUESTS | SHOW_ROOMS | SEND_QUOTE | CONFIRM_BOOKING | HANDOFF_HUMAN)
+  - `state` (enum: GREETING | COLLECT_NAME | ASK_DATES | ASK_GUESTS | SHOW_ROOMS | SEND_QUOTE | CONFIRM_BOOKING | HANDOFF_HUMAN)
   - `data` (jsonb): `{ nome?, data_entrada?, data_saida?, pessoas?, tipo_quarto?, quote? }`
   - `metadata` (jsonb): `{ attempts?, last_question_ts?, escalation_reason? }`
   - `created_at`, `updated_at`, `expires_at` (24h TTL)
@@ -52,7 +52,8 @@ Implementar um **Conversation State Manager** para controlar o estado da convers
   - `getPromptInjection()` — retorna contexto p/ Claude
   - Validações: GREETING → ASK_DATES → ... → HANDOFF_HUMAN
 - [x] Estados permitidos (outros bloqueados):
-  - GREETING → [ASK_DATES]
+  - GREETING → [COLLECT_NAME]
+  - COLLECT_NAME → [ASK_DATES, HANDOFF_HUMAN]
   - ASK_DATES → [ASK_GUESTS, HANDOFF_HUMAN]
   - ASK_GUESTS → [SHOW_ROOMS, ASK_DATES, HANDOFF_HUMAN]
   - SHOW_ROOMS → [SEND_QUOTE, ASK_GUESTS, HANDOFF_HUMAN]
@@ -93,9 +94,10 @@ Implementar um **Conversation State Manager** para controlar o estado da convers
 | File | Type | Status |
 |------|------|--------|
 | `database/migrations/001_create_conversation_states.sql` | New | DONE |
-| `services/state-machine/index.js` | New | DONE |
-| `services/whatsapp/webhook.js` | Edit | DONE (FSM integrated) |
-| `tests/state-machine.test.js` | New | DONE (90/90 tests passing) |
+| `database/migrations/002_add_collect_name_state.sql` | New | DONE (safe enum migration) |
+| `services/state-machine/index.js` | Edit | DONE (added COLLECT_NAME state + transitions) |
+| `services/whatsapp/webhook.js` | Edit | DONE (FSM integrated + COLLECT_NAME auto-transition) |
+| `tests/state-machine.test.js` | Edit | DONE (98/98 tests passing — 90 existing + 8 COLLECT_NAME-specific) |
 | `docs/architecture/conversation-state-machine.md` | New | DONE |
 | `docs/database/conversation-states-schema.md` | New | DONE |
 | `.eslintrc.json` | Edit | DONE (ES2022 support) |
@@ -190,7 +192,7 @@ await fsm.transition(nextState);
 CONVERSATION STATE CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Estado atual: ASK_GUESTS
-Etapa do funil: 2/7 (Coletando informações)
+Etapa do funil: 3/8 (Coletando informações)
 
 Já coletado:
   • Nome: João Silva
@@ -208,6 +210,8 @@ NÃO REPITA perguntas sobre: nome, datas
 ```
 [GREETING]
     ↓ (user message)
+[COLLECT_NAME] ← collect nome do hóspede (NEW)
+    ↓ (name captured OR 2 attempts without answer)
 [ASK_DATES] ← collect entrada/saída
     ↓ (dates provided)
 [ASK_GUESTS] ← collect people count
@@ -255,12 +259,14 @@ describe('Webhook + State Machine', () => {
 ## 🚀 Acceptance Criteria - Definition of Done
 
 - [x] Database schema created + RLS configured
-- [x] `ConversationStateMachine` class fully tested
-- [x] Webhook integração 100% (carrega state, injeta, transiciona)
-- [x] All unit tests passing (`npm test`) — 90/90 tests passing
+- [x] Database migration (002) for COLLECT_NAME state added safely
+- [x] `ConversationStateMachine` class fully tested (8 states)
+- [x] COLLECT_NAME state implemented with auto-transition logic
+- [x] Webhook integração 100% (carrega state, injeta, transiciona, auto-transitions COLLECT_NAME)
+- [x] All unit tests passing (`npm test`) — 98/98 tests passing
 - [x] All lint checks passing (`npm run lint`) — 0 errors, 6 warnings (pre-existing)
 - [x] Type checking passing (`npm run typecheck`) — N/A (JavaScript project)
-- [x] Integration tests (automated in test suite)
+- [x] Integration tests (automated in test suite — 8 new COLLECT_NAME-specific tests)
 - [x] Architecture doc atualizado
 - [x] No regressions em features existentes (WhatsApp relay, escalation, quotation)
 
@@ -296,6 +302,105 @@ describe('Webhook + State Machine', () => {
 
 ---
 
+## QA Results
+
+**Gate Decision:** ✅ **PASS** (All critical quality checks met)
+
+**Review Date:** 2026-03-08 | **Reviewer:** Quinn (@qa) | **Review Duration:** Comprehensive automated + manual analysis
+
+---
+
+### Requirements Traceability
+
+#### Acceptance Criteria Coverage
+- [x] **COLLECT_NAME state created** — Fully implemented in `services/state-machine/index.js`
+- [x] **Transitions enforced** — GREETING→COLLECT_NAME, COLLECT_NAME→[ASK_DATES, HANDOFF_HUMAN] via 98/98 tests
+- [x] **Auto-transition logic** — Name capture and 2-attempt fallback in `services/whatsapp/webhook.js`
+- [x] **Backward compatibility** — Safe PostgreSQL enum migration (002_add_collect_name_state.sql)
+- [x] **Prompt injection updated** — State-specific instructions, "8 estados" messaging
+
+**Finding:** All acceptance criteria fully traced ✅
+
+### Test Coverage
+
+**Test Suite:** 98/98 PASS (100% success rate)
+- Original: 90 tests (all updated for 8-state flow)
+- New: 8 COLLECT_NAME-specific tests covering name capture, fallback, escalation, backward compatibility
+
+**Coverage Assessment:**
+- ✅ Unit tests: load, transition, updateContext, getPromptInjection, trackAttempt
+- ✅ Integration tests: Full happy path, escalation path, prompt injection quality
+- ✅ Edge cases: Terminal states, expired states, pre-loaded states
+- ✅ COLLECT_NAME-specific: name detection, auto-transition, 2-attempt fallback
+- ✅ Backward compatibility: existing conversation_state records load correctly
+
+**Finding:** Comprehensive coverage exceeds requirements ✅
+
+### Code Quality
+
+**Automated Scanning:** CodeRabbit — 0 errors, 6 pre-existing warnings ✅
+**Manual Review:**
+- `services/state-machine/index.js` — Well-structured, JSDoc, follows patterns ✅
+- `services/whatsapp/webhook.js` — Non-blocking error handling, defensive code ✅
+- `database/migrations/002_add_collect_name_state.sql` — Atomic transaction, backward-compatible ✅
+- `tests/state-machine.test.js` — Comprehensive organization, clear test semantics ✅
+
+**Minor Finding:** JSDoc comment (line 7) mentions "7-state" but code implements 8 states (non-blocking, documentation only)
+
+### Database Migration Safety
+
+| Aspect | Status |
+|--------|--------|
+| Atomicity | ✅ PASS (BEGIN/COMMIT transaction) |
+| Backward Compatibility | ✅ PASS (safe text casting of enum values) |
+| Constraint Updates | ✅ PASS (CHECK constraint updated for 8 states) |
+| Rollback Safety | ✅ PASS (no data loss) |
+
+**Finding:** Migration is safe and well-designed ✅
+
+### Risk Assessment
+
+Overall Risk Level: 🟢 **LOW**
+
+All identified risks (state corruption, invalid transitions, infinite loops, backward compat breaks, webhook failures) have mitigations in place and are tested.
+
+### Definition of Done
+
+All criteria verified ✅:
+- [x] Database schema created + RLS configured
+- [x] Database migration (002) added safely
+- [x] ConversationStateMachine class fully tested (8 states)
+- [x] COLLECT_NAME state with auto-transition logic
+- [x] Webhook integration 100% (FSM + COLLECT_NAME auto-transitions)
+- [x] 98/98 tests passing (0 errors)
+- [x] 0 lint errors, 6 pre-existing warnings
+- [x] 8 new integration tests for COLLECT_NAME
+- [x] Architecture doc updated
+- [x] No regressions in existing features
+
+### Recommendations
+
+**Required:** None — All critical checks passed
+
+**Non-blocking:**
+- Update JSDoc (line 7) from "7-state" to "8-state deterministic funnel" — 1 minute effort
+
+### Gate Decision Rationale
+
+✅ **PASS** based on:
+1. 98/98 tests passing (100% success)
+2. All acceptance criteria traced and met
+3. Safe database migration with backward compatibility
+4. 0 CRITICAL/HIGH code quality issues
+5. Comprehensive test coverage (98 tests)
+6. No regressions detected
+7. LOW overall risk profile
+8. Production-ready code
+
+**Confidence:** 🟢 **HIGH** — Ready for merge
+
+---
+
 ## 🔄 Change Log
 
 | Date | Author | Change |
@@ -303,6 +408,7 @@ describe('Webhook + State Machine', () => {
 | 2026-03-08 | River | Story created — Draft |
 | 2026-03-08 | Pax | Validated 10/10 — Status Draft→Ready |
 | 2026-03-08 | Dex | Implementation complete — All 4 phases + 90/90 tests passing |
+| 2026-03-08 | Dex | Enhancement: Added COLLECT_NAME state (8th state) to collect guest name early. Migration 002, FSM transitions updated, webhook auto-transition logic added, 98/98 tests passing (90 existing + 8 COLLECT_NAME-specific) |
 
 ---
 
