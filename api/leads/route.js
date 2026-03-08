@@ -35,7 +35,16 @@ router.get('/', async (req, res) => {
 
   let query = supabaseAdmin
     .from('leads')
-    .select('id, whatsapp_number, name, email, funnel_stage, created_at, updated_at')
+    .select(`
+      id,
+      whatsapp_number,
+      name,
+      email,
+      funnel_stage,
+      created_at,
+      updated_at,
+      conversations(count)
+    `)
     .order('updated_at', { ascending: false })
     .range(Number(offset), Number(offset) + Number(limit) - 1);
 
@@ -43,7 +52,14 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await query;
   if (error) return serverError(res, error);
-  return ok(res, { leads: data, count: data.length });
+
+  // Map conversation count for frontend
+  const leads = (data || []).map(lead => ({
+    ...lead,
+    conversation_count: lead.conversations?.length || 0,
+  }));
+
+  return ok(res, { leads, count: leads.length });
 });
 
 // GET /api/leads/:id
