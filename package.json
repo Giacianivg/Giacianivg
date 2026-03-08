@@ -10,7 +10,7 @@
     "start": "node services/whatsapp/webhook.js",
     "dev": "node --watch services/whatsapp/webhook.js",
     "dev:api": "node --watch server.js",
-    "test": "node --test tests/handler.test.js",
+    "test": "node --test tests/**/*.test.js",
     "test:api": "node --test tests/api.integration.test.js",
     "setup-sheets": "node database/setup.js",
     "lint": "npx eslint . --ext .js --ignore-path .eslintignore"

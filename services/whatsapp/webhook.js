@@ -8,6 +8,8 @@ const LUNA_SYSTEM_PROMPT = require('../luna/system-prompt');
 const { getConversationHistory, appendMessage, recordEvent, getClientProfile, upsertClient } = require('../../database/sheets');
 const crmService = require('../crm/index');
 const { parseCurrency, formatCurrency } = require('../utils/currency');
+const ConversationStateMachine = require('../state-machine/index');
+const { supabaseAdmin } = require('../supabase/client');
 
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
 
@@ -625,6 +627,19 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
       leadIdPromise,
     ]);
 
+    // Load or initialize Conversation State Machine (for 7-state funnel control)
+    let fsm = null;
+    if (process.env.SUPABASE_URL && leadId) {
+      try {
+        fsm = new ConversationStateMachine(leadId, from, supabaseAdmin);
+        await fsm.load();
+        console.log(`[fsm] Loaded state for ${from}: ${fsm.currentState}`);
+      } catch (err) {
+        console.warn(`[fsm] Failed to load state machine: ${err.message}`);
+        fsm = null; // Fallback: continue without FSM
+      }
+    }
+
     // Usa histórico do Sheets se disponível, senão usa memória RAM
     const fullHistory = sheetsHistory.length > 0 ? sheetsHistory : memoryGet(from);
 
@@ -637,10 +652,18 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     const isFirstMessage = fullHistory.length === 0;
     const clientContext = buildClientContext(knownName, isFirstMessage);
 
+    // Inject state machine context if FSM loaded
+    const stateContext = fsm
+      ? fsm.getPromptInjection()
+      : '';
+    const systemPrompt = stateContext
+      ? `${stateContext}\n\n${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`
+      : `${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`;
+
     const history = fullHistory.slice(-10);
     history.push({ role: 'user', content: text });
 
-    const response = await callClaude(history, clientContext);
+    const response = await callClaude(history, systemPrompt);
 
     const nomeCapturado = parseNomeSignal(response);
     const cleanResponse = response.replace(/\[NOME:\s*[^\]]+\]/, '').trim();
@@ -648,6 +671,62 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     if (nomeCapturado) {
       if (SHEETS_ENABLED) upsertClient(from, nomeCapturado).catch(() => {});
       if (leadId) crmService.updateLeadName(leadId, nomeCapturado).catch(() => {});
+      // Update FSM context with captured name
+      if (fsm) {
+        await fsm.updateContext({ nome: nomeCapturado }).catch(err =>
+          console.warn(`[fsm] Failed to update name: ${err.message}`)
+        );
+      }
+    }
+
+    // Parse signals and handle FSM transitions (PLU-01.3)
+    if (fsm) {
+      try {
+        // Parse [COTAR: ...] signal
+        const cotarSignal = parseCotarParams(cleanResponse);
+        if (cotarSignal) {
+          console.log(`[fsm] COTAR signal: ${JSON.stringify(cotarSignal)}`);
+          await fsm.updateContext({
+            data_entrada: cotarSignal.data_entrada,
+            data_saida: cotarSignal.data_saida,
+            pessoas: parseInt(cotarSignal.pessoas) || null,
+            tipo_quarto: cotarSignal.tipo,
+          });
+          // Transition to SEND_QUOTE only if currently in valid state
+          if (ConversationStateMachine.isValidTransition(fsm.currentState, 'SEND_QUOTE')) {
+            await fsm.transition('SEND_QUOTE');
+            console.log(`[fsm] Transitioned to SEND_QUOTE`);
+          }
+        }
+
+        // Parse [CONFIRMAR: ...] signal
+        const confirmarSignal = parseConfirmarParams(cleanResponse);
+        if (confirmarSignal) {
+          console.log(`[fsm] CONFIRMAR signal received`);
+          if (ConversationStateMachine.isValidTransition(fsm.currentState, 'CONFIRM_BOOKING')) {
+            await fsm.transition('CONFIRM_BOOKING');
+            console.log(`[fsm] Transitioned to CONFIRM_BOOKING`);
+          }
+          if (ConversationStateMachine.isValidTransition(fsm.currentState, 'HANDOFF_HUMAN')) {
+            await fsm.transition('HANDOFF_HUMAN');
+            console.log(`[fsm] Transitioned to HANDOFF_HUMAN`);
+          }
+        }
+
+        // Parse [ESCALAR: ...] signal
+        const escalarSignal = parseEscalarParams(cleanResponse);
+        if (escalarSignal && cleanResponse.includes('[ESCALAR')) {
+          console.log(`[fsm] ESCALAR signal: ${JSON.stringify(escalarSignal)}`);
+          await fsm.setEscalationReason(escalarSignal.motivo || 'Escalação solicitada');
+          if (ConversationStateMachine.isValidTransition(fsm.currentState, 'HANDOFF_HUMAN')) {
+            await fsm.transition('HANDOFF_HUMAN');
+            console.log(`[fsm] Transitioned to HANDOFF_HUMAN (escalation)`);
+          }
+        }
+      } catch (fsmErr) {
+        console.warn(`[fsm] Signal processing error: ${fsmErr.message}`);
+        // Non-blocking: FSM errors don't stop message sending
+      }
     }
 
     const displayName = nomeCapturado || knownName || contactName;
