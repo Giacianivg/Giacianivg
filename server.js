@@ -146,6 +146,9 @@ app.use('/api/reservations/confirm',       require('./api/reservations/confirm/r
 app.use('/api/reservations',               require('./api/reservations/route'));
 app.use('/api/payments',                   require('./api/payments/route'));
 
+// ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
+app.use('/webhook', require('./services/whatsapp/webhook'));
+
 // ─── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({
