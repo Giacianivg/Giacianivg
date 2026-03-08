@@ -65,17 +65,22 @@ async function recordConversation(leadId, whatsapp, role, content, timestamp) {
       const unixMs = ts * 1000;
       const isoDate = new Date(unixMs).toISOString();
       payload.created_at = isoDate;
+      console.log(`[crm] Recording ${role}: ${content.substring(0, 50)}... at ${isoDate}`);
     }
   }
 
   try {
     const { error } = await supabaseAdmin.from('conversations').insert(payload);
     if (error) {
-      console.error('[crm] recordConversation failed:', error.message);
+      console.error('[crm] recordConversation FAILED:', error.message);
       console.error('[crm] payload:', JSON.stringify(payload));
+      return { error: error.message };
     }
+    console.log(`[crm] ✅ Recorded ${role} message successfully`);
+    return { success: true };
   } catch (err) {
-    console.error('[crm] recordConversation exception:', err.message);
+    console.error('[crm] recordConversation EXCEPTION:', err.message);
+    return { error: err.message };
   }
 }
 

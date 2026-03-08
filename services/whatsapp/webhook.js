@@ -757,6 +757,7 @@ app.post('/webhook', async (req, res) => {
   const text = message.text.body;
   const timestamp = message.timestamp; // Timestamp real da mensagem do WhatsApp (Unix)
   console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
+  console.log(`[webhook] message.timestamp: ${timestamp} (type: ${typeof timestamp})`);
 
   // Processa ANTES de enviar 200 — Vercel mata o Lambda após res.sendStatus()
   // Claude responde em ~600ms, bem dentro do limite de 5s da Meta
