@@ -57,9 +57,15 @@ async function recordConversation(leadId, whatsapp, role, content, timestamp) {
 
   const payload = { lead_id: leadId, whatsapp_number: whatsapp, role, content };
 
-  // Use timestamp from WhatsApp if provided (Unix seconds → ISO 8601)
+  // Use timestamp from WhatsApp if provided (Unix seconds → ISO 8601 with precision)
   if (timestamp) {
-    const isoDate = new Date(parseInt(timestamp) * 1000).toISOString();
+    let unixMs = parseInt(timestamp) * 1000;
+    // For assistant (Luna) responses, add 1s offset to ensure they appear AFTER client messages
+    // even if both arrive in the same second. This prevents timestamp collisions.
+    if (role === 'assistant') {
+      unixMs += 1000; // +1 second for Luna responses
+    }
+    const isoDate = new Date(unixMs).toISOString();
     payload.created_at = isoDate;
   }
 

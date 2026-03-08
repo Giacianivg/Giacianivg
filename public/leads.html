@@ -268,8 +268,14 @@
         return;
       }
 
-      // Garantir ordem cronológica (antigo → recente)
-      conversations.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      // Garantir ordem cronológica por timestamp + id (como tiebreaker para colisões)
+      conversations.sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        // Se timestamps iguais, usa id como tiebreaker (orden de criação no banco)
+        return a.id.localeCompare(b.id);
+      });
 
       document.getElementById('chatModalBody').innerHTML = conversations.map(msg => {
         const isUser = msg.role === 'user';

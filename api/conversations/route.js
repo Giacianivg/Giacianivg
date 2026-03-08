@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
     .select('id, lead_id, role, content, created_at')
     .eq('lead_id', lead_id)
     .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
     .limit(Math.min(parseInt(limit) || 100, 500));
 
   if (error) return serverError(res, error);
