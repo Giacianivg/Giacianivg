@@ -4,7 +4,7 @@
  * ConversationStateMachine
  *
  * Manages persistent conversation state for guest reservations.
- * 7-state deterministic funnel: GREETING → ... → HANDOFF_HUMAN
+ * 8-state deterministic funnel: GREETING → COLLECT_NAME → ASK_DATES → ... → HANDOFF_HUMAN
  *
  * @class ConversationStateMachine
  * @requires supabase-js
@@ -17,6 +17,7 @@ class ConversationStateMachine {
 
   static STATES = {
     GREETING: 'GREETING',
+    COLLECT_NAME: 'COLLECT_NAME',
     ASK_DATES: 'ASK_DATES',
     ASK_GUESTS: 'ASK_GUESTS',
     SHOW_ROOMS: 'SHOW_ROOMS',
@@ -26,7 +27,8 @@ class ConversationStateMachine {
   };
 
   static VALID_TRANSITIONS = {
-    GREETING: ['ASK_DATES'],
+    GREETING: ['COLLECT_NAME'],
+    COLLECT_NAME: ['ASK_DATES', 'HANDOFF_HUMAN'],
     ASK_DATES: ['ASK_GUESTS', 'HANDOFF_HUMAN'],
     ASK_GUESTS: ['SHOW_ROOMS', 'ASK_DATES', 'HANDOFF_HUMAN'],
     SHOW_ROOMS: ['SEND_QUOTE', 'ASK_GUESTS', 'HANDOFF_HUMAN'],
@@ -263,6 +265,11 @@ class ConversationStateMachine {
 
     const noRepeatFields = collectedItems.map(item => item.split(':')[0].trim()).join(', ');
 
+    // Add state-specific instructions for COLLECT_NAME
+    const stateSpecificInstructions = this._state === 'COLLECT_NAME'
+      ? '\n📝 ETAPA ATUAL: Coletar nome do hóspede\n✅ Se receber nome → [NOME: NomeCapturado]\n⚠️ Se usuário não responder nome → após 2 tentativas, passe para próxima etapa'
+      : '';
+
     return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CONVERSATION STATE CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -270,9 +277,10 @@ Estado atual: ${this._state}
 Etapa do funil: ${stateNumber}/${totalStates}
 
 ${collectedSection}
+${stateSpecificInstructions}
 
 ❌ NÃO REPITA perguntas sobre: ${noRepeatFields || '(nenhum dado coletado)'}
-✅ Mantenha fluxo linear através dos 7 estados
+✅ Mantenha fluxo linear através dos 8 estados (GREETING → COLLECT_NAME → ASK_DATES → ...)
 ✅ Se usuário insistir em voltar, explique a progressão natural
 ⚠️ Em 3 tentativas sem resposta → [ESCALAR: motivo=Não respondeu]
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄`;
