@@ -111,6 +111,21 @@
     </div>
   </div>
 
+  <!-- Conversation viewer modal -->
+  <div id="chatModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+        <h2 class="font-semibold text-white" id="chatModalTitle">Conversa com Luna</h2>
+        <button onclick="closeChatModal()" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="flex-1 overflow-auto p-6 space-y-3" id="chatModalBody">
+        <div class="text-slate-500 text-sm text-center py-8">Carregando mensagens...</div>
+      </div>
+    </div>
+  </div>
+
   <script src="/app.js"></script>
   <script>
     let allLeads = [];
@@ -174,7 +189,12 @@
           </td>
           <td class="px-5 py-3 text-sm text-slate-300">${l.whatsapp_number}</td>
           <td class="px-5 py-3">${statusBadge(l.funnel_stage)}</td>
-          <td class="px-5 py-3 text-sm text-slate-400">${l.conversation_count || '—'}</td>
+          <td class="px-5 py-3">
+            ${l.conversation_count ? `<button onclick="viewConversations('${l.id}', '${l.name || l.whatsapp_number}')" class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors" title="Ver conversa">
+              <span class="text-sm">${l.conversation_count}</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </button>` : '<span class="text-slate-500">—</span>'}
+          </td>
           <td class="px-5 py-3 text-sm text-slate-400">${relativeTime(l.updated_at)}</td>
           <td class="px-5 py-3">
             <button onclick="viewLead('${l.id}')" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Ver →</button>
@@ -227,8 +247,49 @@
       document.getElementById('modal').classList.add('hidden');
     }
 
+    function closeChatModal() {
+      document.getElementById('chatModal').classList.add('hidden');
+    }
+
+    async function viewConversations(leadId, leadName) {
+      document.getElementById('chatModal').classList.remove('hidden');
+      document.getElementById('chatModalTitle').textContent = `Conversa: ${leadName}`;
+      document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Carregando mensagens...</div>';
+
+      const res = await api(`/conversations?lead_id=${leadId}&limit=100`);
+      if (!res.ok || !res.data.conversations) {
+        document.getElementById('chatModalBody').innerHTML = '<div class="text-red-400 text-sm text-center py-8">Erro ao carregar conversas</div>';
+        return;
+      }
+
+      const conversations = res.data.conversations;
+      if (!conversations.length) {
+        document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Nenhuma mensagem ainda</div>';
+        return;
+      }
+
+      document.getElementById('chatModalBody').innerHTML = conversations.map(msg => `
+        <div class="flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+          <div class="${msg.role === 'user' ? 'bg-purple-900/40 border border-purple-700 text-purple-100' : 'bg-slate-700/40 border border-slate-600 text-slate-100'} rounded-lg px-4 py-2.5 max-w-md text-sm">
+            <p class="leading-relaxed">${escapeHtml(msg.content)}</p>
+            <p class="text-xs ${msg.role === 'user' ? 'text-purple-300/60' : 'text-slate-400/60'} mt-1.5">${formatDatetime(msg.created_at)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     document.getElementById('modal').addEventListener('click', e => {
       if (e.target === document.getElementById('modal')) closeModal();
+    });
+
+    document.getElementById('chatModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('chatModal')) closeChatModal();
     });
 
     init();
