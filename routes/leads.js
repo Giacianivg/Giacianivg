@@ -1,8 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { supabaseAdmin } = require('../../services/supabase/client');
-const { ok, fail, serverError } = require('../../services/utils/response');
+const { supabaseAdmin } = require('../services/supabase/client');
+const { ok, fail, serverError } = require('../services/utils/response');
 
 const router = Router();
 

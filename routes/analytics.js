@@ -1,9 +1,9 @@
 'use strict';
 
 const { Router } = require('express');
-const { supabaseAdmin } = require('../../services/supabase/client');
-const { ok, fail, serverError } = require('../../services/utils/response');
-const { getFunnelData } = require('../../services/analytics/funnel-analytics');
+const { supabaseAdmin } = require('../services/supabase/client');
+const { ok, fail, serverError } = require('../services/utils/response');
+const { getFunnelData } = require('../services/analytics/funnel-analytics');
 
 const router = Router();
 
@@ -77,7 +77,7 @@ router.get('/funnel', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get('/revenue/pipeline', async (req, res) => {
   try {
-    const { getPipelineRevenue } = require('../../services/analytics/revenue-analytics');
+    const { getPipelineRevenue } = require('../services/analytics/revenue-analytics');
     const result = await getPipelineRevenue();
     return ok(res, { revenue: result });
   } catch (err) {

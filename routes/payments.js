@@ -1,9 +1,9 @@
 'use strict';
 
 const { Router } = require('express');
-const { supabaseAdmin } = require('../../services/supabase/client');
-const { createPixPayment, getPaymentStatus, validateWebhookSignature } = require('../../services/payments/mercadopago');
-const { ok, fail, notFound, serverError } = require('../../services/utils/response');
+const { supabaseAdmin } = require('../services/supabase/client');
+const { createPixPayment, getPaymentStatus, validateWebhookSignature } = require('../services/payments/mercadopago');
+const { ok, fail, notFound, serverError } = require('../services/utils/response');
 
 const router = Router();
 

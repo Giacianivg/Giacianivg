@@ -170,22 +170,22 @@ app.use('/api', (req, res, next) => {
 });
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/leads',                      require('./api/leads/route'));
-app.use('/api/conversations',              require('./api/conversations/route'));
-app.use('/api/availability/calendar',      require('./api/availability/calendar/route'));
-app.use('/api/availability/block',         require('./api/availability/block/route'));
-app.use('/api/availability/unblock',       require('./api/availability/unblock/route'));
-app.use('/api/availability',               require('./api/availability/route'));
-app.use('/api/proposals',                  require('./api/proposals/route'));
-app.use('/api/reservations/confirm',       require('./api/reservations/confirm/route'));
-app.use('/api/reservations',               require('./api/reservations/route'));
-app.use('/api/payments',                   require('./api/payments/route'));
+app.use('/api/leads',                      require('./routes/leads'));
+app.use('/api/conversations',              require('./routes/conversations'));
+app.use('/api/availability/calendar',      require('./routes/availability-calendar'));
+app.use('/api/availability/block',         require('./routes/availability-block'));
+app.use('/api/availability/unblock',       require('./routes/availability-unblock'));
+app.use('/api/availability',               require('./routes/availability'));
+app.use('/api/proposals',                  require('./routes/proposals'));
+app.use('/api/reservations/confirm',       require('./routes/reservations-confirm'));
+app.use('/api/reservations',               require('./routes/reservations'));
+app.use('/api/payments',                   require('./routes/payments'));
 
 // ─── Intelligence Layer Routes ──────────────────────────────────────────────────
-app.use('/api',                            require('./api/scoring/route'));
-app.use('/api/analytics',                  require('./api/analytics/route'));
-app.use('/api/follow-ups',                 require('./api/follow-ups/route'));
-app.use('/api/alerts',                     require('./api/alerts/route'));
+app.use('/api',                            require('./routes/scoring'));
+app.use('/api/analytics',                  require('./routes/analytics'));
+app.use('/api/follow-ups',                 require('./routes/follow-ups'));
+app.use('/api/alerts',                     require('./routes/alerts'));
 
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
 app.use('/webhook', require('./services/whatsapp/webhook'));

@@ -1,8 +1,8 @@
 'use strict';
 
 const { Router } = require('express');
-const { ok, fail, serverError } = require('../../services/utils/response');
-const { calculateLeadScore } = require('../../services/scoring/lead-scorer');
+const { ok, fail, serverError } = require('../services/utils/response');
+const { calculateLeadScore } = require('../services/scoring/lead-scorer');
 
 const router = Router();
 
