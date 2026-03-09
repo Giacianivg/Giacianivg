@@ -40,6 +40,10 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         Propostas
       </a>
+      <a href="follow-ups.html" data-nav="follow-ups" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Follow-ups
+      </a>
     </nav>
 
     <div class="p-3 border-t border-slate-700">
@@ -116,6 +120,43 @@
         </div>
       </div>
 
+      <!-- Intelligence Row 1: Revenue Pipeline + Gargalo -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Receita em Pipeline</p>
+          <p class="text-3xl font-bold text-white" id="kpiPipeline">—</p>
+          <p class="text-xs text-slate-500 mt-1">ponderado por probabilidade</p>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Gargalo Atual</p>
+          <p class="text-xl font-bold text-white" id="kpiBottleneck">—</p>
+          <p class="text-xs text-slate-500 mt-1" id="kpiBottleneckCount"></p>
+        </div>
+      </div>
+
+      <!-- Intelligence Row 2: Funil + Alertas -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Funil visual -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700">
+          <div class="px-5 py-4 border-b border-slate-700">
+            <h2 class="font-semibold text-white">Funil de Leads</h2>
+          </div>
+          <div id="funnelWidget" class="p-5 space-y-3">
+            <div class="text-slate-500 text-sm">Carregando...</div>
+          </div>
+        </div>
+        <!-- Alertas ativos -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700">
+          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+            <h2 class="font-semibold text-white">Alertas Ativos</h2>
+            <span id="alertsCount" class="text-xs text-slate-400"></span>
+          </div>
+          <div id="alertsWidget" class="divide-y divide-slate-700">
+            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- DB status warning -->
       <div id="dbWarning" class="hidden bg-amber-900/30 border border-amber-700 rounded-xl p-4">
         <div class="flex items-start gap-3">
@@ -150,6 +191,7 @@
       loadKPIs();
       loadRecentLeads();
       loadUpcomingReservations();
+      loadIntelligence();
     }
 
     async function loadKPIs() {
@@ -249,6 +291,86 @@
 
     function showDbWarning() {
       document.getElementById('dbWarning').classList.remove('hidden');
+    }
+
+    async function loadIntelligence() {
+      const ALERT_LABELS = {
+        hot_lead:       { cls: 'bg-red-900/30 text-red-400',     label: '🔥 Hot Lead' },
+        stalled:        { cls: 'bg-amber-900/30 text-amber-400', label: '⏸ Parado' },
+        no_response:    { cls: 'bg-amber-900/30 text-amber-400', label: '💤 Sem resposta' },
+        quote_expiring: { cls: 'bg-orange-900/30 text-orange-400', label: '⏰ Cotação expirando' },
+        checkin_soon:   { cls: 'bg-blue-900/30 text-blue-400',   label: '📅 Check-in próximo' },
+      };
+
+      const [pipelineRes, funnelRes, bottleneckRes, alertsRes] = await Promise.allSettled([
+        api('/analytics/revenue/pipeline'),
+        api('/analytics/funnel'),
+        api('/analytics/funnel/bottleneck'),
+        api('/alerts/active'),
+      ]);
+
+      // Revenue pipeline
+      if (pipelineRes.status === 'fulfilled' && pipelineRes.value.ok) {
+        const val = pipelineRes.value.data.revenue?.weighted_pipeline;
+        document.getElementById('kpiPipeline').textContent = val != null ? formatCurrency(val) : '—';
+      }
+
+      // Bottleneck
+      if (bottleneckRes.status === 'fulfilled' && bottleneckRes.value.ok) {
+        const d = bottleneckRes.value.data;
+        const stage = d.bottleneck_stage;
+        document.getElementById('kpiBottleneck').textContent = stage
+          ? (STATUS_LABELS[stage]?.label || stage) : '—';
+        document.getElementById('kpiBottleneckCount').textContent = d.count
+          ? `${d.count} lead${d.count !== 1 ? 's' : ''} parado${d.count !== 1 ? 's' : ''}`
+          : 'nenhum parado';
+      }
+
+      // Funnel
+      if (funnelRes.status === 'fulfilled' && funnelRes.value.ok) {
+        const stages = funnelRes.value.data.funnel?.stages || [];
+        const maxCount = Math.max(...stages.map(s => s.count || 0), 1);
+        document.getElementById('funnelWidget').innerHTML = stages.length
+          ? stages.map(s => {
+              const pct = Math.round((s.count || 0) / maxCount * 100);
+              const label = STATUS_LABELS[s.name]?.label || s.name;
+              return `
+                <div>
+                  <div class="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>${label}</span>
+                    <span class="text-white font-medium">${s.count || 0}</span>
+                  </div>
+                  <div class="bg-slate-700 rounded-full h-2">
+                    <div class="bg-purple-600 h-2 rounded-full" style="width:${pct}%"></div>
+                  </div>
+                </div>`;
+            }).join('')
+          : '<div class="text-slate-500 text-sm">Sem dados de funil</div>';
+      } else {
+        document.getElementById('funnelWidget').innerHTML = '<div class="text-slate-500 text-sm">—</div>';
+      }
+
+      // Alerts
+      if (alertsRes.status === 'fulfilled' && alertsRes.value.ok) {
+        const alerts = alertsRes.value.data.alerts || [];
+        document.getElementById('alertsCount').textContent = alerts.length
+          ? `${alerts.length} ativo${alerts.length !== 1 ? 's' : ''}` : '';
+        document.getElementById('alertsWidget').innerHTML = alerts.length
+          ? alerts.slice(0, 8).map(a => {
+              const al = ALERT_LABELS[a.alert_type] || { cls: 'bg-slate-700 text-slate-400', label: a.alert_type };
+              return `
+                <div class="px-5 py-3 flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm text-white truncate">${a.name || a.phone}</p>
+                    <p class="text-xs text-slate-500 truncate">${a.alert_message || '—'}</p>
+                  </div>
+                  <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${al.cls}">${al.label}</span>
+                </div>`;
+            }).join('')
+          : '<div class="px-5 py-4 text-slate-500 text-sm">Nenhum alerta ativo</div>';
+      } else {
+        document.getElementById('alertsWidget').innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">—</div>';
+      }
     }
 
     // Add leads endpoint support

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Follow-ups — Pousada Luz da Lua</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+
+  <!-- Sidebar -->
+  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
+    <div class="p-5 border-b border-slate-700">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌙</span>
+        <div><p class="font-semibold text-white text-sm">Luz da Lua</p><p class="text-xs text-slate-400">CRM</p></div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </a>
+      <a href="leads.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Leads
+      </a>
+      <a href="reservations.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Reservas
+      </a>
+      <a href="proposals.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Propostas
+      </a>
+      <a href="follow-ups.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-slate-700 text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Follow-ups
+      </a>
+    </nav>
+    <div class="p-3 border-t border-slate-700">
+      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-auto">
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-semibold text-white">Follow-ups Pendentes</h1>
+        <p class="text-xs text-slate-400" id="followUpsCount"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="userEmail" class="text-sm text-slate-400"></span>
+        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold text-white" id="userAvatar">?</div>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Lead</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Tipo</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Agendado para</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="followUpsTable" class="divide-y divide-slate-700">
+            <tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/app.js"></script>
+  <script>
+    const FOLLOW_UP_TYPE_LABELS = {
+      first_contact:     'Primeiro contato',
+      quote_followup:    'Acompanhar cotação',
+      no_response:       'Sem resposta',
+      post_stay:         'Pós-estadia',
+      reengagement:      'Reengajamento',
+    };
+
+    async function init() {
+      const session = await requireAuth();
+      if (!session) return;
+      document.getElementById('userEmail').textContent = session.user.email;
+      document.getElementById('userAvatar').textContent = session.user.email[0].toUpperCase();
+      document.getElementById('logoutBtn').addEventListener('click', logout);
+      loadFollowUps();
+    }
+
+    async function loadFollowUps() {
+      const res = await api('/follow-ups/pending');
+      const tbody = document.getElementById('followUpsTable');
+
+      if (!res.ok) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-amber-400">Erro ao carregar follow-ups</td></tr>';
+        return;
+      }
+
+      const followUps = res.data.follow_ups || [];
+      document.getElementById('followUpsCount').textContent =
+        followUps.length ? `${followUps.length} pendente${followUps.length !== 1 ? 's' : ''}` : 'nenhum pendente';
+
+      if (!followUps.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Nenhum follow-up pendente</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = followUps.map(f => {
+        const leadName = f.lead_name || f.phone || f.lead_id?.slice(0, 8) + '...';
+        const typeLabel = FOLLOW_UP_TYPE_LABELS[f.follow_up_type] || f.follow_up_type || '—';
+        const scheduledFor = f.scheduled_for ? formatDatetime(f.scheduled_for) : '—';
+        const isPast = f.scheduled_for && new Date(f.scheduled_for) < new Date();
+        return `
+          <tr class="hover:bg-slate-700/40 transition-colors" id="row-${f.id}">
+            <td class="px-5 py-3">
+              <p class="font-medium text-white text-sm">${leadName}</p>
+              ${f.lead_funnel_stage ? `<p class="text-xs text-slate-500">${STATUS_LABELS[f.lead_funnel_stage]?.label || f.lead_funnel_stage}</p>` : ''}
+            </td>
+            <td class="px-5 py-3 text-sm text-slate-300">${typeLabel}</td>
+            <td class="px-5 py-3">
+              <span class="text-sm ${isPast ? 'text-amber-400' : 'text-slate-300'}">${scheduledFor}</span>
+              ${isPast ? '<span class="ml-2 text-xs text-amber-500">atrasado</span>' : ''}
+            </td>
+            <td class="px-5 py-3">${statusBadge(f.status)}</td>
+            <td class="px-5 py-3">
+              <button onclick="cancelFollowUp('${f.id}')" class="text-xs text-red-400 hover:text-red-300 transition-colors">Cancelar</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    async function cancelFollowUp(id) {
+      const res = await api(`/follow-ups/${id}/cancel`, { method: 'DELETE' });
+      if (res.ok) {
+        const row = document.getElementById(`row-${id}`);
+        if (row) row.remove();
+        // Update count
+        const tbody = document.getElementById('followUpsTable');
+        const remaining = tbody.querySelectorAll('tr[id^="row-"]').length;
+        document.getElementById('followUpsCount').textContent =
+          remaining ? `${remaining} pendente${remaining !== 1 ? 's' : ''}` : 'nenhum pendente';
+        if (!remaining) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Nenhum follow-up pendente</td></tr>';
+        }
+        toast('Follow-up cancelado');
+      } else {
+        toast('Erro ao cancelar follow-up', 'error');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

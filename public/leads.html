@@ -40,6 +40,10 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         Propostas
       </a>
+      <a href="follow-ups.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Follow-ups
+      </a>
     </nav>
     <div class="p-3 border-t border-slate-700">
       <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
@@ -79,13 +83,15 @@
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Lead</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">WhatsApp</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Status</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Score</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Conversas</th>
+              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Alerta</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Última atividade</th>
               <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Ações</th>
             </tr>
           </thead>
           <tbody id="leadsTable" class="divide-y divide-slate-700">
-            <tr><td colspan="6" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
+            <tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
           </tbody>
         </table>
 
@@ -134,8 +140,65 @@
   <script src="/app.js"></script>
   <script>
     let allLeads = [];
+    let allAlerts = {};   // Map lead_id → alert object
+    const scoreCache = new Map(); // lead_id → label string
     let page = 0;
     const PAGE_SIZE = 20;
+
+    function scoreBadge(label) {
+      const map = {
+        HOT:  { emoji: '🔥', cls: 'bg-red-900/30 text-red-400' },
+        WARM: { emoji: '🟡', cls: 'bg-amber-900/30 text-amber-400' },
+        COOL: { emoji: '🟠', cls: 'bg-orange-900/30 text-orange-400' },
+        COLD: { emoji: '❄️', cls: 'bg-slate-700 text-slate-400' },
+      };
+      const s = map[label];
+      if (!s) return '<span class="text-slate-500 text-xs">—</span>';
+      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}">${s.emoji} ${label}</span>`;
+    }
+
+    async function dismissAlert(leadId) {
+      const res = await api(`/alerts/${leadId}/dismiss`, { method: 'POST' });
+      if (res.ok) {
+        delete allAlerts[leadId];
+        renderTable();
+        toast('Alerta dispensado');
+      } else {
+        toast('Erro ao dispensar alerta', 'error');
+      }
+    }
+
+    async function loadAlerts() {
+      const res = await api('/alerts/active');
+      if (!res.ok) return;
+      allAlerts = {};
+      for (const a of res.data.alerts || []) {
+        allAlerts[a.lead_id] = a;
+      }
+    }
+
+    async function loadScores(leads) {
+      if (!leads.length) return;
+      const BATCH = 5;
+      for (let i = 0; i < leads.length; i += BATCH) {
+        const batch = leads.slice(i, i + BATCH);
+        await Promise.allSettled(batch.map(async lead => {
+          if (scoreCache.has(lead.id)) {
+            const el = document.getElementById(`score-${lead.id}`);
+            if (el) el.innerHTML = scoreBadge(scoreCache.get(lead.id));
+            return;
+          }
+          try {
+            const res = await api(`/leads/${lead.id}/score`);
+            if (res.ok && res.data.label) {
+              scoreCache.set(lead.id, res.data.label);
+              const el = document.getElementById(`score-${lead.id}`);
+              if (el) el.innerHTML = scoreBadge(res.data.label);
+            }
+          } catch {}
+        }));
+      }
+    }
 
     async function init() {
       await requireAuth();
@@ -149,13 +212,16 @@
     }
 
     async function loadLeads() {
-      const res = await api('/leads?limit=200');
-      if (!res.ok) {
+      const [leadsRes] = await Promise.allSettled([
+        api('/leads?limit=200'),
+        loadAlerts(),
+      ]);
+      if (leadsRes.status !== 'fulfilled' || !leadsRes.value.ok) {
         document.getElementById('leadsTable').innerHTML =
-          '<tr><td colspan="6" class="px-5 py-8 text-center text-amber-400">Banco de dados não configurado. Execute as migrations no Supabase.</td></tr>';
+          '<tr><td colspan="8" class="px-5 py-8 text-center text-amber-400">Banco de dados não configurado. Execute as migrations no Supabase.</td></tr>';
         return;
       }
-      allLeads = res.data.leads || [];
+      allLeads = leadsRes.value.data.leads || [];
       renderTable();
     }
 
@@ -182,11 +248,19 @@
 
       if (!paginated.length) {
         document.getElementById('leadsTable').innerHTML =
-          '<tr><td colspan="6" class="px-5 py-8 text-center text-slate-500">Nenhum lead encontrado</td></tr>';
+          '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Nenhum lead encontrado</td></tr>';
         return;
       }
 
-      document.getElementById('leadsTable').innerHTML = paginated.map(l => `
+      document.getElementById('leadsTable').innerHTML = paginated.map(l => {
+        const alert = allAlerts[l.id];
+        const alertCell = alert
+          ? `<div class="flex items-center gap-2">
+               <span class="text-xs text-slate-300 max-w-[110px] truncate" title="${(alert.alert_message || '').replace(/"/g, '&quot;')}">${alert.alert_message || '—'}</span>
+               <button onclick="dismissAlert('${l.id}')" class="shrink-0 text-xs text-red-400 hover:text-red-300 transition-colors">Dispensar</button>
+             </div>`
+          : '<span class="text-slate-500 text-xs">—</span>';
+        return `
         <tr class="hover:bg-slate-700/40 transition-colors">
           <td class="px-5 py-3">
             <p class="font-medium text-white text-sm">${l.name || '<span class="text-slate-500">Sem nome</span>'}</p>
@@ -194,18 +268,23 @@
           </td>
           <td class="px-5 py-3 text-sm text-slate-300">${l.whatsapp_number}</td>
           <td class="px-5 py-3">${statusBadge(l.funnel_stage)}</td>
+          <td class="px-5 py-3" id="score-${l.id}"><span class="text-slate-500 text-xs">…</span></td>
           <td class="px-5 py-3">
             ${l.conversation_count ? `<button onclick="viewConversations('${l.id}', '${l.name || l.whatsapp_number}')" class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors" title="Ver conversa">
               <span class="text-sm">${l.conversation_count}</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </button>` : '<span class="text-slate-500">—</span>'}
           </td>
+          <td class="px-5 py-3">${alertCell}</td>
           <td class="px-5 py-3 text-sm text-slate-400">${relativeTime(l.updated_at)}</td>
           <td class="px-5 py-3">
             <button onclick="viewLead('${l.id}')" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Ver →</button>
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
+
+      // Load scores asynchronously after table is rendered
+      loadScores(paginated);
     }
 
     async function viewLead(id) {
