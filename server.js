@@ -181,6 +181,12 @@ app.use('/api/reservations/confirm',       require('./api/reservations/confirm/r
 app.use('/api/reservations',               require('./api/reservations/route'));
 app.use('/api/payments',                   require('./api/payments/route'));
 
+// ─── Intelligence Layer Routes ──────────────────────────────────────────────────
+app.use('/api',                            require('./api/scoring/route'));
+app.use('/api/analytics',                  require('./api/analytics/route'));
+app.use('/api/follow-ups',                 require('./api/follow-ups/route'));
+app.use('/api/alerts',                     require('./api/alerts/route'));
+
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
 app.use('/webhook', require('./services/whatsapp/webhook'));
 
