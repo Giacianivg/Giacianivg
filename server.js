@@ -307,6 +307,9 @@ app.use((err, req, res, _next) => {
 
 // ─── Boot — only when run directly, not when required by tests ────────────────
 if (require.main === module) {
+  require('./services/follow-up/follow-up-cron').startFollowUpCron();
+  require('./services/follow-up/quote-event-listener').startQuoteEventListener();
+
   const server = app.listen(PORT, () => {
     console.log('');
     console.log(`${C.bold}${C.cyan}🏨 Pousada Luz da Lua — CRM API${C.reset}`);
