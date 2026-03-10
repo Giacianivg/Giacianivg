@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
+  <title>Calendário — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .cal-grid { display: grid; grid-template-columns: 80px repeat(var(--cal-days,31),1fr); gap:2px; font-size:.75rem; }
+    .cal-head-cell { text-align:center; padding:4px 2px; color:var(--tx3); font-size:.7rem; font-weight:600; }
+    .cal-room-label { display:flex; align-items:center; padding:4px 6px; font-size:.75rem; font-weight:600; color:var(--tx2); background:var(--bg2); border-radius:var(--r-sm); }
+    .cal-cell { min-height:44px; cursor:default; }
+    .cal-cell:hover { opacity:.85; }
+    .cal-today-col { background:rgba(230,184,0,.04); }
+    .legend { display:flex; gap:var(--sp-4); align-items:center; flex-wrap:wrap; }
+    .legend-item { display:flex; align-items:center; gap:var(--sp-2); font-size:.75rem; color:var(--tx2); }
+    .legend-dot { width:12px; height:12px; border-radius:3px; border:1px solid; }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Calendário de Ocupação</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" id="prev-month">← Anterior</button>
+        <span id="month-label" style="font-weight:600;min-width:140px;text-align:center"></span>
+        <button class="btn btn-ghost btn-sm" id="next-month">Próximo →</button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="panel" style="margin-bottom:var(--sp-4)">
+        <div class="panel-body" style="padding:var(--sp-4)">
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--bg2);border-color:var(--bdr)"></div>Disponível</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--royal-bg);border-color:var(--royal-bdr)"></div>Ocupado</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--err-bg);border-color:rgba(239,68,68,.3)"></div>Bloqueado</div>
+            <div class="legend-item"><div class="legend-dot" style="border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)"></div>Hoje</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body-flush" style="overflow-x:auto;padding:var(--sp-4)">
+          <div id="cal-container"><div class="skel skel-card" style="height:240px"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+const ROOMS = ['ALA_A', 'ALA_B', 'ALA_C_CASAL', 'ALA_C_GRUPO'];
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+let curYear, curMonth;
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+function isoDate(y,m,d) { return `${y}-${pad2(m+1)}-${pad2(d)}`; }
+
+async function loadCalendar(year, month) {
+  document.getElementById('month-label').textContent = MONTHS_PT[month] + ' ' + year;
+  const cont = document.getElementById('cal-container');
+  cont.innerHTML = '<div class="skel skel-card" style="height:240px"></div>';
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const from = isoDate(year, month, 1);
+  const to   = isoDate(year, month, daysInMonth);
+  const today = new Date().toISOString().slice(0,10);
+
+  let calData = {};
+  try {
+    const res = await DS.api(`/api/availability/calendar?from=${from}&to=${to}`);
+    const rows = res?.calendar || [];
+    rows.forEach(row => { calData[row.date] = row.rooms || {}; });
+  } catch (err) {
+    DS.errorState(cont, err.message);
+    return;
+  }
+
+  const days = Array.from({length: daysInMonth}, (_,i) => i+1);
+
+  cont.style.setProperty('--cal-days', daysInMonth);
+
+  // Header row
+  let html = `<div class="cal-grid" style="--cal-days:${daysInMonth};min-width:${80 + daysInMonth*38}px">`;
+  html += '<div class="cal-head-cell"></div>';
+  days.forEach(d => {
+    const dateStr = isoDate(year, month, d);
+    const isToday = dateStr === today;
+    const dayOfWeek = new Date(dateStr).getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    html += `<div class="cal-head-cell" style="${isToday?'color:var(--gold);font-weight:700':''} ${isWeekend?'color:var(--royal-l)':''}">
+      <div>${d}</div><div style="font-size:.6rem">${DAYS_PT[dayOfWeek]}</div>
+    </div>`;
+  });
+
+  // Room rows
+  ROOMS.forEach(roomKey => {
+    html += `<div class="cal-room-label">${DS.esc(DS.room(roomKey))}</div>`;
+    days.forEach(d => {
+      const dateStr = isoDate(year, month, d);
+      const roomData = (calData[dateStr] || {})[roomKey] || {};
+      const status   = roomData.status || 'available';
+      const isToday  = dateStr === today;
+      const guest    = roomData.guest_name || roomData.guestName || '';
+      const reason   = roomData.block_reason || roomData.blockReason || '';
+      const tip      = guest || reason || status;
+      html += `<div class="cal-cell ${status}${isToday?' today':''}" data-tip="${DS.esc(tip)}">
+        ${guest ? `<div class="cal-guest">${DS.esc(guest.split(' ')[0])}</div>` : ''}
+        ${reason ? `<div class="cal-guest t-err">${DS.esc(reason.slice(0,8))}</div>` : ''}
+      </div>`;
+    });
+  });
+
+  html += '</div>';
+  cont.innerHTML = html;
+}
+
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  DS.initNav();
+  const avEl = document.getElementById('user-avatar');
+  if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
+
+  const now = new Date();
+  curYear  = now.getFullYear();
+  curMonth = now.getMonth();
+  loadCalendar(curYear, curMonth);
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    curMonth--;
+    if (curMonth < 0) { curMonth = 11; curYear--; }
+    loadCalendar(curYear, curMonth);
+  });
+  document.getElementById('next-month').addEventListener('click', () => {
+    curMonth++;
+    if (curMonth > 11) { curMonth = 0; curYear++; }
+    loadCalendar(curYear, curMonth);
+  });
+})();
+</script>
+</body>
+</html>

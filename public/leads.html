@@ -3,417 +3,220 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
-  <title>Leads — Pousada Luz da Lua</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <style>
-    #chatModalBody {
-      scroll-behavior: smooth;
-    }
-  </style>
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
+  <title>Leads — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
 
-  <!-- Sidebar -->
-  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
-    <div class="p-5 border-b border-slate-700">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🌙</span>
-        <div><p class="font-semibold text-white text-sm">Luz da Lua</p><p class="text-xs text-slate-400">CRM</p></div>
-      </div>
-    </div>
-    <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" data-nav="dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-        Dashboard
-      </a>
-      <a href="leads.html" data-nav="leads" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-slate-700 text-white">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Leads
-      </a>
-      <a href="reservations.html" data-nav="reservations" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        Reservas
-      </a>
-      <a href="proposals.html" data-nav="proposals" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Propostas
-      </a>
-      <a href="follow-ups.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Follow-ups
-      </a>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
     </nav>
-    <div class="p-3 border-t border-slate-700">
-      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        Sair
-      </button>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 overflow-auto">
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-      <h1 class="text-lg font-semibold text-white">Leads</h1>
-      <div class="flex items-center gap-3">
-        <!-- Search -->
-        <input type="text" id="searchInput" placeholder="Buscar por nome ou telefone..."
-          class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 w-64">
-        <!-- Status filter -->
-        <select id="statusFilter" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
-          <option value="">Todos status</option>
-          <option value="new">Novos</option>
-          <option value="qualified">Qualificados</option>
-          <option value="proposal">Com proposta</option>
-          <option value="negotiation">Em negociação</option>
-          <option value="confirmed">Confirmados</option>
-          <option value="lost">Perdidos</option>
-        </select>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Leads</h1>
       </div>
     </header>
 
-    <div class="p-6">
-      <!-- Table -->
-      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-slate-700">
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Lead</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">WhatsApp</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Status</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Score</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Conversas</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Alerta</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Última atividade</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="leadsTable" class="divide-y divide-slate-700">
-            <tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
-          </tbody>
-        </table>
-
-        <!-- Pagination -->
-        <div class="px-5 py-3 border-t border-slate-700 flex items-center justify-between text-sm text-slate-400">
-          <span id="paginationInfo"></span>
-          <div class="flex gap-2">
-            <button id="prevBtn" class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
-            <button id="nextBtn" class="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed">Próximo →</button>
+    <main class="page-body">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-wrap" style="max-width:280px;width:100%">
+            <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input" type="search" id="search" placeholder="Buscar nome ou telefone…">
           </div>
+          <select class="select" id="score-filter" style="width:auto">
+            <option value="">Todos os scores</option>
+            <option value="HOT">🔴 Hot</option>
+            <option value="WARM">🟡 Warm</option>
+            <option value="NURTURE">🔵 Nurture</option>
+            <option value="COLD">⚫ Cold</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <span class="t-3" id="leads-count" style="font-size:.8125rem"></span>
         </div>
       </div>
-    </div>
-  </main>
 
-  <!-- Lead detail modal -->
-  <div id="modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[80vh] overflow-auto">
-      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
-        <h2 class="font-semibold text-white" id="modalTitle">Lead</h2>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div class="p-6" id="modalBody">
-        <div class="text-slate-500 text-sm">Carregando...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Conversation viewer modal -->
-  <div id="chatModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[80vh] flex flex-col">
-      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between shrink-0">
-        <h2 class="font-semibold text-white" id="chatModalTitle">Conversa com Luna</h2>
-        <button onclick="closeChatModal()" class="text-slate-400 hover:text-white">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div class="flex-1 overflow-auto p-6 space-y-3" id="chatModalBody">
-        <div class="text-slate-500 text-sm text-center py-8">Carregando mensagens...</div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/app.js"></script>
-  <script>
-    let allLeads = [];
-    let allAlerts = {};   // Map lead_id → alert object
-    const scoreCache = new Map(); // lead_id → label string
-    let page = 0;
-    const PAGE_SIZE = 20;
-
-    function scoreBadge(label) {
-      const map = {
-        HOT:  { emoji: '🔥', cls: 'bg-red-900/30 text-red-400' },
-        WARM: { emoji: '🟡', cls: 'bg-amber-900/30 text-amber-400' },
-        COOL: { emoji: '🟠', cls: 'bg-orange-900/30 text-orange-400' },
-        COLD: { emoji: '❄️', cls: 'bg-slate-700 text-slate-400' },
-      };
-      const s = map[label];
-      if (!s) return '<span class="text-slate-500 text-xs">—</span>';
-      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}">${s.emoji} ${label}</span>`;
-    }
-
-    async function dismissAlert(leadId) {
-      const res = await api(`/alerts/${leadId}/dismiss`, { method: 'POST' });
-      if (res.ok) {
-        delete allAlerts[leadId];
-        renderTable();
-        toast('Alerta dispensado');
-      } else {
-        toast('Erro ao dispensar alerta', 'error');
-      }
-    }
-
-    async function loadAlerts() {
-      const res = await api('/alerts/active');
-      if (!res.ok) return;
-      allAlerts = {};
-      for (const a of res.data.alerts || []) {
-        allAlerts[a.lead_id] = a;
-      }
-    }
-
-    async function loadScores(leads) {
-      if (!leads.length) return;
-      const BATCH = 5;
-      for (let i = 0; i < leads.length; i += BATCH) {
-        const batch = leads.slice(i, i + BATCH);
-        await Promise.allSettled(batch.map(async lead => {
-          if (scoreCache.has(lead.id)) {
-            const el = document.getElementById(`score-${lead.id}`);
-            if (el) el.innerHTML = scoreBadge(scoreCache.get(lead.id));
-            return;
-          }
-          try {
-            const res = await api(`/leads/${lead.id}/score`);
-            if (res.ok && res.data.label) {
-              scoreCache.set(lead.id, res.data.label);
-              const el = document.getElementById(`score-${lead.id}`);
-              if (el) el.innerHTML = scoreBadge(res.data.label);
-            }
-          } catch {}
-        }));
-      }
-    }
-
-    async function init() {
-      await requireAuth();
-      loadLeads();
-
-      document.getElementById('searchInput').addEventListener('input', renderTable);
-      document.getElementById('statusFilter').addEventListener('change', () => { page = 0; renderTable(); });
-      document.getElementById('prevBtn').addEventListener('click', () => { if (page > 0) { page--; renderTable(); } });
-      document.getElementById('nextBtn').addEventListener('click', () => { page++; renderTable(); });
-      document.getElementById('logoutBtn').addEventListener('click', logout);
-    }
-
-    async function loadLeads() {
-      const [leadsRes] = await Promise.allSettled([
-        api('/leads?limit=200'),
-        loadAlerts(),
-      ]);
-      if (leadsRes.status !== 'fulfilled' || !leadsRes.value.ok) {
-        document.getElementById('leadsTable').innerHTML =
-          '<tr><td colspan="8" class="px-5 py-8 text-center text-amber-400">Banco de dados não configurado. Execute as migrations no Supabase.</td></tr>';
-        return;
-      }
-      allLeads = leadsRes.value.data.leads || [];
-      renderTable();
-    }
-
-    function renderTable() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const status = document.getElementById('statusFilter').value;
-
-      let filtered = allLeads.filter(l => {
-        const matchSearch = !search ||
-          (l.name || '').toLowerCase().includes(search) ||
-          (l.whatsapp_number || '').includes(search);
-        const matchStatus = !status || l.funnel_stage === status;
-        return matchSearch && matchStatus;
-      });
-
-      const total = filtered.length;
-      const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-      document.getElementById('paginationInfo').textContent =
-        `${total} lead${total !== 1 ? 's' : ''} · página ${page + 1} de ${Math.ceil(total / PAGE_SIZE) || 1}`;
-
-      document.getElementById('prevBtn').disabled = page === 0;
-      document.getElementById('nextBtn').disabled = (page + 1) * PAGE_SIZE >= total;
-
-      if (!paginated.length) {
-        document.getElementById('leadsTable').innerHTML =
-          '<tr><td colspan="8" class="px-5 py-8 text-center text-slate-500">Nenhum lead encontrado</td></tr>';
-        return;
-      }
-
-      document.getElementById('leadsTable').innerHTML = paginated.map(l => {
-        const alert = allAlerts[l.id];
-        const alertCell = alert
-          ? `<div class="flex items-center gap-2">
-               <span class="text-xs text-slate-300 max-w-[110px] truncate" title="${(alert.alert_message || '').replace(/"/g, '&quot;')}">${alert.alert_message || '—'}</span>
-               <button onclick="dismissAlert('${l.id}')" class="shrink-0 text-xs text-red-400 hover:text-red-300 transition-colors">Dispensar</button>
-             </div>`
-          : '<span class="text-slate-500 text-xs">—</span>';
-        return `
-        <tr class="hover:bg-slate-700/40 transition-colors">
-          <td class="px-5 py-3">
-            <p class="font-medium text-white text-sm">${l.name || '<span class="text-slate-500">Sem nome</span>'}</p>
-            <p class="text-xs text-slate-500">${l.id.slice(0, 8)}...</p>
-          </td>
-          <td class="px-5 py-3 text-sm text-slate-300">${l.whatsapp_number}</td>
-          <td class="px-5 py-3">${statusBadge(l.funnel_stage)}</td>
-          <td class="px-5 py-3" id="score-${l.id}"><span class="text-slate-500 text-xs">…</span></td>
-          <td class="px-5 py-3">
-            ${l.conversation_count ? `<button onclick="viewConversations('${l.id}', '${l.name || l.whatsapp_number}')" class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors" title="Ver conversa">
-              <span class="text-sm">${l.conversation_count}</span>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </button>` : '<span class="text-slate-500">—</span>'}
-          </td>
-          <td class="px-5 py-3">${alertCell}</td>
-          <td class="px-5 py-3 text-sm text-slate-400">${relativeTime(l.updated_at)}</td>
-          <td class="px-5 py-3">
-            <button onclick="viewLead('${l.id}')" class="text-xs text-purple-400 hover:text-purple-300 transition-colors">Ver →</button>
-          </td>
-        </tr>`;
-      }).join('');
-
-      // Load scores asynchronously after table is rendered
-      loadScores(paginated);
-    }
-
-    async function viewLead(id) {
-      document.getElementById('modal').classList.remove('hidden');
-      document.getElementById('modalTitle').textContent = 'Carregando...';
-      document.getElementById('modalBody').innerHTML = '<div class="text-slate-500 text-sm">Carregando...</div>';
-
-      const lead = allLeads.find(l => l.id === id);
-      if (!lead) return;
-
-      document.getElementById('modalTitle').textContent = lead.name || lead.whatsapp_number;
-      document.getElementById('modalBody').innerHTML = `
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div><p class="text-slate-400 mb-0.5">WhatsApp</p><p class="text-white font-mono">${lead.whatsapp_number}</p></div>
-            <div><p class="text-slate-400 mb-0.5">Funil</p>${statusBadge(lead.funnel_stage)}</div>
-            <div><p class="text-slate-400 mb-0.5">Criado em</p><p class="text-white">${formatDatetime(lead.created_at)}</p></div>
-            <div><p class="text-slate-400 mb-0.5">Atualizado</p><p class="text-white">${relativeTime(lead.updated_at)}</p></div>
-          </div>
-
-          <!-- Status update -->
-          <div class="border-t border-slate-700 pt-4">
-            <p class="text-sm font-medium text-slate-300 mb-2">Atualizar status</p>
-            <div class="flex gap-2 flex-wrap">
-              ${['new','qualified','proposal','negotiation','confirmed','lost'].map(s =>
-                `<button onclick="updateStatus('${lead.id}','${s}')" class="px-3 py-1.5 rounded-lg text-xs font-medium border ${lead.funnel_stage === s ? 'border-purple-500 text-purple-300 bg-purple-900/30' : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-200'} transition-colors">${STATUS_LABELS[s]?.label || s}</button>`
-              ).join('')}
-            </div>
-          </div>
+      <div class="panel">
+        <div class="panel-body-flush">
+          <div id="leads-table"><div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:200px"></div></div></div>
         </div>
-      `;
-    }
+        <div class="panel-footer" id="pagination-wrap" style="display:none">
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
 
-    async function updateStatus(leadId, status) {
-      // Update in local array optimistically
-      const lead = allLeads.find(l => l.id === leadId);
-      if (lead) lead.funnel_stage = status;
-      renderTable();
-      closeModal();
-      toast('Status atualizado (requer chamada API PATCH)');
-    }
+<!-- Slide-over -->
+<div id="lead-detail-backdrop" class="slideover-backdrop"></div>
+<div class="slideover" id="lead-detail">
+  <div class="slideover-header">
+    <span class="slideover-title" id="detail-name">Detalhes do Lead</span>
+    <button class="close-btn" onclick="DS.closeSlideOver('lead-detail')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="slideover-body">
+    <div id="detail-content"><div class="skel skel-card" style="height:200px"></div></div>
+    <div class="slideover-section" id="conv-section" style="display:none">
+      <div class="slideover-section-title">Conversa</div>
+      <div class="chat-list" id="chat-list"></div>
+    </div>
+  </div>
+</div>
 
-    function closeModal() {
-      document.getElementById('modal').classList.add('hidden');
-    }
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+const PAGE_SIZE = 20;
+let allLeads = [], filtered = [], page = 1;
 
-    function closeChatModal() {
-      document.getElementById('chatModal').classList.add('hidden');
-    }
+function renderTable(data) {
+  const cont = document.getElementById('leads-table');
+  if (!data.length) {
+    DS.emptyState(cont, 'Nenhum lead', 'Não há leads com esse filtro.', '');
+    return;
+  }
+  const start = (page - 1) * PAGE_SIZE;
+  const slice = data.slice(start, start + PAGE_SIZE);
+  cont.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th>Nome</th><th>Telefone</th><th>Score</th><th>Último contato</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${slice.map(l => `<tr>
+        <td><div class="row" style="gap:var(--sp-2)">
+          <div class="avatar avatar-sm">${DS.initials(l.name || l.nome)}</div>
+          <span>${DS.esc(l.name || l.nome || '—')}</span>
+        </div></td>
+        <td class="td-mono td-muted">${DS.esc(l.phone || l.telefone || '—')}</td>
+        <td>${DS.scoreBadge(l.score_label || l.score_label || l.score)}</td>
+        <td class="td-muted">${DS.rel(l.last_message_at || l.updated_at)}</td>
+        <td class="td-action">
+          <button class="btn btn-ghost btn-sm" onclick="openDetail(${JSON.stringify(l).replace(/"/g,'&quot;')})">Ver →</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
 
-    async function viewConversations(leadId, leadName) {
-      document.getElementById('chatModal').classList.remove('hidden');
-      document.getElementById('chatModalTitle').textContent = `Conversa: ${leadName}`;
-      document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Carregando mensagens...</div>';
+  renderPagination(data.length);
+}
 
-      const res = await api(`/conversations?lead_id=${leadId}&limit=10000`);
-      if (!res.ok || !res.data.conversations) {
-        document.getElementById('chatModalBody').innerHTML = '<div class="text-red-400 text-sm text-center py-8">Erro ao carregar conversas</div>';
-        return;
+function renderPagination(total) {
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const wrap = document.getElementById('pagination-wrap');
+  if (pages <= 1) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = `
+    <button class="page-btn" onclick="changePage(${page-1})" ${page===1?'disabled':''}>← Anterior</button>
+    <span class="page-info">${page} / ${pages}</span>
+    <button class="page-btn" onclick="changePage(${page+1})" ${page>=pages?'disabled':''}>Próxima →</button>`;
+}
+
+function changePage(p) { page = p; renderTable(filtered); }
+
+function applyFilter() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const s = document.getElementById('score-filter').value;
+  filtered = allLeads.filter(l => {
+    const name  = (l.name || l.nome || '').toLowerCase();
+    const phone = (l.phone || l.telefone || '').toLowerCase();
+    const score = l.score_label || l.score || '';
+    return (!q || name.includes(q) || phone.includes(q)) && (!s || score === s);
+  });
+  page = 1;
+  document.getElementById('leads-count').textContent = filtered.length + ' leads';
+  renderTable(filtered);
+}
+
+async function openDetail(lead) {
+  document.getElementById('detail-name').textContent = lead.name || lead.nome || 'Lead';
+  DS.openSlideOver('lead-detail');
+  document.getElementById('conv-section').style.display = 'none';
+
+  const phone = lead.phone || lead.telefone || '';
+  document.getElementById('detail-content').innerHTML = `
+    <div class="slideover-section">
+      <div class="detail-row"><span class="detail-key">Nome</span><span class="detail-val">${DS.esc(lead.name || lead.nome || '—')}</span></div>
+      <div class="detail-row"><span class="detail-key">Telefone</span><span class="detail-val td-mono">${DS.esc(phone)}</span></div>
+      <div class="detail-row"><span class="detail-key">Score</span><span class="detail-val">${DS.scoreBadge(lead.score_label || lead.score)}</span></div>
+      <div class="detail-row"><span class="detail-key">Última msg</span><span class="detail-val">${DS.rel(lead.last_message_at || lead.updated_at)}</span></div>
+      <div class="detail-row"><span class="detail-key">Criado em</span><span class="detail-val">${DS.date(lead.created_at)}</span></div>
+    </div>`;
+
+  if (phone) {
+    try {
+      const convRes = await DS.api(`/api/conversations?phone=${encodeURIComponent(phone)}&limit=30`);
+      const msgs = convRes?.messages || convRes?.conversations || convRes || [];
+      if (msgs.length) {
+        const chatEl = document.getElementById('chat-list');
+        chatEl.innerHTML = msgs.slice().reverse().map(m => {
+          const cls = m.role === 'assistant' || m.role === 'luna' ? 'luna'
+                    : m.role === 'equipe' || m.role === 'team' ? 'team'
+                    : 'guest';
+          return `<div><div class="chat-bubble ${cls}">${DS.esc(m.content || m.message || '')}</div>
+            <div class="chat-ts">${DS.datetime(m.created_at || m.timestamp)}</div></div>`;
+        }).join('');
+        document.getElementById('conv-section').style.display = '';
       }
+    } catch {}
+  }
+}
 
-      const conversations = res.data.conversations;
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  DS.initNav();
 
-      console.log(`%c[viewConversations] ✅ Received ${conversations.length} messages for lead ${leadId}`, 'color: green; font-weight: bold');
+  const avEl = document.getElementById('user-avatar');
+  if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
 
-      if (conversations.length > 0) {
-        console.table(conversations.slice(-5).map(m => ({
-          role: m.role,
-          content: m.content.substring(0, 40) + '...',
-          created_at: m.created_at,
-          id: m.id.substring(0, 8) + '...',
-        })));
-      }
+  try {
+    const res = await DS.api('/api/leads?limit=500');
+    allLeads = res?.leads || res?.data || (Array.isArray(res) ? res : []);
+    filtered = [...allLeads];
+    document.getElementById('leads-count').textContent = filtered.length + ' leads';
+    renderTable(filtered);
+  } catch (err) {
+    DS.errorState('leads-table', err.message);
+  }
 
-      if (!conversations.length) {
-        document.getElementById('chatModalBody').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Nenhuma mensagem ainda</div>';
-        return;
-      }
-
-      // Garantir ordem cronológica por timestamp + id (como tiebreaker para colisões)
-      console.log('%c[viewConversations] Sorting by created_at ASC, then id ASC...', 'color: blue');
-      conversations.sort((a, b) => {
-        const timeA = new Date(a.created_at).getTime();
-        const timeB = new Date(b.created_at).getTime();
-        if (timeA !== timeB) return timeA - timeB;
-        return a.id.localeCompare(b.id);
-      });
-
-      console.log(`%c[viewConversations] ✅ After sort: first=${conversations[0].role} at ${conversations[0].created_at}, last=${conversations[conversations.length - 1].role} at ${conversations[conversations.length - 1].created_at}`, 'color: green');
-
-      document.getElementById('chatModalBody').innerHTML = conversations.map(msg => {
-        const isUser = msg.role === 'user'; // true = Cliente, false = Luna
-        // Cliente (cinza, esquerda) | Luna (roxo, direita)
-        return `
-          <div class="flex gap-2 ${isUser ? 'justify-start' : 'justify-end'} mb-2">
-            <div class="flex flex-col ${isUser ? 'items-start' : 'items-end'} max-w-xs">
-              <div class="${isUser
-                ? 'bg-slate-600 text-white rounded-3xl rounded-tl-none'
-                : 'bg-purple-600 text-white rounded-3xl rounded-tr-none'} px-4 py-2.5 text-sm leading-relaxed">
-                ${escapeHtml(msg.content)}
-              </div>
-              <span class="text-xs text-slate-400 mt-1 px-2">${formatDatetime(msg.created_at)}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Auto-scroll para a última mensagem (como WhatsApp)
-      const chatBody = document.getElementById('chatModalBody');
-      setTimeout(() => {
-        chatBody.scrollTop = chatBody.scrollHeight;
-      }, 0);
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    document.getElementById('modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('modal')) closeModal();
-    });
-
-    document.getElementById('chatModal').addEventListener('click', e => {
-      if (e.target === document.getElementById('chatModal')) closeChatModal();
-    });
-
-    init();
-  </script>
+  document.getElementById('search').addEventListener('input', applyFilter);
+  document.getElementById('score-filter').addEventListener('change', applyFilter);
+})();
+</script>
 </body>
 </html>

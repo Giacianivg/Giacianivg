@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
-  <title>Propostas — Luz da Lua</title>
+  <title>Reservas — Luz da Lua</title>
   <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
   <link rel="stylesheet" href="design-system/t.css">
   <link rel="stylesheet" href="design-system/c.css">
@@ -43,33 +43,30 @@
     <header class="topbar">
       <div class="topbar-left">
         <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-        <h1 class="page-title">Propostas</h1>
-      </div>
-      <div class="topbar-right">
-        <span class="t-3" id="prop-count" style="font-size:.8125rem"></span>
+        <h1 class="page-title">Reservas</h1>
       </div>
     </header>
 
     <main class="page-body">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <select class="select" id="status-filter" style="width:auto">
-            <option value="">Todos os status</option>
-            <option value="draft">Rascunho</option>
-            <option value="sent">Enviada</option>
-            <option value="accepted">Aceita</option>
-            <option value="expired">Expirada</option>
-          </select>
-        </div>
+      <!-- Summary cards -->
+      <div class="g4" id="summary-cards" style="margin-bottom:var(--sp-5)">
+        <div class="skel skel-card" style="height:80px"></div>
+        <div class="skel skel-card" style="height:80px"></div>
+        <div class="skel skel-card" style="height:80px"></div>
+        <div class="skel skel-card" style="height:80px"></div>
       </div>
 
-      <div class="g3" id="proposals-grid">
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
+      <div id="tabs-root">
+        <div class="tabs-list">
+          <button class="tab-btn active" data-tab="tab-all">Todas</button>
+          <button class="tab-btn" data-tab="tab-confirmed">Confirmadas</button>
+          <button class="tab-btn" data-tab="tab-pending">Pendentes</button>
+          <button class="tab-btn" data-tab="tab-cancelled">Canceladas</button>
+        </div>
+        <div class="tab-panel active" id="tab-all"><div class="panel"><div class="panel-body-flush" id="tbl-all"><div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:180px"></div></div></div></div></div>
+        <div class="tab-panel" id="tab-confirmed"><div class="panel"><div class="panel-body-flush" id="tbl-confirmed"></div></div></div>
+        <div class="tab-panel" id="tab-pending"><div class="panel"><div class="panel-body-flush" id="tbl-pending"></div></div></div>
+        <div class="tab-panel" id="tab-cancelled"><div class="panel"><div class="panel-body-flush" id="tbl-cancelled"></div></div></div>
       </div>
     </main>
   </div>
@@ -78,57 +75,53 @@
 <div id="toast-container"></div>
 <script src="design-system/u.js"></script>
 <script>
-let allProps = [], filtered = [];
-
-function renderGrid(list) {
-  const el = document.getElementById('proposals-grid');
-  document.getElementById('prop-count').textContent = list.length + ' propostas';
-  if (!list.length) { DS.emptyState(el, 'Nenhuma proposta', 'Propostas aparecem quando Luna cota automaticamente.', ''); return; }
-  el.innerHTML = list.map(p => {
-    const nights = p.nights || p.num_nights || '';
-    const room   = DS.room(p.room_type || p.roomType || p.accommodation);
-    const checkin = DS.date(p.check_in || p.checkIn);
-    const checkout = DS.date(p.check_out || p.checkOut);
-    const countdown = (p.expires_at || p.expiresAt) ? DS.countdownBadge(p.expires_at || p.expiresAt) : '';
-    return `<div class="proposal-card">
-      <div class="row-between">
-        <div>
-          <div class="prop-value">${DS.cur(p.total_amount || p.totalAmount || p.total)}</div>
-          <div class="prop-meta">${nights ? nights + ' noite' + (nights > 1 ? 's' : '') + ' · ' : ''}${DS.esc(room)}</div>
-        </div>
-        ${DS.statusBadge(p.status)}
-      </div>
-      <div class="prop-meta t-2">${DS.esc(p.guest_name || p.guestName || '—')}</div>
-      <div class="prop-meta">${checkin} → ${checkout}</div>
-      ${countdown ? `<div>${countdown}</div>` : ''}
-      <div class="prop-actions">
-        <span class="t-3" style="font-size:.75rem">${DS.rel(p.created_at)}</span>
-      </div>
-    </div>`;
-  }).join('');
+function resTable(list, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!list.length) { DS.emptyState(el, 'Nenhuma reserva', 'Sem reservas nesta categoria.', ''); return; }
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Hóspede</th><th>Acomodação</th><th>Entrada</th><th>Saída</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody>${list.map(r => `<tr>
+      <td>${DS.esc(r.guest_name || r.guestName || '—')}</td>
+      <td>${DS.esc(DS.room(r.room_type || r.roomType || r.accommodation))}</td>
+      <td class="td-mono">${DS.date(r.check_in || r.checkIn)}</td>
+      <td class="td-mono">${DS.date(r.check_out || r.checkOut)}</td>
+      <td class="t-serif" style="font-family:var(--f-serif);color:var(--gold)">${DS.cur(r.total_amount || r.totalAmount || r.total)}</td>
+      <td>${DS.statusBadge(r.status)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
 }
 
 (async () => {
   const session = await DS.requireAuth();
   if (!session) return;
   DS.initNav();
+  DS.initTabs('tabs-root');
   const avEl = document.getElementById('user-avatar');
   if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
 
   try {
-    const res = await DS.api('/api/proposals');
-    allProps = res?.proposals || res?.data || (Array.isArray(res) ? res : []);
-    filtered = [...allProps];
-    renderGrid(filtered);
-  } catch (err) {
-    DS.errorState('proposals-grid', err.message);
-  }
+    const res = await DS.api('/api/reservations');
+    const all  = res?.reservations || res?.data || (Array.isArray(res) ? res : []);
 
-  document.getElementById('status-filter').addEventListener('change', (e) => {
-    const v = e.target.value;
-    filtered = v ? allProps.filter(p => p.status === v) : [...allProps];
-    renderGrid(filtered);
-  });
+    const confirmed = all.filter(r => r.status === 'confirmed');
+    const pending   = all.filter(r => r.status === 'pending');
+    const cancelled = all.filter(r => r.status === 'cancelled');
+    const revenue   = confirmed.reduce((s,r) => s + parseFloat(r.total_amount || r.total || 0), 0);
+
+    document.getElementById('summary-cards').innerHTML = `
+      <div class="metric-card"><div class="metric-label">Total</div><div class="metric-value">${all.length}</div></div>
+      <div class="metric-card"><div class="metric-label">Confirmadas</div><div class="metric-value t-ok">${confirmed.length}</div></div>
+      <div class="metric-card"><div class="metric-label">Pendentes</div><div class="metric-value t-warn">${pending.length}</div></div>
+      <div class="metric-card"><div class="metric-label">Receita</div><div class="metric-value t-serif" style="font-size:1.5rem;font-family:var(--f-serif);color:var(--gold)">${DS.cur(revenue)}</div></div>`;
+
+    resTable(all, 'tbl-all');
+    resTable(confirmed, 'tbl-confirmed');
+    resTable(pending, 'tbl-pending');
+    resTable(cancelled, 'tbl-cancelled');
+  } catch (err) {
+    DS.errorState('tbl-all', err.message);
+  }
 })();
 </script>
 </body>

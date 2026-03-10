@@ -3,165 +3,139 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
-  <title>Follow-ups — Pousada Luz da Lua</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
+  <title>Follow-ups — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
 
-  <!-- Sidebar -->
-  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
-    <div class="p-5 border-b border-slate-700">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🌙</span>
-        <div><p class="font-semibold text-white text-sm">Luz da Lua</p><p class="text-xs text-slate-400">CRM</p></div>
-      </div>
-    </div>
-    <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-        Dashboard
-      </a>
-      <a href="leads.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Leads
-      </a>
-      <a href="reservations.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        Reservas
-      </a>
-      <a href="proposals.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        Propostas
-      </a>
-      <a href="follow-ups.html" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-slate-700 text-white">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Follow-ups
-      </a>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
     </nav>
-    <div class="p-3 border-t border-slate-700">
-      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        Sair
-      </button>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
     </div>
   </aside>
 
-  <!-- Main -->
-  <main class="flex-1 overflow-auto">
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-semibold text-white">Follow-ups Pendentes</h1>
-        <p class="text-xs text-slate-400" id="followUpsCount"></p>
-      </div>
-      <div class="flex items-center gap-3">
-        <span id="userEmail" class="text-sm text-slate-400"></span>
-        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold text-white" id="userAvatar">?</div>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Follow-ups</h1>
       </div>
     </header>
 
-    <div class="p-6">
-      <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-slate-700">
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Lead</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Tipo</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Agendado para</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Status</th>
-              <th class="text-left px-5 py-3 text-xs font-medium text-slate-400 uppercase tracking-wide">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="followUpsTable" class="divide-y divide-slate-700">
-            <tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Carregando...</td></tr>
-          </tbody>
-        </table>
+    <main class="page-body">
+      <div id="fu-content">
+        <div class="skel skel-card" style="height:200px"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+const FU_LABELS = {
+  quote_followup: 'Follow-up de cotação',
+  no_response:    'Sem resposta',
+  post_stay:      'Pós-estadia',
+  reengagement:   'Reengajamento',
+  manual:         'Manual',
+};
+
+function renderGroup(title, list, badgeClass) {
+  if (!list.length) return '';
+  return `<div style="margin-bottom:var(--sp-6)">
+    <div class="row-between" style="margin-bottom:var(--sp-3)">
+      <h2 style="font-size:.9375rem;font-weight:600;color:var(--tx1)">${DS.esc(title)}</h2>
+      <span class="badge ${badgeClass}">${list.length}</span>
+    </div>
+    <div class="panel">
+      <div class="panel-body-flush">
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Hóspede</th><th>Tipo</th><th>Agendado para</th><th>Criado em</th><th></th></tr></thead>
+          <tbody>${list.map(f => `<tr>
+            <td><div class="row" style="gap:var(--sp-2)">
+              <div class="avatar avatar-sm">${DS.initials(f.guest_name || f.guestName)}</div>
+              <div>
+                <div>${DS.esc(f.guest_name || f.guestName || f.phone || '—')}</div>
+                <div class="t-3" style="font-size:.75rem">${DS.esc(f.phone || '')}</div>
+              </div>
+            </div></td>
+            <td><span class="badge badge-sent">${DS.esc(FU_LABELS[f.type || f.follow_up_type] || f.type || '—')}</span></td>
+            <td class="td-mono">${DS.datetime(f.scheduled_at || f.scheduledAt)}</td>
+            <td class="td-muted">${DS.rel(f.created_at)}</td>
+            <td class="td-action">
+              <button class="btn btn-danger btn-sm" onclick="cancelFU('${DS.esc(f.id)}', this)">Cancelar</button>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table></div>
       </div>
     </div>
-  </main>
+  </div>`;
+}
 
-  <script src="/app.js"></script>
-  <script>
-    const FOLLOW_UP_TYPE_LABELS = {
-      first_contact:     'Primeiro contato',
-      quote_followup:    'Acompanhar cotação',
-      no_response:       'Sem resposta',
-      post_stay:         'Pós-estadia',
-      reengagement:      'Reengajamento',
-    };
+async function cancelFU(id, btn) {
+  if (!confirm('Cancelar este follow-up?')) return;
+  btn.disabled = true;
+  try {
+    await DS.api(`/api/follow-ups/${id}/cancel`, { method: 'DELETE' });
+    DS.toast('Follow-up cancelado.', 'ok');
+    btn.closest('tr').remove();
+  } catch (err) {
+    DS.toast(err.message, 'err');
+    btn.disabled = false;
+  }
+}
 
-    async function init() {
-      const session = await requireAuth();
-      if (!session) return;
-      document.getElementById('userEmail').textContent = session.user.email;
-      document.getElementById('userAvatar').textContent = session.user.email[0].toUpperCase();
-      document.getElementById('logoutBtn').addEventListener('click', logout);
-      loadFollowUps();
-    }
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  DS.initNav();
+  const avEl = document.getElementById('user-avatar');
+  if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
 
-    async function loadFollowUps() {
-      const res = await api('/follow-ups/pending');
-      const tbody = document.getElementById('followUpsTable');
+  const el = document.getElementById('fu-content');
+  try {
+    const res = await DS.api('/api/follow-ups/pending');
+    const all = res?.follow_ups || res?.followUps || res?.data || (Array.isArray(res) ? res : []);
 
-      if (!res.ok) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-amber-400">Erro ao carregar follow-ups</td></tr>';
-        return;
-      }
+    if (!all.length) { DS.emptyState(el, 'Nenhum follow-up pendente', 'Luna gerencia os follow-ups automaticamente.', ''); return; }
 
-      const followUps = res.data.follow_ups || [];
-      document.getElementById('followUpsCount').textContent =
-        followUps.length ? `${followUps.length} pendente${followUps.length !== 1 ? 's' : ''}` : 'nenhum pendente';
+    const now = Date.now();
+    const overdue  = all.filter(f => new Date(f.scheduled_at || f.scheduledAt).getTime() < now);
+    const upcoming = all.filter(f => new Date(f.scheduled_at || f.scheduledAt).getTime() >= now);
 
-      if (!followUps.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Nenhum follow-up pendente</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = followUps.map(f => {
-        const leadName = f.lead_name || f.phone || f.lead_id?.slice(0, 8) + '...';
-        const typeLabel = FOLLOW_UP_TYPE_LABELS[f.follow_up_type] || f.follow_up_type || '—';
-        const scheduledFor = f.scheduled_for ? formatDatetime(f.scheduled_for) : '—';
-        const isPast = f.scheduled_for && new Date(f.scheduled_for) < new Date();
-        return `
-          <tr class="hover:bg-slate-700/40 transition-colors" id="row-${f.id}">
-            <td class="px-5 py-3">
-              <p class="font-medium text-white text-sm">${leadName}</p>
-              ${f.lead_funnel_stage ? `<p class="text-xs text-slate-500">${STATUS_LABELS[f.lead_funnel_stage]?.label || f.lead_funnel_stage}</p>` : ''}
-            </td>
-            <td class="px-5 py-3 text-sm text-slate-300">${typeLabel}</td>
-            <td class="px-5 py-3">
-              <span class="text-sm ${isPast ? 'text-amber-400' : 'text-slate-300'}">${scheduledFor}</span>
-              ${isPast ? '<span class="ml-2 text-xs text-amber-500">atrasado</span>' : ''}
-            </td>
-            <td class="px-5 py-3">${statusBadge(f.status)}</td>
-            <td class="px-5 py-3">
-              <button onclick="cancelFollowUp('${f.id}')" class="text-xs text-red-400 hover:text-red-300 transition-colors">Cancelar</button>
-            </td>
-          </tr>`;
-      }).join('');
-    }
-
-    async function cancelFollowUp(id) {
-      const res = await api(`/follow-ups/${id}/cancel`, { method: 'DELETE' });
-      if (res.ok) {
-        const row = document.getElementById(`row-${id}`);
-        if (row) row.remove();
-        // Update count
-        const tbody = document.getElementById('followUpsTable');
-        const remaining = tbody.querySelectorAll('tr[id^="row-"]').length;
-        document.getElementById('followUpsCount').textContent =
-          remaining ? `${remaining} pendente${remaining !== 1 ? 's' : ''}` : 'nenhum pendente';
-        if (!remaining) {
-          tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500">Nenhum follow-up pendente</td></tr>';
-        }
-        toast('Follow-up cancelado');
-      } else {
-        toast('Erro ao cancelar follow-up', 'error');
-      }
-    }
-
-    init();
-  </script>
+    el.innerHTML =
+      renderGroup('Vencidos', overdue, 'badge-hot') +
+      renderGroup('Próximos', upcoming, 'badge-pending');
+  } catch (err) {
+    DS.errorState(el, err.message);
+  }
+})();
+</script>
 </body>
 </html>

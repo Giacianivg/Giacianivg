@@ -3,387 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
-  <title>Dashboard — Pousada Luz da Lua</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
+  <title>Dashboard — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex">
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
 
+<div class="app-shell">
   <!-- Sidebar -->
-  <aside class="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
-    <div class="p-5 border-b border-slate-700">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl">🌙</span>
-        <div>
-          <p class="font-semibold text-white text-sm">Luz da Lua</p>
-          <p class="text-xs text-slate-400">CRM</p>
-        </div>
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/>
+        <path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-name">Luz da Lua</div>
+        <div class="sidebar-brand-sub">Operações</div>
       </div>
-    </div>
+    </a>
 
-    <nav class="flex-1 p-3 space-y-1">
-      <a href="dashboard.html" data-nav="dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors bg-slate-700 text-white">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Dashboard
       </a>
-      <a href="leads.html" data-nav="leads" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <a class="nav-link" href="leads.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         Leads
       </a>
-      <a href="reservations.html" data-nav="reservations" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <a class="nav-link" href="bookings.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Reservas
       </a>
-      <a href="proposals.html" data-nav="proposals" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <a class="nav-link" href="proposals.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Propostas
       </a>
-      <a href="follow-ups.html" data-nav="follow-ups" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <a class="nav-link" href="follow-ups.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Follow-ups
+      </a>
+      <a class="nav-link" href="calendar.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/></svg>
+        Calendário
       </a>
     </nav>
 
-    <div class="p-3 border-t border-slate-700">
-      <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        Sair
-      </button>
+    <div class="sidebar-footer">
+      <div class="theme-toggle">
+        <span>Tema claro</span>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Alternar tema"></button>
+      </div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-email" data-user-email></div>
+        </div>
+        <button class="btn-ghost btn btn-icon" data-action="logout" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
     </div>
   </aside>
 
   <!-- Main -->
-  <main class="flex-1 overflow-auto">
-    <!-- Header -->
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-semibold text-white">Dashboard</h1>
-        <p class="text-xs text-slate-400" id="headerDate"></p>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="page-title">Dashboard</h1>
       </div>
-      <div class="flex items-center gap-3">
-        <span id="userEmail" class="text-sm text-slate-400"></span>
-        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold text-white" id="userAvatar">?</div>
+      <div class="topbar-right">
+        <span class="t-3" style="font-size:.8125rem" id="last-updated"></span>
       </div>
     </header>
 
-    <div class="p-6 space-y-6">
-
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Leads Ativos</p>
-          <p class="text-3xl font-bold text-white" id="kpiLeads">—</p>
-          <p class="text-xs text-slate-500 mt-1" id="kpiLeadsNew"></p>
-        </div>
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Reservas (30d)</p>
-          <p class="text-3xl font-bold text-white" id="kpiReservations">—</p>
-          <p class="text-xs text-slate-500 mt-1" id="kpiReservationsStatus"></p>
-        </div>
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Receita (30d)</p>
-          <p class="text-3xl font-bold text-white" id="kpiRevenue">—</p>
-          <p class="text-xs text-slate-500 mt-1">reservas confirmadas</p>
-        </div>
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Propostas Ativas</p>
-          <p class="text-3xl font-bold text-white" id="kpiProposals">—</p>
-          <p class="text-xs text-slate-500 mt-1" id="kpiProposalsExpiring"></p>
-        </div>
+    <main class="page-body">
+      <!-- KPI Row -->
+      <div class="g4" id="kpi-row" style="margin-bottom:var(--sp-6)">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
       </div>
 
-      <!-- Quick actions + Recent -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Recent leads -->
-        <div class="lg:col-span-2 bg-slate-800 rounded-xl border border-slate-700">
-          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 class="font-semibold text-white">Leads Recentes</h2>
-            <a href="leads.html" class="text-xs text-purple-400 hover:text-purple-300">Ver todos →</a>
+      <div class="g2-1" style="margin-bottom:var(--sp-6)">
+        <!-- Funnel -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Funil de Conversão</span>
+            <a href="leads.html" class="btn btn-ghost btn-sm">Ver leads →</a>
           </div>
-          <div id="recentLeads" class="divide-y divide-slate-700">
-            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
+          <div class="panel-body" id="funnel-panel">
+            <div class="skel skel-card" style="height:160px"></div>
           </div>
         </div>
 
-        <!-- Upcoming reservations -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700">
-          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 class="font-semibold text-white">Próximas Entradas</h2>
-            <a href="reservations.html" class="text-xs text-purple-400 hover:text-purple-300">Ver →</a>
+        <!-- Alerts -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Alertas</span>
+            <span class="badge badge-err" id="alert-count" style="display:none"></span>
           </div>
-          <div id="upcomingReservations" class="divide-y divide-slate-700">
-            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
+          <div class="panel-body" id="alerts-panel" style="padding:0">
+            <div style="padding:var(--sp-4)"><div class="skel skel-text"></div></div>
           </div>
         </div>
       </div>
 
-      <!-- Intelligence Row 1: Revenue Pipeline + Gargalo -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Receita em Pipeline</p>
-          <p class="text-3xl font-bold text-white" id="kpiPipeline">—</p>
-          <p class="text-xs text-slate-500 mt-1">ponderado por probabilidade</p>
+      <!-- Recent Leads -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Leads Recentes</span>
+          <a href="leads.html" class="btn btn-ghost btn-sm">Ver todos →</a>
         </div>
-        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700">
-          <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Gargalo Atual</p>
-          <p class="text-xl font-bold text-white" id="kpiBottleneck">—</p>
-          <p class="text-xs text-slate-500 mt-1" id="kpiBottleneckCount"></p>
+        <div class="panel-body-flush">
+          <div id="leads-table"><div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:120px"></div></div></div>
         </div>
       </div>
+    </main>
+  </div>
+</div>
 
-      <!-- Intelligence Row 2: Funil + Alertas -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Funil visual -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700">
-          <div class="px-5 py-4 border-b border-slate-700">
-            <h2 class="font-semibold text-white">Funil de Leads</h2>
-          </div>
-          <div id="funnelWidget" class="p-5 space-y-3">
-            <div class="text-slate-500 text-sm">Carregando...</div>
-          </div>
-        </div>
-        <!-- Alertas ativos -->
-        <div class="bg-slate-800 rounded-xl border border-slate-700">
-          <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 class="font-semibold text-white">Alertas Ativos</h2>
-            <span id="alertsCount" class="text-xs text-slate-400"></span>
-          </div>
-          <div id="alertsWidget" class="divide-y divide-slate-700">
-            <div class="px-5 py-4 text-slate-500 text-sm">Carregando...</div>
-          </div>
-        </div>
-      </div>
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  DS.initNav();
 
-      <!-- DB status warning -->
-      <div id="dbWarning" class="hidden bg-amber-900/30 border border-amber-700 rounded-xl p-4">
-        <div class="flex items-start gap-3">
-          <span class="text-xl">⚠️</span>
-          <div>
-            <p class="font-medium text-amber-300">Banco de dados não configurado</p>
-            <p class="text-sm text-amber-400/80 mt-1">
-              As tabelas do Supabase ainda não foram criadas. Execute as migrations via
-              <a href="https://app.supabase.com/project/vwgqhonbbiqubuahkyij/sql/new" target="_blank" class="underline hover:text-amber-200">Supabase Dashboard</a>:
-              execute <code class="bg-amber-900/50 px-1 rounded">001_schema_initial.sql</code> e depois <code class="bg-amber-900/50 px-1 rounded">002_calendar_seed.sql</code>.
-            </p>
-          </div>
-        </div>
-      </div>
+  // Set user avatar initials
+  const email = session.user.email || '';
+  const avEl = document.getElementById('user-avatar');
+  if (avEl) avEl.textContent = email.slice(0,2).toUpperCase();
 
+  const now = new Date();
+  document.getElementById('last-updated').textContent = 'Atualizado ' + DS.datetime(now);
+
+  // Load all in parallel
+  const [leadsRes, funnelRes, pipelineRes, alertsRes] = await Promise.allSettled([
+    DS.api('/api/leads?limit=8'),
+    DS.api('/api/analytics/funnel'),
+    DS.api('/api/analytics/revenue/pipeline'),
+    DS.api('/api/alerts/active')
+  ]);
+
+  // KPI row
+  const pipeline = pipelineRes.status === 'fulfilled' ? pipelineRes.value : null;
+  const leads    = leadsRes.status === 'fulfilled' ? leadsRes.value : null;
+  const funnel   = funnelRes.status === 'fulfilled' ? funnelRes.value : null;
+
+  const totalLeads    = leads?.total ?? leads?.leads?.length ?? '—';
+  const pipelineVal   = pipeline?.total_pipeline ?? pipeline?.pipeline ?? '—';
+  const convRate      = funnel?.conversion_rate ?? funnel?.conversionRate ?? '—';
+  const confirmedRes  = pipeline?.confirmed_count ?? pipeline?.confirmed ?? '—';
+
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">Leads Ativos</div>
+      <div class="metric-value">${typeof totalLeads === 'number' ? totalLeads : totalLeads}</div>
+      <div class="metric-sub">Total no funil</div>
     </div>
-  </main>
+    <div class="metric-card">
+      <div class="metric-label">Pipeline</div>
+      <div class="metric-value t-serif" style="font-size:1.5rem">${typeof pipelineVal === 'number' ? DS.cur(pipelineVal) : '—'}</div>
+      <div class="metric-sub">Valor em negociação</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Taxa de Conversão</div>
+      <div class="metric-value">${typeof convRate === 'number' ? convRate.toFixed(1) + '%' : '—'}</div>
+      <div class="metric-sub">Lead → Reserva</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Reservas Confirmadas</div>
+      <div class="metric-value t-ok">${confirmedRes}</div>
+      <div class="metric-sub">Este mês</div>
+    </div>`;
 
-  <script src="/app.js"></script>
-  <script>
-    const today = new Date();
-    document.getElementById('headerDate').textContent = today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-
-    async function init() {
-      const session = await requireAuth();
-      if (!session) return;
-
-      const email = session.user.email;
-      document.getElementById('userEmail').textContent = email;
-      document.getElementById('userAvatar').textContent = email[0].toUpperCase();
-
-      loadKPIs();
-      loadRecentLeads();
-      loadUpcomingReservations();
-      loadIntelligence();
-    }
-
-    async function loadKPIs() {
-      const since30 = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-
-      // Reservations
-      const res = await api(`/reservations?limit=100&checkin_from=${since30}`);
-      if (!res.ok) { showDbWarning(); return; }
-
-      const reservations = res.data.reservations || [];
-      const confirmed = reservations.filter(r => r.status === 'confirmed');
-      const revenue = confirmed.reduce((sum, r) => sum + Number(r.total_amount || 0), 0);
-
-      document.getElementById('kpiReservations').textContent = reservations.length;
-      document.getElementById('kpiReservationsStatus').textContent = `${confirmed.length} confirmadas`;
-      document.getElementById('kpiRevenue').textContent = formatCurrency(revenue);
-
-      // Leads
-      const leadsRes = await api('/leads?limit=200');
-      if (leadsRes.ok) {
-        const leads = leadsRes.data.leads || [];
-        const active = leads.filter(l => l.status !== 'lost');
-        const newOnes = leads.filter(l => l.status === 'new');
-        document.getElementById('kpiLeads').textContent = active.length;
-        document.getElementById('kpiLeadsNew').textContent = `${newOnes.length} novos hoje`;
-      }
-
-      // Proposals
-      const propsRes = await api('/proposals?status=pending');
-      if (propsRes.ok) {
-        const proposals = propsRes.data.proposals || [];
-        const expiring = proposals.filter(p => {
-          const exp = new Date(p.expires_at);
-          return exp > new Date() && exp < new Date(Date.now() + 24 * 3600000);
-        });
-        document.getElementById('kpiProposals').textContent = proposals.length;
-        document.getElementById('kpiProposalsExpiring').textContent = expiring.length
-          ? `${expiring.length} expiram em 24h`
-          : 'nenhuma expirando';
-      }
-    }
-
-    async function loadRecentLeads() {
-      const res = await api('/leads?limit=8');
-      const container = document.getElementById('recentLeads');
-
-      if (!res.ok) {
-        container.innerHTML = '<div class="px-5 py-4 text-amber-400 text-sm">Banco de dados não configurado</div>';
-        showDbWarning();
-        return;
-      }
-
-      const leads = res.data.leads || [];
-      if (!leads.length) {
-        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">Nenhum lead ainda</div>';
-        return;
-      }
-
-      container.innerHTML = leads.map(l => `
-        <div class="px-5 py-3 hover:bg-slate-700/50 transition-colors flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-white">${l.name || 'Sem nome'}</p>
-            <p class="text-xs text-slate-400">${l.whatsapp_number} · ${relativeTime(l.updated_at)}</p>
-          </div>
-          ${statusBadge(l.status)}
+  // Funnel
+  const funnelPanel = document.getElementById('funnel-panel');
+  const stages = funnel?.stages ?? funnel?.funnel ?? [];
+  if (stages.length) {
+    const maxCount = Math.max(...stages.map(s => s.count || 0), 1);
+    funnelPanel.innerHTML = stages.map(s => {
+      const pct = Math.round((s.count / maxCount) * 100);
+      return `<div class="funnel-row">
+        <div class="funnel-meta">
+          <span class="funnel-stage">${DS.esc(s.stage || s.name || '')}</span>
+          <span class="funnel-count">${s.count ?? 0}</span>
         </div>
-      `).join('');
-    }
+        <div class="progress-bar"><div class="progress-bar-fill royal" style="width:${pct}%;background:var(--royal)"></div></div>
+      </div>`;
+    }).join('');
+  } else {
+    DS.emptyState(funnelPanel, 'Sem dados', 'Funil ainda sem registros.', '');
+  }
 
-    async function loadUpcomingReservations() {
-      const from = new Date().toISOString().split('T')[0];
-      const to   = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
-      const res  = await api(`/reservations?checkin_from=${from}&checkin_to=${to}&limit=5`);
-      const container = document.getElementById('upcomingReservations');
+  // Alerts
+  const alertsPanel = document.getElementById('alerts-panel');
+  const alertsData  = alertsRes.status === 'fulfilled' ? alertsRes.value : null;
+  const alertList   = alertsData?.alerts ?? alertsData ?? [];
+  if (alertList.length) {
+    document.getElementById('alert-count').style.display = '';
+    document.getElementById('alert-count').textContent = alertList.length;
+    alertsPanel.innerHTML = alertList.slice(0,5).map(a => `
+      <div class="alert-strip ${a.severity || 'medium'}" style="margin:var(--sp-2) var(--sp-4);border-radius:var(--r-md)">
+        <span>${DS.alertIcon(a.severity)}</span>
+        <span>${DS.esc(a.message || a.title || '')}</span>
+      </div>`).join('');
+  } else {
+    DS.emptyState(alertsPanel, 'Sem alertas', 'Tudo certo por enquanto.', '');
+  }
 
-      if (!res.ok) {
-        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">—</div>';
-        return;
-      }
-
-      const reservations = res.data.reservations || [];
-      if (!reservations.length) {
-        container.innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">Nenhuma entrada nos próximos 14 dias</div>';
-        return;
-      }
-
-      container.innerHTML = reservations.map(r => `
-        <div class="px-5 py-3">
-          <div class="flex items-center justify-between mb-0.5">
-            <p class="text-sm font-medium text-white">${r.leads?.name || 'Hóspede'}</p>
-            ${statusBadge(r.status)}
-          </div>
-          <p class="text-xs text-slate-400">${formatDate(r.checkin_date)} · ${roomLabel(r.room_type)}</p>
-        </div>
-      `).join('');
-    }
-
-    function showDbWarning() {
-      document.getElementById('dbWarning').classList.remove('hidden');
-    }
-
-    async function loadIntelligence() {
-      const ALERT_LABELS = {
-        hot_lead:       { cls: 'bg-red-900/30 text-red-400',     label: '🔥 Hot Lead' },
-        stalled:        { cls: 'bg-amber-900/30 text-amber-400', label: '⏸ Parado' },
-        no_response:    { cls: 'bg-amber-900/30 text-amber-400', label: '💤 Sem resposta' },
-        quote_expiring: { cls: 'bg-orange-900/30 text-orange-400', label: '⏰ Cotação expirando' },
-        checkin_soon:   { cls: 'bg-blue-900/30 text-blue-400',   label: '📅 Check-in próximo' },
-      };
-
-      const [pipelineRes, funnelRes, bottleneckRes, alertsRes] = await Promise.allSettled([
-        api('/analytics/revenue/pipeline'),
-        api('/analytics/funnel'),
-        api('/analytics/funnel/bottleneck'),
-        api('/alerts/active'),
-      ]);
-
-      // Revenue pipeline
-      if (pipelineRes.status === 'fulfilled' && pipelineRes.value.ok) {
-        const val = pipelineRes.value.data.revenue?.weighted_pipeline;
-        document.getElementById('kpiPipeline').textContent = val != null ? formatCurrency(val) : '—';
-      }
-
-      // Bottleneck
-      if (bottleneckRes.status === 'fulfilled' && bottleneckRes.value.ok) {
-        const d = bottleneckRes.value.data;
-        const stage = d.bottleneck_stage;
-        document.getElementById('kpiBottleneck').textContent = stage
-          ? (STATUS_LABELS[stage]?.label || stage) : '—';
-        document.getElementById('kpiBottleneckCount').textContent = d.count
-          ? `${d.count} lead${d.count !== 1 ? 's' : ''} parado${d.count !== 1 ? 's' : ''}`
-          : 'nenhum parado';
-      }
-
-      // Funnel
-      if (funnelRes.status === 'fulfilled' && funnelRes.value.ok) {
-        const stages = funnelRes.value.data.funnel?.stages || [];
-        const maxCount = Math.max(...stages.map(s => s.count || 0), 1);
-        document.getElementById('funnelWidget').innerHTML = stages.length
-          ? stages.map(s => {
-              const pct = Math.round((s.count || 0) / maxCount * 100);
-              const label = STATUS_LABELS[s.name]?.label || s.name;
-              return `
-                <div>
-                  <div class="flex justify-between text-xs text-slate-400 mb-1">
-                    <span>${label}</span>
-                    <span class="text-white font-medium">${s.count || 0}</span>
-                  </div>
-                  <div class="bg-slate-700 rounded-full h-2">
-                    <div class="bg-purple-600 h-2 rounded-full" style="width:${pct}%"></div>
-                  </div>
-                </div>`;
-            }).join('')
-          : '<div class="text-slate-500 text-sm">Sem dados de funil</div>';
-      } else {
-        document.getElementById('funnelWidget').innerHTML = '<div class="text-slate-500 text-sm">—</div>';
-      }
-
-      // Alerts
-      if (alertsRes.status === 'fulfilled' && alertsRes.value.ok) {
-        const alerts = alertsRes.value.data.alerts || [];
-        document.getElementById('alertsCount').textContent = alerts.length
-          ? `${alerts.length} ativo${alerts.length !== 1 ? 's' : ''}` : '';
-        document.getElementById('alertsWidget').innerHTML = alerts.length
-          ? alerts.slice(0, 8).map(a => {
-              const al = ALERT_LABELS[a.alert_type] || { cls: 'bg-slate-700 text-slate-400', label: a.alert_type };
-              return `
-                <div class="px-5 py-3 flex items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="text-sm text-white truncate">${a.name || a.phone}</p>
-                    <p class="text-xs text-slate-500 truncate">${a.alert_message || '—'}</p>
-                  </div>
-                  <span class="shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${al.cls}">${al.label}</span>
-                </div>`;
-            }).join('')
-          : '<div class="px-5 py-4 text-slate-500 text-sm">Nenhum alerta ativo</div>';
-      } else {
-        document.getElementById('alertsWidget').innerHTML = '<div class="px-5 py-4 text-slate-500 text-sm">—</div>';
-      }
-    }
-
-    // Add leads endpoint support
-    const _api = api;
-    window.api = async function(path, opts) {
-      // Route /leads to correct endpoint
-      if (path.startsWith('/leads')) {
-        return _api(path.replace('/leads', '/leads'), opts);
-      }
-      return _api(path, opts);
-    };
-
-    init();
-  </script>
+  // Leads table
+  const leadsTable = document.getElementById('leads-table');
+  const leadList   = leads?.leads ?? leads?.data ?? (Array.isArray(leads) ? leads : []);
+  if (leadList.length) {
+    leadsTable.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+      <thead><tr>
+        <th>Nome</th><th>Telefone</th><th>Score</th><th>Último contato</th>
+      </tr></thead>
+      <tbody>
+        ${leadList.map(l => `<tr>
+          <td><div class="row" style="gap:var(--sp-2)">
+            <div class="avatar avatar-sm">${DS.initials(l.name || l.nome)}</div>
+            <span>${DS.esc(l.name || l.nome || '—')}</span>
+          </div></td>
+          <td class="td-mono td-muted">${DS.esc(l.phone || l.telefone || '—')}</td>
+          <td>${DS.scoreBadge(l.score_label || l.score || l.scoreLabel)}</td>
+          <td class="td-muted">${DS.rel(l.last_message_at || l.lastMessageAt || l.updated_at)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  } else {
+    DS.emptyState(leadsTable, 'Nenhum lead', 'Leads aparecerão quando chegarem mensagens.', `<a href="leads.html" class="btn btn-secondary btn-sm">Ver leads</a>`);
+  }
+})();
+</script>
 </body>
 </html>

@@ -3,146 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sb3FmdnpsZ3Bhanl5Z3lscnNwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA4NjE3MDMsImV4cCI6MjA1NjQzNzcwM30.4jnMKFHoJcQHfIBvlXsMxb4T3MFD8FjCXx3n74ONZLA">
   <title>Login — Pousada Luz da Lua</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: { brand: { DEFAULT: '#7c3aed', dark: '#5b21b6', light: '#ede9fe' } } } }
-    }
-  </script>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 min-h-screen flex items-center justify-center px-4">
-
-  <div class="w-full max-w-md">
-    <!-- Logo -->
-    <div class="text-center mb-8">
-      <div class="text-4xl mb-3">🌙</div>
-      <h1 class="text-2xl font-bold text-white">Pousada Luz da Lua</h1>
-      <p class="text-slate-400 mt-1">Sistema de Gestão CRM</p>
-    </div>
-
-    <!-- Card -->
-    <div class="bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-xl">
-      <h2 class="text-lg font-semibold text-white mb-6">Entrar na conta</h2>
-
-      <form id="loginForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1.5">E-mail</label>
-          <input
-            type="email" id="email" required
-            placeholder="seu@email.com"
-            class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-          >
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-300 mb-1.5">Senha</label>
-          <div class="relative">
-            <input
-              type="password" id="password" required
-              placeholder="••••••••"
-              class="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent pr-10"
-            >
-            <button type="button" id="togglePw" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
-              <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Error -->
-        <div id="errorMsg" class="hidden bg-red-900/40 border border-red-700 rounded-lg px-4 py-2.5 text-red-300 text-sm"></div>
-
-        <button
-          type="submit" id="submitBtn"
-          class="w-full bg-brand hover:bg-brand-dark text-white font-semibold py-2.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-slate-800 disabled:opacity-50"
-        >
-          Entrar
-        </button>
-      </form>
-
-      <div class="mt-4 text-center">
-        <a href="#" id="forgotLink" class="text-sm text-slate-400 hover:text-slate-200 transition-colors">
-          Esqueceu a senha?
-        </a>
+<body>
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <circle cx="28" cy="28" r="28" fill="var(--royal-bg)"/>
+        <path d="M36 28a12 12 0 01-12 12 12 12 0 010-24 9 9 0 000 12z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="22" cy="18" r="2" fill="var(--gold)" opacity=".7"/>
+        <circle cx="38" cy="22" r="1.5" fill="var(--gold)" opacity=".5"/>
+      </svg>
+      <div>
+        <div class="auth-brand">Luz da Lua</div>
+        <div class="auth-tagline">Painel de Operações</div>
       </div>
     </div>
 
-    <!-- Reset success -->
-    <div id="resetSuccess" class="hidden mt-4 bg-green-900/40 border border-green-700 rounded-lg px-4 py-3 text-green-300 text-sm text-center">
-      Email de recuperação enviado! Verifique sua caixa de entrada.
-    </div>
+    <form id="login-form">
+      <div class="stack">
+        <div class="form-group">
+          <label class="form-label" for="email">E-mail</label>
+          <input class="input" type="email" id="email" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Senha</label>
+          <input class="input" type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div id="err-msg" class="alert alert-err" style="display:none">
+          <span class="alert-body">
+            <span class="alert-title" id="err-text">Credenciais inválidas.</span>
+          </span>
+        </div>
+        <button class="btn btn-primary" type="submit" id="submit-btn" style="width:100%;justify-content:center;margin-top:4px">
+          Entrar
+        </button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script>
-    const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
-    const SUPABASE_ANON = 'sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs';
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+(async () => {
+  const sb = DS.getSB();
+  if (sb) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { window.location.href = 'dashboard.html'; return; }
+  }
 
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-    // Toggle password visibility
-    document.getElementById('togglePw').addEventListener('click', () => {
-      const pw = document.getElementById('password');
-      pw.type = pw.type === 'password' ? 'text' : 'password';
-    });
-
-    // Forgot password
-    document.getElementById('forgotLink').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      if (!email) { showError('Digite seu e-mail primeiro'); return; }
-      const { error } = await sb.auth.resetPasswordForEmail(email, {
-        redirectTo: `${location.origin}/reset-password.html`
-      });
-      if (error) { showError(error.message); return; }
-      document.getElementById('resetSuccess').classList.remove('hidden');
-    });
-
-    // Login form
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      btn.textContent = 'Entrando...';
-      btn.disabled = true;
-      hideError();
-
-      const email    = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-      if (error) {
-        showError(error.message === 'Invalid login credentials'
-          ? 'E-mail ou senha incorretos'
-          : error.message
-        );
-        btn.textContent = 'Entrar';
-        btn.disabled = false;
-        return;
-      }
-
-      // Store session and redirect
-      localStorage.setItem('sb_session', JSON.stringify(data.session));
-      window.location.href = '/dashboard.html';
-    });
-
-    // Check if already logged in
-    sb.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = '/dashboard.html';
-    });
-
-    function showError(msg) {
-      const el = document.getElementById('errorMsg');
-      el.textContent = msg;
-      el.classList.remove('hidden');
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const errDiv = document.getElementById('err-msg');
+    errDiv.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Entrando…';
+    try {
+      const email = document.getElementById('email').value;
+      const pass  = document.getElementById('password').value;
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      document.getElementById('err-text').textContent = err.message || 'Credenciais inválidas.';
+      errDiv.style.display = 'flex';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
     }
-    function hideError() {
-      document.getElementById('errorMsg').classList.add('hidden');
-    }
-  </script>
+  });
+})();
+</script>
 </body>
 </html>

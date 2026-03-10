@@ -1,0 +1,184 @@
+/* t.css — Design Tokens | Luz da Lua v1.0 */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Brand */
+  --royal:    #2D6BE4;
+  --royal-l:  #4D87FF;
+  --midnight: #1A3A6B;
+  --gold:     #E6B800;
+  --ok:       #22C55E;
+  --warn:     #F59E0B;
+  --err:      #EF4444;
+
+  /* Fonts */
+  --f-serif: 'Playfair Display', Georgia, serif;
+  --f-sans:  'DM Sans', system-ui, sans-serif;
+  --f-mono:  'DM Mono', 'Courier New', monospace;
+
+  /* Radius */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-full: 9999px;
+
+  /* Shadows */
+  --sh-sm: 0 1px 3px rgba(0,0,0,.25);
+  --sh-md: 0 4px 12px rgba(0,0,0,.35);
+  --sh-lg: 0 8px 32px rgba(0,0,0,.45);
+
+  /* Transitions */
+  --t-fast: 120ms ease;
+  --t-base: 200ms ease;
+  --t-slow: 350ms ease;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Z-index */
+  --z-base:   1;
+  --z-above:  10;
+  --z-modal:  100;
+  --z-toast:  200;
+  --z-drawer: 150;
+}
+
+/* === DARK THEME (CRM default) === */
+:root,
+:root[data-theme="dark"] {
+  --bg0: #070C12;
+  --bg1: #0D1520;
+  --bg2: #111D2C;
+  --bg3: #152032;
+
+  --sur0: rgba(255,255,255,.03);
+  --sur1: rgba(255,255,255,.06);
+  --sur2: rgba(255,255,255,.10);
+
+  --bdr:  rgba(255,255,255,.08);
+  --bdr2: rgba(255,255,255,.14);
+
+  --tx1: #F0F4FF;
+  --tx2: #A8BBCC;
+  --tx3: #5C7A8C;
+
+  --royal-bg:  rgba(45,107,228,.15);
+  --royal-bdr: rgba(45,107,228,.35);
+
+  --ok-bg:   rgba(34,197,94,.12);
+  --warn-bg: rgba(245,158,11,.12);
+  --err-bg:  rgba(239,68,68,.12);
+
+  --sidebar-bg:  #08101A;
+  --sidebar-bdr: rgba(255,255,255,.06);
+
+  --input-bg:  rgba(255,255,255,.05);
+  --input-bdr: rgba(255,255,255,.12);
+  --input-focus-bdr: var(--royal);
+
+  --skeleton-base:    rgba(255,255,255,.05);
+  --skeleton-shimmer: rgba(255,255,255,.10);
+
+  color-scheme: dark;
+}
+
+/* === CLEAN THEME (light, public landing + alt CRM) === */
+:root[data-theme="clean"] {
+  --bg0: #EEF3FB;
+  --bg1: #FFFFFF;
+  --bg2: #FFFFFF;
+  --bg3: #F4F8FF;
+
+  --sur0: rgba(0,0,0,.02);
+  --sur1: rgba(0,0,0,.04);
+  --sur2: rgba(0,0,0,.07);
+
+  --bdr:  rgba(0,0,0,.08);
+  --bdr2: rgba(0,0,0,.14);
+
+  --tx1: #0D1520;
+  --tx2: #3A5068;
+  --tx3: #7A9AAF;
+
+  --royal-bg:  rgba(45,107,228,.08);
+  --royal-bdr: rgba(45,107,228,.25);
+
+  --ok-bg:   rgba(34,197,94,.10);
+  --warn-bg: rgba(245,158,11,.10);
+  --err-bg:  rgba(239,68,68,.10);
+
+  --sidebar-bg:  #FFFFFF;
+  --sidebar-bdr: rgba(0,0,0,.07);
+
+  --input-bg:  #FFFFFF;
+  --input-bdr: rgba(0,0,0,.14);
+  --input-focus-bdr: var(--royal);
+
+  --skeleton-base:    rgba(0,0,0,.05);
+  --skeleton-shimmer: rgba(0,0,0,.10);
+
+  color-scheme: light;
+}
+
+/* === Base Reset === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--f-sans);
+  background: var(--bg0);
+  color: var(--tx1);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--t-slow), color var(--t-slow);
+}
+
+a { color: var(--royal-l); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+img { display: block; max-width: 100%; }
+
+button { cursor: pointer; font-family: var(--f-sans); }
+
+/* Typography helpers */
+.t-serif { font-family: var(--f-serif); }
+.t-mono  { font-family: var(--f-mono); }
+.t-1 { color: var(--tx1); }
+.t-2 { color: var(--tx2); }
+.t-3 { color: var(--tx3); }
+.t-royal { color: var(--royal-l); }
+.t-gold  { color: var(--gold); }
+.t-ok    { color: var(--ok); }
+.t-warn  { color: var(--warn); }
+.t-err   { color: var(--err); }
+
+/* Spacing helpers */
+.mt-1 { margin-top: var(--sp-1); }
+.mt-2 { margin-top: var(--sp-2); }
+.mt-3 { margin-top: var(--sp-3); }
+.mt-4 { margin-top: var(--sp-4); }
+.mt-6 { margin-top: var(--sp-6); }
+.mb-2 { margin-bottom: var(--sp-2); }
+.mb-4 { margin-bottom: var(--sp-4); }
+.mb-6 { margin-bottom: var(--sp-6); }
+.gap-2 { gap: var(--sp-2); }
+.gap-4 { gap: var(--sp-4); }
+
+/* Display helpers */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }

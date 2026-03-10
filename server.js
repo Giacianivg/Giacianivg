@@ -125,6 +125,8 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/design-system', express.static(path.join(__dirname, 'public', 'design-system')));
+app.use('/landing', express.static(path.join(__dirname, 'public', 'landing')));
 
 // ─── Public Debug Endpoint (no auth required) ──────────────────────────────────
 // MUST be before auth middleware
