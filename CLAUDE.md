@@ -295,3 +295,44 @@ Squads (Growth / Product / Revenue / Engineering)
 - **Migrations irreversíveis:** nunca alterar `001–006`, sempre criar nova numerada
 - **Auth CRM:** Supabase JWT obrigatório para todas as rotas (exceto `X-Internal-Key` para chamadas internas)
 - **Webhook:** validação `X-Hub-Signature-256` existe mas está desabilitada temporariamente (`webhook.js:30`)
+
+---
+
+## Regra de Modelo por Agente
+
+### Usar Sonnet (modelo padrão — precisa pensar)
+- @aios-master — votação, decisões estratégicas
+- @architect — trade-offs de arquitetura
+- @dev — features complexas, bugs, lógica nova
+- @cto-agent — decisões de segurança e veto técnico
+- @cmo-agent / @cpo-agent / @cfo-agent — análises e estratégia
+
+### Usar Haiku (tasks mecânicas — só executar)
+- @devops — git add, commit, push, deploy
+- @qa — rodar checklist fixo, npm test, verificar arquivos
+- @data-engineer — migrations simples, queries diretas
+- Qualquer agente fazendo: buscar arquivo, mover pasta, renomear, formatar
+
+### Regra de ouro
+Se o agente precisa PENSAR → Sonnet
+Se o agente precisa EXECUTAR → Haiku
+
+### Como aplicar no CLI
+Haiku:  claude --model claude-haiku-4-5-20251001
+Sonnet: claude (padrão)
+
+---
+
+## Protocolo de Operação
+
+Todos os agentes leem obrigatoriamente:
+- ai-os/OPERATION-PROTOCOL.md → níveis de decisão + fluxos
+- ai-os/DECISION-GATES.md → portões de validação por etapa
+
+Resumo dos níveis:
+- Nível 1: Founder decide sozinho (preço, deploy crítico, campanha, épico)
+- Nível 2: Board vota, Founder aprova (features, ajustes, migrações)
+- Nível 3: Agente executa autônomo (diagnóstico, leitura, documentação)
+
+Reporte ao Vitor usando o formato definido no OPERATION-PROTOCOL.md.
+Nunca execute Nível 1 ou 2 sem confirmação explícita: "executar" ou aprovação.

@@ -217,3 +217,44 @@ Responda *CONFIRMAR* para reservar e nossa equipe finaliza! \uD83C\uDF3F`;
 }
 
 module.exports = { calculateQuotation, formatWhatsAppMessage };
+
+// ─── PASCOA_PACKAGE — Escapada Romântica Páscoa 2026 ──────────────────────────
+// DEC-004 aprovado 2026-03-10 | Append only — zero alteração na lógica existente
+// FLAG: definir como false após 06/abr/2026 para desativar o pacote
+
+const PASCOA_2026_ACTIVE = true;
+
+const PASCOA_PACKAGE = {
+  nome: 'Escapada Romântica Páscoa',
+  periodo: { startMd: '03-28', endMd: '04-06', ano: 2026 },
+  noites: 2,
+  pessoas: 2,
+  preco: 900,
+  incluso: 'Café da manhã incluso',
+  descricao: '2 noites + café da manhã para 2 pessoas',
+};
+
+/**
+ * Verifica se o período solicitado está dentro do Pacote Páscoa 2026.
+ * Retorna o pacote se PASCOA_2026_ACTIVE e as datas estiverem em 28/mar–06/abr/2026.
+ * @param {string} data_entrada - DD/MM/YYYY
+ * @param {string} data_saida   - DD/MM/YYYY
+ * @returns {object|null} pacote ou null se fora do período ou inativo
+ */
+function getPascoaPackage(data_entrada, data_saida) {
+  if (!PASCOA_2026_ACTIVE) return null;
+  if (!data_entrada || !data_saida) return null;
+
+  const entrada = parseDate(data_entrada);
+  const saida   = parseDate(data_saida);
+  const inicioP = parseDate('28/03/2026');
+  const fimP    = parseDate('06/04/2026');
+
+  if (entrada >= inicioP && saida <= fimP) {
+    return { ...PASCOA_PACKAGE };
+  }
+  return null;
+}
+
+module.exports.getPascoaPackage = getPascoaPackage;
+module.exports.PASCOA_PACKAGE   = PASCOA_PACKAGE;
