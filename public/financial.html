@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Financeiro — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-6);
+    }
+    .kpi-card {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      padding: var(--sp-4);
+    }
+    .kpi-label  { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--tx3); margin-bottom: var(--sp-1); }
+    .kpi-value  { font-size: 1.75rem; font-weight: 800; color: var(--tx1); line-height: 1.1; }
+    .kpi-value.green { color: var(--ok); }
+    .kpi-value.gold  { color: var(--gold); }
+    .kpi-value.blue  { color: var(--royal-l); }
+    .kpi-sub    { font-size: .75rem; color: var(--tx3); margin-top: var(--sp-1); }
+
+    .section-title {
+      font-size: .8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--tx3);
+      margin-bottom: var(--sp-3);
+    }
+
+    /* Bar chart */
+    .chart-wrap {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      padding: var(--sp-4);
+      margin-bottom: var(--sp-6);
+    }
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-4);
+    }
+    .chart-title { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .chart-svg-wrap { width: 100%; overflow-x: auto; }
+    .chart-legend {
+      display: flex;
+      gap: var(--sp-4);
+      margin-top: var(--sp-3);
+      font-size: .75rem;
+      color: var(--tx3);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      margin-right: 4px;
+    }
+
+    /* Room breakdown */
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-6);
+    }
+    .breakdown-card {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4);
+    }
+    .breakdown-room  { font-size: .75rem; font-weight: 700; color: var(--royal-l); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .breakdown-total { font-size: 1.25rem; font-weight: 800; color: var(--tx1); }
+    .breakdown-count { font-size: .75rem; color: var(--tx3); margin-top: 2px; }
+    .breakdown-bar-track { height: 4px; background: var(--sur2); border-radius: 9999px; margin-top: var(--sp-2); }
+    .breakdown-bar-fill  { height: 4px; background: var(--royal-l); border-radius: 9999px; }
+
+    /* Recent table */
+    .recent-wrap {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .recent-header {
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .recent-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .recent-table th {
+      padding: var(--sp-2) var(--sp-3);
+      text-align: left;
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--tx3);
+      border-bottom: 1px solid var(--bdr1);
+      white-space: nowrap;
+    }
+    .recent-table td {
+      padding: var(--sp-2) var(--sp-3);
+      color: var(--tx1);
+      border-bottom: 1px solid var(--bdr0);
+      white-space: nowrap;
+    }
+    .recent-table tr:last-child td { border-bottom: none; }
+    .recent-table tr:hover td { background: var(--sur2); }
+    .status-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: .7rem;
+      font-weight: 600;
+    }
+    .status-pending      { background: rgba(234,179,8,.1);   color: var(--gold);    border: 1px solid rgba(234,179,8,.2); }
+    .status-deposit_paid { background: var(--royal-bg);      color: var(--royal-l); border: 1px solid rgba(99,102,241,.2); }
+    .status-confirmed    { background: rgba(34,197,94,.1);   color: var(--ok);      border: 1px solid rgba(34,197,94,.2); }
+    .status-checked_in   { background: rgba(34,197,94,.2);   color: var(--ok);      border: 1px solid rgba(34,197,94,.3); }
+    .status-completed    { background: var(--sur2);          color: var(--tx2);     border: 1px solid var(--bdr1); }
+
+    .empty-row td { text-align: center; color: var(--tx3); padding: var(--sp-6) !important; }
+
+    .year-select { background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx1); padding: 4px 8px; font-size: .8125rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link active" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendario</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Financeiro</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" id="btn-refresh">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <main class="page-body">
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Carregando</div><div class="kpi-value" style="color:var(--tx3)">...</div></div>
+      </div>
+
+      <!-- Grafico mensal -->
+      <div class="chart-wrap">
+        <div class="chart-header">
+          <span class="chart-title">Receita por mes (check-in)</span>
+          <select class="year-select" id="year-select"></select>
+        </div>
+        <div class="chart-svg-wrap" id="chart-container">
+          <div style="text-align:center;color:var(--tx3);padding:var(--sp-8)">Carregando grafico...</div>
+        </div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:var(--royal-l)"></span>Total previsto</span>
+          <span><span class="legend-dot" style="background:var(--ok)"></span>Sinal recebido</span>
+        </div>
+      </div>
+
+      <!-- Breakdown por quarto -->
+      <div class="section-title">Receita por quarto</div>
+      <div class="breakdown-grid" id="breakdown-grid">
+        <div class="breakdown-card" style="color:var(--tx3)">Carregando...</div>
+      </div>
+
+      <!-- Reservas recentes -->
+      <div class="recent-wrap">
+        <div class="recent-header">
+          <span style="font-size:.9375rem;font-weight:700;color:var(--tx1)">Ultimas reservas</span>
+          <span style="font-size:.8125rem;color:var(--tx3)" id="recent-count"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Numero</th>
+                <th>Hospede</th>
+                <th>Quarto</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Total</th>
+                <th>Sinal</th>
+                <th>Saldo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recent-body">
+              <tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:2rem">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL  = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let authToken = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  sb.auth.getSession().then(({ data }) => {
+    const user = data?.session?.user;
+    if (!user) { window.location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    authToken = data.session.access_token;
+    loadAll();
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+  });
+
+  async function apiFetch(path) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  // ── Year selector ─────────────────────────────────────────────────────────
+  const currentYear = new Date().getFullYear();
+  const yearSel = document.getElementById('year-select');
+  for (let y = currentYear; y >= currentYear - 2; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+  yearSel.addEventListener('change', () => loadMonthly(parseInt(yearSel.value, 10)));
+
+  // ── Load all ──────────────────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([loadSummary(), loadMonthly(currentYear), loadRecent()]);
+  }
+
+  document.getElementById('btn-refresh').addEventListener('click', loadAll);
+
+  // ── Summary / KPIs ────────────────────────────────────────────────────────
+  async function loadSummary() {
+    const res = await apiFetch('/api/financial/summary');
+    if (!res || !res.success) return;
+
+    const k = res.kpis;
+    document.getElementById('kpi-grid').innerHTML = `
+      <div class="kpi-card">
+        <div class="kpi-label">Receita total prevista</div>
+        <div class="kpi-value blue">${fmtBRL(k.receita_total)}</div>
+        <div class="kpi-sub">${k.total_reservas} reserva${k.total_reservas !== 1 ? 's' : ''} ativas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Sinais recebidos</div>
+        <div class="kpi-value green">${fmtBRL(k.depositos_pagos)}</div>
+        <div class="kpi-sub">${k.em_andamento + k.completadas} confirmadas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo a receber</div>
+        <div class="kpi-value gold">${fmtBRL(k.saldo_pendente)}</div>
+        <div class="kpi-sub">Saldo das confirmadas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ticket medio</div>
+        <div class="kpi-value">${fmtBRL(k.ticket_medio)}</div>
+        <div class="kpi-sub">Por reserva</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pendentes</div>
+        <div class="kpi-value" style="font-size:1.5rem">${k.pendentes}</div>
+        <div class="kpi-sub">Aguardando sinal</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Concluidas</div>
+        <div class="kpi-value" style="font-size:1.5rem">${k.completadas}</div>
+        <div class="kpi-sub">${k.em_andamento} em andamento</div>
+      </div>
+    `;
+
+    // Breakdown por quarto
+    const pg = res.por_quarto || {};
+    const maxTotal = Math.max(...Object.values(pg).map(v => v.total), 1);
+    document.getElementById('breakdown-grid').innerHTML = Object.entries(pg).length
+      ? Object.entries(pg).map(([code, d]) => `
+          <div class="breakdown-card">
+            <div class="breakdown-room">${code}</div>
+            <div class="breakdown-total">${fmtBRL(d.total)}</div>
+            <div class="breakdown-count">${d.count} reserva${d.count !== 1 ? 's' : ''}</div>
+            <div class="breakdown-bar-track">
+              <div class="breakdown-bar-fill" style="width:${Math.round((d.total / maxTotal) * 100)}%"></div>
+            </div>
+          </div>
+        `).join('')
+      : '<div class="breakdown-card" style="color:var(--tx3);font-size:.8125rem">Nenhuma reserva ainda</div>';
+  }
+
+  // ── Monthly chart (SVG) ───────────────────────────────────────────────────
+  const MONTH_NAMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  async function loadMonthly(year) {
+    const res = await apiFetch(`/api/financial/monthly?year=${year}`);
+    if (!res || !res.success) return;
+    renderChart(res.months || []);
+  }
+
+  function renderChart(months) {
+    const W = 700, H = 220, PAD = { top: 16, right: 16, bottom: 40, left: 60 };
+    const innerW = W - PAD.left - PAD.right;
+    const innerH = H - PAD.top - PAD.bottom;
+
+    const maxVal = Math.max(...months.map(m => m.total_amount), 1000);
+    const barW   = Math.floor(innerW / months.length) - 4;
+    const step   = innerW / months.length;
+
+    const yTicks = 4;
+    let svgLines = '', svgBars = '', svgLabels = '', svgYAxis = '';
+
+    // Y axis ticks + grid lines
+    for (let i = 0; i <= yTicks; i++) {
+      const val = (maxVal / yTicks) * (yTicks - i);
+      const y   = PAD.top + (innerH * i / yTicks);
+      svgYAxis  += `<text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" fill="var(--tx3)" font-size="11">${fmtBRLShort(val)}</text>`;
+      svgLines  += `<line x1="${PAD.left}" y1="${y}" x2="${PAD.left + innerW}" y2="${y}" stroke="var(--bdr1)" stroke-dasharray="3,3"/>`;
+    }
+
+    months.forEach((m, i) => {
+      const x      = PAD.left + i * step + (step - barW) / 2;
+      const hTotal = Math.max(1, (m.total_amount / maxVal) * innerH);
+      const hDep   = Math.max(0, (m.depositos   / maxVal) * innerH);
+      const yTotal = PAD.top + innerH - hTotal;
+      const yDep   = PAD.top + innerH - hDep;
+      const mx     = x + barW / 2;
+      const mLabel = MONTH_NAMES[i] || i + 1;
+
+      // Total bar (background)
+      svgBars += `<rect x="${x}" y="${yTotal}" width="${barW}" height="${hTotal}" rx="3" fill="var(--royal-l)" opacity="0.35"/>`;
+      // Deposits bar (foreground)
+      if (hDep > 0) {
+        svgBars += `<rect x="${x + 2}" y="${yDep}" width="${barW - 4}" height="${hDep}" rx="2" fill="var(--ok)" opacity="0.85"/>`;
+      }
+      // Month label
+      svgLabels += `<text x="${mx}" y="${PAD.top + innerH + 18}" text-anchor="middle" fill="var(--tx3)" font-size="11">${mLabel}</text>`;
+      // Value on hover via title
+      svgBars += `<rect x="${x}" y="${PAD.top}" width="${barW}" height="${innerH}" fill="transparent"><title>${mLabel}: ${fmtBRL(m.total_amount)} total / ${fmtBRL(m.depositos)} sinal (${m.count} reservas)</title></rect>`;
+    });
+
+    const svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${W}px;min-width:360px;display:block">
+      ${svgLines}${svgYAxis}${svgBars}${svgLabels}
+      <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + innerH}" stroke="var(--bdr1)"/>
+      <line x1="${PAD.left}" y1="${PAD.top + innerH}" x2="${PAD.left + innerW}" y2="${PAD.top + innerH}" stroke="var(--bdr1)"/>
+    </svg>`;
+
+    document.getElementById('chart-container').innerHTML = svg;
+  }
+
+  // ── Recent reservations ───────────────────────────────────────────────────
+  async function loadRecent() {
+    const res = await apiFetch('/api/financial/recent?limit=20');
+    if (!res || !res.success) return;
+
+    const resos = res.reservations || [];
+    document.getElementById('recent-count').textContent = `${resos.length} reservas`;
+
+    if (!resos.length) {
+      document.getElementById('recent-body').innerHTML =
+        '<tr class="empty-row"><td colspan="9">Nenhuma reserva ativa</td></tr>';
+      return;
+    }
+
+    const statusLabels = {
+      pending:      'Pendente',
+      deposit_paid: 'Sinal pago',
+      confirmed:    'Confirmada',
+      checked_in:   'Hospedado',
+      completed:    'Concluida',
+    };
+
+    document.getElementById('recent-body').innerHTML = resos.map(r => {
+      const name = r.leads?.name || r.leads?.whatsapp_number || '—';
+      return `<tr>
+        <td style="font-family:monospace;font-size:.75rem;color:var(--tx2)">${escHtml(r.reservation_number)}</td>
+        <td>${escHtml(name)}</td>
+        <td style="color:var(--royal-l);font-weight:600">${escHtml(r.room_type)}</td>
+        <td>${fmtDate(r.checkin_date)}</td>
+        <td>${fmtDate(r.checkout_date)}</td>
+        <td style="font-weight:700">${fmtBRL(r.total_amount)}</td>
+        <td style="color:var(--ok)">${fmtBRL(r.deposit_amount)}</td>
+        <td style="color:var(--gold)">${fmtBRL(r.balance_amount)}</td>
+        <td><span class="status-pill status-${r.status}">${statusLabels[r.status] || r.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function fmtBRL(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+  }
+  function fmtBRLShort(v) {
+    if (v >= 1000) return 'R$' + Math.round(v / 1000) + 'k';
+    return 'R$' + Math.round(v);
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${y.slice(2)}`;
+  }
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+})();
+</script>
+</body>
+</html>
