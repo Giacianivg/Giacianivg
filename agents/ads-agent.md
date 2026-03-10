@@ -1,6 +1,11 @@
 # Ads Agent
 
-**Status:** Planejado
+> ⚠️ [DEPRECATED — 2026-03-10]
+> Este agente foi substituído por **`agents/meta-agent.md`** (Marcus — Chief Media Officer).
+> Não usar. Ver DEC-013 para contexto da decisão.
+
+**Status:** DEPRECATED
+**Substituído por:** `agents/meta-agent.md`
 **Épico:** EPIC-PLU-02 — Motor de Marketing Digital
 
 ## Responsabilidades Previstas

@@ -14,16 +14,17 @@ Uma task validada é lei: deve ser executada conforme configurada, com todas as 
 
 **Full 4-phase workflow for all development work.**
 
-#### Phase 1: Create (@sm)
+#### Phase 1: Create (@pm)
 - **Task:** `create-next-story.md`
 - **Inputs:** PRD sharded, epic context
 - **Output:** `{epicNum}.{storyNum}.story.md`
 - **Status:** Draft
 
-#### Phase 2: Validate (@po)
+#### Phase 2: Validate (@pm)
 - **Task:** `validate-next-story.md`
 - **10-point checklist** (see `story-lifecycle.md`)
 - **Decision:** GO (>=7) or NO-GO (required fixes listed)
+- **Note (DEC-013):** @pm (Morgan) executa fases 1 e 2. @sm e @po foram absorvidos.
 
 #### Phase 3: Implement (@dev)
 - **Task:** `dev-develop-story.md`

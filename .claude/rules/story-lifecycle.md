@@ -8,21 +8,23 @@ Draft → Ready → InProgress → InReview → Done
 
 | Status | Trigger | Agent | Action |
 |--------|---------|-------|--------|
-| Draft | @sm creates story | @sm | Story file created |
-| Ready | @po validates (GO) | @po | **MUST update status field in story file from Draft → Ready** |
+| Draft | @pm creates story | @pm | Story file created |
+| Ready | @pm validates (GO) | @pm | **MUST update status field in story file from Draft → Ready** |
 | InProgress | @dev starts implementation | @dev | Update status field |
 | InReview | @dev completes, @qa reviews | @qa | Update status field |
 | Done | @qa PASS, @devops pushes | @devops | Update status field |
 
-**CRITICAL:** The `Draft → Ready` transition is the responsibility of @po during `*validate-story-draft`. When verdict is GO (including conditional GO after fixes are applied), @po MUST update the story's Status field to `Ready` and log the transition in the Change Log. A story left in `Draft` after a GO verdict is a process violation.
+> **DEC-013 (2026-03-10):** @pm (Morgan) absorveu @sm (criação) e @po (validação). Morgan executa as fases 1 e 2 do SDC de forma unificada.
 
-## Phase 1: Create (@sm)
+**CRITICAL:** The `Draft → Ready` transition is the responsibility of @pm during `*validate-story-draft`. When verdict is GO (including conditional GO after fixes are applied), @pm MUST update the story's Status field to `Ready` and log the transition in the Change Log. A story left in `Draft` after a GO verdict is a process violation.
+
+## Phase 1: Create (@pm)
 
 **Task:** `create-next-story.md`
 **Inputs:** PRD sharded, epic context
 **Output:** `{epicNum}.{storyNum}.story.md`
 
-## Phase 2: Validate (@po)
+## Phase 2: Validate (@pm)
 
 **Task:** `validate-next-story.md`
 
@@ -133,7 +135,7 @@ issues:
 
 | Section | Who Can Edit |
 |---------|-------------|
-| Title, Description, AC, Scope | @po only |
+| Title, Description, AC, Scope | @pm only |
 | File List, Dev Notes, checkboxes | @dev |
 | QA Results | @qa only |
 | Change Log | Any agent (append only) |
