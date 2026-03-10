@@ -46,9 +46,12 @@ app.use((req, res, next) => {
     .update(rawBody)
     .digest('hex');
 
+  if (signature.length !== expectedSignature.length) {
+    return res.status(403).json({ error: 'invalid_signature' });
+  }
+
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
     console.error('[security] Invalid X-Hub-Signature-256');
-    console.error('[security] Expected:', expectedSignature);
     console.error('[security] Got:', signature);
     return res.status(403).json({ error: 'invalid_signature' });
   }
