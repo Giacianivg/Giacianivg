@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autenticando... — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+    }
+    .auth-box {
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      padding: 2rem;
+    }
+    .auth-logo {
+      margin: 0 auto var(--sp-6);
+      width: 56px; height: 56px;
+    }
+    .auth-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--tx1);
+      margin-bottom: var(--sp-2);
+    }
+    .auth-sub {
+      font-size: .875rem;
+      color: var(--tx3);
+      line-height: 1.5;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--bdr1);
+      border-top-color: var(--royal-l);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: var(--sp-4) auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: var(--sp-4) auto 0;
+    }
+    .status-icon.ok  { background: var(--ok-bg);  }
+    .status-icon.err { background: var(--err-bg); }
+    .status-icon.ok  svg { color: var(--ok); }
+    .status-icon.err svg { color: var(--err); }
+  </style>
+</head>
+<body>
+<div class="auth-box">
+  <svg class="auth-logo" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="28" cy="28" r="28" fill="var(--royal-bg)"/>
+    <path d="M36 28a14 14 0 01-14 14 14 14 0 010-28 10 10 0 000 14z" fill="var(--royal-l)" opacity=".9"/>
+    <circle cx="21" cy="16" r="2.5" fill="var(--gold)" opacity=".7"/>
+  </svg>
+
+  <div class="auth-title" id="auth-title">Verificando sua identidade...</div>
+  <div class="auth-sub"  id="auth-sub">Aguarde um momento.</div>
+  <div id="auth-indicator"><div class="spinner"></div></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const SUPABASE_URL  = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_ANON = 'CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  function setSuccess(msg) {
+    document.getElementById('auth-title').textContent = 'Pronto!';
+    document.getElementById('auth-sub').textContent   = msg;
+    document.getElementById('auth-indicator').innerHTML =
+      `<div class="status-icon ok">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>`;
+  }
+
+  function setError(msg) {
+    document.getElementById('auth-title').textContent = 'Falha na autenticacao';
+    document.getElementById('auth-sub').textContent   = msg;
+    document.getElementById('auth-indicator').innerHTML =
+      `<div class="status-icon err">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>`;
+  }
+
+  function redirectAfter(url, delay) {
+    setTimeout(() => { window.location.replace(url); }, delay);
+  }
+
+  async function handleCallback() {
+    const hash   = window.location.hash.substring(1);   // strip leading #
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(hash);
+
+    // ── 1. Hash flow: #access_token=...&refresh_token=...&type=recovery ──────
+    const accessToken  = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const hashType     = hashParams.get('type');
+
+    if (accessToken) {
+      try {
+        const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+        if (error) throw error;
+        setSuccess('Redirecionando...');
+        redirectAfter('/dashboard.html', 1000);
+      } catch (err) {
+        console.error('[auth-callback] setSession error:', err);
+        setError('Token invalido ou expirado. Redirecionando para o login...');
+        redirectAfter('/login.html?error=true', 2000);
+      }
+      return;
+    }
+
+    // ── 2. Token hash flow: ?token_hash=...&type=recovery ────────────────────
+    const tokenHash = params.get('token_hash');
+    const type      = params.get('type') || hashType || 'recovery';
+
+    if (tokenHash) {
+      try {
+        const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
+        if (error) throw error;
+        setSuccess('Senha redefinida. Redirecionando...');
+        redirectAfter('/dashboard.html', 1200);
+      } catch (err) {
+        console.error('[auth-callback] verifyOtp error:', err);
+        setError('Link expirado ou invalido. Solicite um novo link.');
+        redirectAfter('/login.html?error=true', 2500);
+      }
+      return;
+    }
+
+    // ── 3. PKCE flow: ?code=... ───────────────────────────────────────────────
+    const code = params.get('code');
+
+    if (code) {
+      try {
+        const { error } = await sb.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+        setSuccess('Autenticado. Redirecionando...');
+        redirectAfter('/dashboard.html', 1000);
+      } catch (err) {
+        console.error('[auth-callback] exchangeCodeForSession error:', err);
+        setError('Codigo invalido ou expirado. Redirecionando para o login...');
+        redirectAfter('/login.html?error=true', 2000);
+      }
+      return;
+    }
+
+    // ── 4. Nenhum token encontrado ────────────────────────────────────────────
+    // Pode ser que o Supabase ja processou e a sessao esta valida
+    const { data } = await sb.auth.getSession();
+    if (data?.session) {
+      setSuccess('Sessao encontrada. Redirecionando...');
+      redirectAfter('/dashboard.html', 800);
+    } else {
+      setError('Nenhum token encontrado. Redirecionando para o login...');
+      redirectAfter('/login.html?error=true', 2000);
+    }
+  }
+
+  handleCallback();
+})();
+</script>
+</body>
+</html>
