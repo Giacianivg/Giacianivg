@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Mapa da Pousada — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Map container ── */
+    .map-wrap {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      padding: var(--sp-4);
+      overflow: hidden;
+    }
+    .map-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-4);
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+    .map-title { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .map-updated { font-size: .75rem; color: var(--tx3); }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: var(--sp-4);
+      flex-wrap: wrap;
+      margin-bottom: var(--sp-4);
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--sur2);
+      border-radius: var(--r-md);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-1);
+      font-size: .75rem;
+      color: var(--tx2);
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      border: 2px solid;
+      flex-shrink: 0;
+    }
+    .ld-available { background: rgba(34,197,94,.2);  border-color: #22c55e; }
+    .ld-occupied  { background: rgba(239,68,68,.2);  border-color: #ef4444; }
+    .ld-checkin   { background: rgba(234,179,8,.2);  border-color: #eab308; }
+    .ld-request   { background: rgba(99,102,241,.2); border-color: #6366f1; }
+    .ld-unknown   { background: rgba(148,163,184,.1);border-color: #94a3b8; }
+
+    /* ── SVG floor plan ── */
+    .floor-svg {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: block;
+      cursor: default;
+    }
+
+    /* Room base styles */
+    .room-area {
+      transition: fill .4s ease, stroke .4s ease;
+      cursor: pointer;
+    }
+    .room-label {
+      font-family: var(--f-sans, system-ui, sans-serif);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* Status fills */
+    .s-available { fill: rgba(34,197,94,.15);  stroke: #22c55e; stroke-width: 2; }
+    .s-occupied  { fill: rgba(239,68,68,.18);  stroke: #ef4444; stroke-width: 2; }
+    .s-checkin   { fill: rgba(234,179,8,.2);   stroke: #eab308; stroke-width: 2.5; }
+    .s-request   { fill: rgba(99,102,241,.15); stroke: #6366f1; stroke-width: 1.5; stroke-dasharray: 6,3; }
+    .s-unknown   { fill: rgba(148,163,184,.08);stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 4,4; }
+
+    /* Pulse animations */
+    @keyframes pulse-occupied {
+      0%, 100% { filter: drop-shadow(0 0 0px rgba(239,68,68,0));  }
+      50%       { filter: drop-shadow(0 0 8px rgba(239,68,68,.7)); }
+    }
+    @keyframes pulse-checkin {
+      0%, 100% { filter: drop-shadow(0 0 0px rgba(234,179,8,0));  }
+      50%       { filter: drop-shadow(0 0 10px rgba(234,179,8,.8)); }
+    }
+    @keyframes pulse-available {
+      0%, 100% { filter: drop-shadow(0 0 0px rgba(34,197,94,0));  }
+      50%       { filter: drop-shadow(0 0 5px rgba(34,197,94,.4)); }
+    }
+
+    .anim-occupied  { animation: pulse-occupied  2s ease-in-out infinite; }
+    .anim-checkin   { animation: pulse-checkin   1.4s ease-in-out infinite; }
+    .anim-available { animation: pulse-available 3s ease-in-out infinite; }
+
+    /* ── Room detail panel ── */
+    .room-detail {
+      margin-top: var(--sp-4);
+      background: var(--sur2);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4);
+      display: none;
+      animation: fadeIn .2s ease;
+    }
+    .room-detail.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-2);
+    }
+    .detail-name { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: var(--sp-3);
+      margin-top: var(--sp-2);
+    }
+    .detail-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tx3); margin-bottom: 2px; }
+    .detail-stat-value { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .sb-available { background: rgba(34,197,94,.12);  color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
+    .sb-occupied  { background: rgba(239,68,68,.12);  color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+    .sb-checkin   { background: rgba(234,179,8,.12);  color: #eab308; border: 1px solid rgba(234,179,8,.3); }
+    .sb-request   { background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.3); }
+    .sb-unknown   { background: rgba(148,163,184,.1); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
+
+    /* ── Refresh indicator ── */
+    .refresh-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
+      display: inline-block;
+      margin-right: 4px;
+      animation: pulse-available 2s ease-in-out infinite;
+    }
+    .refresh-dot.loading { background: var(--gold); animation: pulse-checkin 1s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link active" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendario</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Mapa da Pousada</h1>
+      </div>
+      <div class="topbar-right">
+        <span style="font-size:.8125rem;color:var(--tx3);display:flex;align-items:center">
+          <span class="refresh-dot" id="refresh-dot"></span>
+          <span id="last-updated">Carregando...</span>
+        </span>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="map-wrap">
+        <!-- Legend -->
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot ld-available"></span>Disponivel</span>
+          <span class="legend-item"><span class="legend-dot ld-occupied"></span>Ocupado</span>
+          <span class="legend-item"><span class="legend-dot ld-checkin"></span>Check-in hoje</span>
+          <span class="legend-item"><span class="legend-dot ld-request"></span>Sob consulta</span>
+          <span class="legend-item"><span class="legend-dot ld-unknown"></span>Sem dados</span>
+          <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">Clique no quarto para detalhes</span>
+        </div>
+
+        <!-- Floor plan SVG -->
+        <svg class="floor-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" id="floor-plan">
+
+          <!-- Defs: patterns and filters -->
+          <defs>
+            <pattern id="garden-dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+              <circle cx="6" cy="6" r="1.5" fill="currentColor" opacity="0.15"/>
+            </pattern>
+            <filter id="room-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+
+          <!-- Building shell -->
+          <rect x="2" y="2" width="796" height="496" rx="8" fill="none" stroke="var(--bdr2)" stroke-width="2"/>
+
+          <!-- ── Reception strip ── -->
+          <rect x="2" y="2" width="796" height="46" rx="8" fill="var(--sur2)" opacity="0.8"/>
+          <rect x="2" y="34" width="796" height="14" fill="var(--sur2)" opacity="0.8"/><!-- square bottom corners -->
+          <text x="400" y="30" text-anchor="middle" fill="var(--tx3)" font-size="13" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="3">RECEPÇÃO / ENTRADA</text>
+
+          <!-- ── Garden / pool area (center) ── -->
+          <rect x="205" y="54" width="300" height="290" rx="6" fill="url(#garden-dots)" stroke="var(--bdr1)" stroke-width="1" stroke-dasharray="5,3" color="var(--ok)"/>
+          <text x="355" y="155" text-anchor="middle" fill="var(--ok)" opacity="0.5" font-size="26" font-family="system-ui,sans-serif">🌿</text>
+          <text x="355" y="185" text-anchor="middle" fill="var(--tx3)" opacity="0.6" font-size="11" font-family="system-ui,sans-serif" font-weight="500" letter-spacing="2">ÁREA COMUM</text>
+          <text x="355" y="205" text-anchor="middle" fill="var(--tx3)" opacity="0.5" font-size="11" font-family="system-ui,sans-serif" font-weight="500" letter-spacing="2">JARDIM · PISCINA</text>
+
+          <!-- Pool circle -->
+          <ellipse cx="355" cy="255" rx="55" ry="40" fill="none" stroke="var(--royal-l)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.4"/>
+          <text x="355" y="259" text-anchor="middle" fill="var(--royal-l)" opacity="0.5" font-size="10" font-family="system-ui,sans-serif">PISCINA</text>
+
+          <!-- ── CORRIDORS ── -->
+          <!-- Left corridor vertical -->
+          <rect x="183" y="54" width="18" height="290" fill="var(--bg)" opacity="0.6"/>
+          <!-- Right corridor vertical -->
+          <rect x="515" y="54" width="18" height="290" fill="var(--bg)" opacity="0.6"/>
+
+          <!-- ── ALA_A ── -->
+          <g id="room-ALA_A" class="room-area anim-unknown" onclick="selectRoom('ALA_A')">
+            <rect x="10" y="54" width="170" height="155" rx="6" class="s-unknown" id="rect-ALA_A"/>
+            <!-- Door indicator -->
+            <rect x="162" y="118" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
+            <text x="95" y="108" text-anchor="middle" fill="var(--tx1)" font-size="16" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA A</text>
+            <text x="95" y="128" text-anchor="middle" fill="var(--tx3)" font-size="11" font-family="system-ui,sans-serif" class="room-label">máx. 3 hóspedes</text>
+            <text x="95" y="150" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_A" fill="var(--tx3)">—</text>
+            <!-- Furniture hint -->
+            <rect x="30" y="160" width="50" height="30" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+            <rect x="90" y="160" width="50" height="30" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+          </g>
+
+          <!-- ── ALA_B ── -->
+          <g id="room-ALA_B" class="room-area anim-unknown" onclick="selectRoom('ALA_B')">
+            <rect x="10" y="224" width="170" height="120" rx="6" class="s-unknown" id="rect-ALA_B"/>
+            <rect x="162" y="272" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
+            <text x="95" y="268" text-anchor="middle" fill="var(--tx1)" font-size="16" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA B</text>
+            <text x="95" y="287" text-anchor="middle" fill="var(--tx3)" font-size="11" font-family="system-ui,sans-serif" class="room-label">máx. 5 hóspedes</text>
+            <text x="95" y="310" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_B" fill="var(--tx3)">—</text>
+          </g>
+
+          <!-- ── ALA_C_1 (top half of suite) ── -->
+          <g id="room-ALA_C_1" class="room-area anim-unknown" onclick="selectRoom('ALA_C_CASAL')">
+            <rect x="537" y="54" width="253" height="145" rx="6" class="s-unknown" id="rect-ALA_C_1"/>
+            <rect x="537" y="118" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
+            <text x="663" y="96" text-anchor="middle" fill="var(--tx3)" font-size="10" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" class="room-label">ALA C — SUITE</text>
+            <text x="663" y="115" text-anchor="middle" fill="var(--tx1)" font-size="15" font-weight="700" font-family="system-ui,sans-serif" class="room-label">C-1</text>
+            <text x="663" y="134" text-anchor="middle" fill="var(--tx3)" font-size="10" font-family="system-ui,sans-serif" class="room-label">quarto 1 de 2</text>
+            <text x="663" y="155" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_1" fill="var(--tx3)">—</text>
+            <!-- Bed symbols -->
+            <rect x="560" y="160" width="40" height="25" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+            <rect x="610" y="160" width="40" height="25" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+          </g>
+
+          <!-- ── Suite connector ── -->
+          <rect x="537" y="199" width="253" height="14" fill="var(--bg)" opacity="0.5"/>
+          <text x="663" y="210" text-anchor="middle" fill="var(--tx3)" opacity="0.5" font-size="9" font-family="system-ui,sans-serif" letter-spacing="1">CORREDOR INTERNO</text>
+
+          <!-- ── ALA_C_2 (bottom half of suite) ── -->
+          <g id="room-ALA_C_2" class="room-area anim-unknown" onclick="selectRoom('ALA_C_CASAL')">
+            <rect x="537" y="213" width="253" height="131" rx="6" class="s-unknown" id="rect-ALA_C_2"/>
+            <rect x="537" y="265" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
+            <text x="663" y="258" text-anchor="middle" fill="var(--tx1)" font-size="15" font-weight="700" font-family="system-ui,sans-serif" class="room-label">C-2</text>
+            <text x="663" y="277" text-anchor="middle" fill="var(--tx3)" font-size="10" font-family="system-ui,sans-serif" class="room-label">quarto 2 de 2</text>
+            <text x="663" y="298" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_2" fill="var(--tx3)">—</text>
+          </g>
+
+          <!-- ── Suite brace / label ── -->
+          <rect x="787" y="54" width="3" height="290" rx="1" fill="var(--bdr2)" opacity="0.5"/>
+          <text x="797" y="200" text-anchor="middle" fill="var(--tx3)" opacity="0.4" font-size="9" font-family="system-ui,sans-serif"
+            transform="rotate(90,797,200)">ALA C SUITE — até 8 hóspedes</text>
+
+          <!-- ── ALA_C_GRUPO ── -->
+          <g id="room-ALA_C_GRUPO" class="room-area anim-unknown" onclick="selectRoom('ALA_C_GRUPO')">
+            <rect x="10" y="358" width="780" height="130" rx="6" class="s-unknown" id="rect-ALA_C_GRUPO"/>
+            <text x="400" y="403" text-anchor="middle" fill="var(--tx1)" font-size="17" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA C — GRUPO</text>
+            <text x="400" y="423" text-anchor="middle" fill="var(--tx3)" font-size="12" font-family="system-ui,sans-serif" class="room-label">Espaço exclusivo para grupos grandes · sob consulta com a equipe</text>
+            <text x="400" y="455" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_GRUPO" fill="var(--tx3)">—</text>
+          </g>
+
+          <!-- ── Compass rose (decorative) ── -->
+          <g transform="translate(148,325)" opacity="0.25">
+            <circle cx="0" cy="0" r="18" fill="none" stroke="var(--tx3)" stroke-width="1"/>
+            <polygon points="0,-14 3,-4 0,-2 -3,-4" fill="var(--err)"/>
+            <polygon points="0,14 3,4 0,2 -3,4" fill="var(--tx3)"/>
+            <polygon points="-14,0 -4,-3 -2,0 -4,3" fill="var(--tx3)"/>
+            <polygon points="14,0 4,-3 2,0 4,3" fill="var(--tx3)"/>
+            <text x="0" y="-20" text-anchor="middle" fill="var(--tx3)" font-size="9" font-family="system-ui">N</text>
+          </g>
+
+        </svg>
+
+        <!-- Room detail panel -->
+        <div class="room-detail" id="room-detail">
+          <div class="detail-header">
+            <span class="detail-name" id="detail-name">—</span>
+            <span class="status-badge" id="detail-badge">—</span>
+          </div>
+          <div class="detail-grid" id="detail-grid"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL  = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let authToken = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  sb.auth.getSession().then(({ data }) => {
+    const user = data?.session?.user;
+    if (!user) { window.location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    authToken = data.session.access_token;
+    loadMap();
+    // Auto-refresh every 60s
+    setInterval(loadMap, 60_000);
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+  });
+
+  document.getElementById('btn-refresh').addEventListener('click', loadMap);
+
+  async function apiFetch(path) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let roomsData   = {};   // code → room object
+  let selectedCode = null;
+  const TODAY = new Date().toISOString().slice(0, 10);
+
+  // ── Load ──────────────────────────────────────────────────────────────────
+  async function loadMap() {
+    const dot = document.getElementById('refresh-dot');
+    dot.classList.add('loading');
+    document.getElementById('last-updated').textContent = 'Atualizando...';
+
+    const [roomsRes, recentRes] = await Promise.all([
+      apiFetch('/api/rooms'),
+      apiFetch('/api/financial/recent?limit=50'),
+    ]);
+
+    // Which room_types have check-in today?
+    const checkinToday = new Set();
+    if (recentRes?.success) {
+      for (const r of (recentRes.reservations || [])) {
+        if (r.checkin_date === TODAY && ['confirmed', 'deposit_paid', 'checked_in'].includes(r.status)) {
+          checkinToday.add(r.room_type); // e.g. "ALA_A", "ALA_C_1", "ALA_C_2"
+        }
+      }
+    }
+
+    if (roomsRes?.success) {
+      for (const room of (roomsRes.rooms || [])) {
+        roomsData[room.code] = room;
+      }
+      applyStatuses(checkinToday);
+    }
+
+    dot.classList.remove('loading');
+    const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('last-updated').textContent = `Atualizado às ${now}`;
+
+    // Refresh detail panel if a room is selected
+    if (selectedCode) selectRoom(selectedCode);
+  }
+
+  // ── Apply status to SVG ───────────────────────────────────────────────────
+  function applyStatuses(checkinToday) {
+    // ALA_A
+    const alaA = roomsData['ALA_A'];
+    if (alaA) {
+      const checkin = checkinToday.has('ALA_A');
+      applyRoomStatus('ALA_A', checkin ? 'checkin' : mapStatus(alaA.today_status), alaA);
+    }
+
+    // ALA_B
+    const alaB = roomsData['ALA_B'];
+    if (alaB) {
+      const checkin = checkinToday.has('ALA_B');
+      applyRoomStatus('ALA_B', checkin ? 'checkin' : mapStatus(alaB.today_status), alaB);
+    }
+
+    // ALA_C_CASAL → applies to both ALA_C_1 and ALA_C_2
+    const alaC = roomsData['ALA_C_CASAL'];
+    if (alaC) {
+      const checkin = checkinToday.has('ALA_C_1') || checkinToday.has('ALA_C_2');
+      const status  = checkin ? 'checkin' : mapStatus(alaC.today_status);
+      applyRoomStatus('ALA_C_1',    status, alaC);
+      applyRoomStatus('ALA_C_2',    status, alaC);
+    }
+
+    // ALA_C_GRUPO
+    const grupo = roomsData['ALA_C_GRUPO'];
+    if (grupo) {
+      applyRoomStatus('ALA_C_GRUPO', 'request', grupo);
+    }
+  }
+
+  function mapStatus(apiStatus) {
+    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request', unknown: 'unknown' };
+    return map[apiStatus] || 'unknown';
+  }
+
+  const STATUS_CLASSES = {
+    available: { rect: 's-available', anim: 'anim-available', label: 'Disponivel',   badge: 'sb-available', color: '#22c55e' },
+    occupied:  { rect: 's-occupied',  anim: 'anim-occupied',  label: 'Ocupado',      badge: 'sb-occupied',  color: '#ef4444' },
+    checkin:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Check-in hoje',badge: 'sb-checkin',   color: '#eab308' },
+    partial:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Parcial',      badge: 'sb-checkin',   color: '#eab308' },
+    request:   { rect: 's-request',   anim: '',               label: 'Sob consulta', badge: 'sb-request',   color: '#6366f1' },
+    unknown:   { rect: 's-unknown',   anim: '',               label: 'Sem dados',    badge: 'sb-unknown',   color: '#94a3b8' },
+  };
+
+  function applyRoomStatus(svgId, status, room) {
+    const cfg  = STATUS_CLASSES[status] || STATUS_CLASSES.unknown;
+    const rect = document.getElementById(`rect-${svgId}`);
+    const grp  = document.getElementById(`room-${svgId}`);
+    const txt  = document.getElementById(`status-text-${svgId}`);
+
+    if (!rect || !grp) return;
+
+    // Update rect class
+    rect.className.baseVal = `room-area ${cfg.rect}`;
+
+    // Update group animation class
+    const baseClass = 'room-area';
+    grp.className.baseVal = `${baseClass} ${cfg.anim}`;
+
+    // Update status text
+    if (txt) {
+      txt.textContent = cfg.label;
+      txt.setAttribute('fill', cfg.color);
+    }
+  }
+
+  // ── Room detail panel ─────────────────────────────────────────────────────
+  window.selectRoom = function(code) {
+    selectedCode = code;
+    const room = roomsData[code];
+    const panel = document.getElementById('room-detail');
+
+    if (!room) { panel.classList.remove('show'); return; }
+
+    // Determine display status
+    const statusKey = mapStatus(room.today_status);
+    const cfg = STATUS_CLASSES[statusKey] || STATUS_CLASSES.unknown;
+    const isGrupo = code === 'ALA_C_GRUPO';
+
+    document.getElementById('detail-name').textContent = room.name;
+
+    const badge = document.getElementById('detail-badge');
+    badge.className = `status-badge ${cfg.badge}`;
+    badge.textContent = cfg.label;
+
+    const fmtBRL = v => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+
+    document.getElementById('detail-grid').innerHTML = `
+      <div>
+        <div class="detail-stat-label">Hospedes max.</div>
+        <div class="detail-stat-value">${isGrupo ? 'Variavel' : room.max_guests}</div>
+      </div>
+      ${!isGrupo ? `
+      <div>
+        <div class="detail-stat-label">Preco baixa</div>
+        <div class="detail-stat-value">${fmtBRL(room.base_price_baixa)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
+      </div>
+      <div>
+        <div class="detail-stat-label">Preco media</div>
+        <div class="detail-stat-value">${fmtBRL(room.base_price_media)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
+      </div>
+      <div>
+        <div class="detail-stat-label">Preco alta</div>
+        <div class="detail-stat-value" style="color:var(--gold)">${fmtBRL(room.base_price_alta)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
+      </div>` : `
+      <div>
+        <div class="detail-stat-label">Cotacao</div>
+        <div class="detail-stat-value" style="font-size:.875rem">R$ 150–210/px</div>
+      </div>`}
+      <div style="grid-column:1/-1">
+        <div class="detail-stat-label">Descricao</div>
+        <div style="font-size:.8125rem;color:var(--tx2);margin-top:2px;line-height:1.5">${escHtml(room.description)}</div>
+      </div>
+      ${room.amenities && room.amenities.length ? `
+      <div style="grid-column:1/-1">
+        <div class="detail-stat-label" style="margin-bottom:var(--sp-1)">Comodidades</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${room.amenities.map(a => `<span style="font-size:.7rem;padding:2px 7px;background:var(--sur1);border:1px solid var(--bdr0);border-radius:9999px;color:var(--tx2)">${escHtml(a)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+    `;
+
+    panel.classList.add('show');
+  };
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+})();
+</script>
+</body>
+</html>
