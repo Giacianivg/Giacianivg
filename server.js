@@ -190,6 +190,7 @@ app.use('/api/follow-ups',                 require('./routes/follow-ups'));
 app.use('/api/alerts',                     require('./routes/alerts'));
 app.use('/api/ai',                         require('./routes/ai-activity'));
 app.use('/api/blackboard',                 require('./routes/blackboard'));
+app.use('/api/luna-config',                require('./routes/luna-config'));
 
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
 app.use('/webhook', require('./services/whatsapp/webhook'));

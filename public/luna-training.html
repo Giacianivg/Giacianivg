@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Treinamento Luna — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .training-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: var(--sp-4);
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .training-grid { grid-template-columns: 1fr; }
+    }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--bdr1); margin-bottom: var(--sp-4); }
+    .tab-btn {
+      padding: var(--sp-2) var(--sp-4);
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--tx2);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color var(--t-fast), border-color var(--t-fast);
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--tx1); }
+    .tab-btn.active { color: var(--royal-l); border-bottom-color: var(--royal-l); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .field-group { margin-bottom: var(--sp-4); }
+    .field-label {
+      display: block;
+      font-size: .8125rem;
+      font-weight: 500;
+      color: var(--tx2);
+      margin-bottom: var(--sp-1);
+    }
+    .field-hint {
+      font-size: .75rem;
+      color: var(--tx3);
+      margin-top: var(--sp-1);
+    }
+    textarea.input {
+      resize: vertical;
+      font-family: var(--f-mono, 'Cascadia Code', monospace);
+      font-size: .8125rem;
+      line-height: 1.6;
+    }
+    .prompt-textarea { min-height: 320px; }
+    .script-textarea { min-height: 100px; }
+    .json-textarea {
+      min-height: 120px;
+      font-family: var(--f-mono, 'Cascadia Code', monospace);
+      font-size: .8rem;
+    }
+
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: var(--royal-bg);
+      color: var(--royal-l);
+      font-size: .75rem;
+      font-weight: 600;
+      border: 1px solid rgba(99,102,241,.2);
+    }
+    .save-bar {
+      position: sticky;
+      bottom: 0;
+      background: var(--sur1);
+      border-top: 1px solid var(--bdr1);
+      padding: var(--sp-3) var(--sp-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin: var(--sp-4) calc(-1 * var(--sp-4)) 0;
+      z-index: 10;
+    }
+    .save-status {
+      font-size: .8125rem;
+      color: var(--tx3);
+    }
+    .save-status.saving { color: var(--gold); }
+    .save-status.saved  { color: var(--ok); }
+    .save-status.error  { color: var(--err); }
+
+    .history-card { background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-lg); overflow: hidden; }
+    .history-header {
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--bdr1);
+      font-size: .8125rem;
+      font-weight: 600;
+      color: var(--tx1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .history-list { list-style: none; margin: 0; padding: 0; }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-2) var(--sp-4);
+      border-bottom: 1px solid var(--bdr0);
+      gap: var(--sp-2);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-ver { font-size: .75rem; font-weight: 700; color: var(--royal-l); min-width: 32px; }
+    .history-meta { flex: 1; min-width: 0; }
+    .history-by { font-size: .75rem; color: var(--tx1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-date { font-size: .7rem; color: var(--tx3); }
+    .history-empty { padding: var(--sp-4); text-align: center; color: var(--tx3); font-size: .8125rem; }
+
+    .warning-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--sp-2);
+      padding: var(--sp-3) var(--sp-4);
+      background: rgba(234,179,8,.08);
+      border: 1px solid rgba(234,179,8,.2);
+      border-radius: var(--r-md);
+      margin-bottom: var(--sp-4);
+      font-size: .8125rem;
+      color: var(--tx2);
+      line-height: 1.5;
+    }
+    .warning-banner svg { flex-shrink: 0; color: var(--gold); margin-top: 1px; }
+
+    .package-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-size: .75rem;
+      font-weight: 600;
+      border: 1px solid rgba(34,197,94,.2);
+      cursor: pointer;
+    }
+    .package-tag .remove { opacity: .6; font-size: 1rem; line-height: 1; }
+    .package-tag .remove:hover { opacity: 1; }
+    .packages-list { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); min-height: 32px; }
+    .add-package-row { display: flex; gap: var(--sp-2); }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link active" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Treinamento Luna</h1>
+      </div>
+      <div class="topbar-right">
+        <span class="version-badge" id="version-badge">v1</span>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="warning-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Configuracoes salvas aqui ficam armazenadas no banco. A integracao com o bot Luna sera ativada em um proximo DEC apos aprovacao do CTO.
+      </div>
+
+      <div class="training-grid">
+        <!-- Coluna principal -->
+        <div class="card" style="padding: var(--sp-4);">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="prompt">System Prompt</button>
+            <button class="tab-btn" data-tab="personality">Personalidade</button>
+            <button class="tab-btn" data-tab="scripts">Scripts</button>
+            <button class="tab-btn" data-tab="packages">Pacotes Ativos</button>
+          </div>
+
+          <!-- Tab: System Prompt -->
+          <div class="tab-panel active" id="tab-prompt">
+            <div class="field-group">
+              <label class="field-label" for="system-prompt">Prompt principal da Luna</label>
+              <textarea class="input prompt-textarea" id="system-prompt" placeholder="Voce e Luna, assistente da Pousada Luz da Lua em Socorro-SP..."></textarea>
+              <p class="field-hint">Define o comportamento central da Luna. Seja especifica: tom, limites, o que fazer e o que nao fazer.</p>
+            </div>
+          </div>
+
+          <!-- Tab: Personalidade -->
+          <div class="tab-panel" id="tab-personality">
+            <div class="field-group">
+              <label class="field-label" for="p-nome">Nome</label>
+              <input class="input" type="text" id="p-nome" placeholder="Luna">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="p-tom">Tom de voz</label>
+              <select class="select" id="p-tom">
+                <option value="acolhedor">Acolhedor</option>
+                <option value="profissional">Profissional</option>
+                <option value="informal">Informal</option>
+                <option value="entusiasmado">Entusiasmado</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Usar emojis</label>
+              <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;font-size:.875rem;color:var(--tx2)">
+                <input type="checkbox" id="p-emoji" style="width:16px;height:16px;accent-color:var(--royal-l)">
+                Habilitar emojis nas respostas
+              </label>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="p-json-raw">JSON completo (avancado)</label>
+              <textarea class="input json-textarea" id="p-json-raw"></textarea>
+              <p class="field-hint">Edicao direta do JSON de personalidade. Sobrepoe os campos acima ao salvar.</p>
+            </div>
+          </div>
+
+          <!-- Tab: Scripts -->
+          <div class="tab-panel" id="tab-scripts">
+            <div class="field-group">
+              <label class="field-label" for="s-saudacao">Saudacao inicial</label>
+              <textarea class="input script-textarea" id="s-saudacao" placeholder="Ola! Bem-vindo a Pousada Luz da Lua!..."></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="s-cotacao">Apresentacao de cotacao</label>
+              <textarea class="input script-textarea" id="s-cotacao" placeholder="Tenho uma otima opcao para voces!..."></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="s-objecao">Resposta a objecoes de preco</label>
+              <textarea class="input script-textarea" id="s-objecao" placeholder="Entendo sua preocupacao! Nosso diferencial e..."></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="s-fechamento">Fechamento de reserva</label>
+              <textarea class="input script-textarea" id="s-fechamento" placeholder="Que otimo! Para confirmar sua reserva..."></textarea>
+            </div>
+          </div>
+
+          <!-- Tab: Pacotes -->
+          <div class="tab-panel" id="tab-packages">
+            <div class="field-group">
+              <label class="field-label">Pacotes ativos</label>
+              <div class="packages-list" id="packages-list"></div>
+              <div class="add-package-row">
+                <input class="input" type="text" id="new-package" placeholder="ex: PASCOA_2026" style="flex:1">
+                <button class="btn btn-secondary" id="btn-add-package">Adicionar</button>
+              </div>
+              <p class="field-hint">Pacotes ativos influenciam o comportamento da Luna para campanhas especificas.</p>
+            </div>
+          </div>
+
+          <div class="save-bar">
+            <span class="save-status" id="save-status">Carregando...</span>
+            <button class="btn btn-primary" id="btn-save" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar configuracao
+            </button>
+          </div>
+        </div>
+
+        <!-- Coluna: Historico -->
+        <div>
+          <div class="history-card">
+            <div class="history-header">
+              Historico de versoes
+              <span style="font-size:.75rem;color:var(--tx3);font-weight:400">ultimas 10</span>
+            </div>
+            <ul class="history-list" id="history-list">
+              <li class="history-empty">Carregando...</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  let authToken = null;
+  let activePackages = [];
+
+  async function getToken() {
+    const { data } = await sb.auth.getSession();
+    return data?.session?.access_token || null;
+  }
+
+  async function apiFetch(path, options = {}) {
+    if (!authToken) authToken = await getToken();
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(options.headers || {}) },
+    });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  // ── Auth setup ────────────────────────────────────────────────────────────
+  sb.auth.getSession().then(({ data }) => {
+    const user = data?.session?.user;
+    if (!user) { window.location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    authToken = data.session.access_token;
+    loadAll();
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+  });
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Load config ───────────────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([loadConfig(), loadHistory()]);
+  }
+
+  async function loadConfig() {
+    setStatus('Carregando...', '');
+    const res = await apiFetch('/api/luna-config');
+    if (!res) return;
+
+    const cfg = res.config;
+    if (!cfg) { setStatus('Nenhuma config salva. Preencha e salve.', ''); enableSave(); return; }
+
+    document.getElementById('version-badge').textContent = `v${cfg.version}`;
+    document.getElementById('system-prompt').value = cfg.system_prompt || '';
+
+    const p = cfg.personality || {};
+    document.getElementById('p-nome').value = p.nome || '';
+    document.getElementById('p-tom').value = p.tom || 'acolhedor';
+    document.getElementById('p-emoji').checked = p.emoji !== false;
+    document.getElementById('p-json-raw').value = JSON.stringify(p, null, 2);
+
+    const s = cfg.scripts || {};
+    document.getElementById('s-saudacao').value   = s.saudacao   || '';
+    document.getElementById('s-cotacao').value    = s.cotacao    || '';
+    document.getElementById('s-objecao').value    = s.objecao    || '';
+    document.getElementById('s-fechamento').value = s.fechamento || '';
+
+    activePackages = Array.isArray(cfg.active_packages) ? [...cfg.active_packages] : [];
+    renderPackages();
+
+    setStatus(`Versao v${cfg.version} carregada`, 'saved');
+    enableSave();
+  }
+
+  async function loadHistory() {
+    const res = await apiFetch('/api/luna-config/history');
+    if (!res) return;
+    renderHistory(res.history || []);
+  }
+
+  // ── Packages ──────────────────────────────────────────────────────────────
+  function renderPackages() {
+    const list = document.getElementById('packages-list');
+    list.innerHTML = '';
+    if (activePackages.length === 0) {
+      list.innerHTML = '<span style="font-size:.8125rem;color:var(--tx3)">Nenhum pacote ativo</span>';
+      return;
+    }
+    activePackages.forEach((pkg, idx) => {
+      const tag = document.createElement('span');
+      tag.className = 'package-tag';
+      tag.innerHTML = `${pkg} <span class="remove" data-idx="${idx}">&times;</span>`;
+      tag.querySelector('.remove').addEventListener('click', () => {
+        activePackages.splice(idx, 1);
+        renderPackages();
+      });
+      list.appendChild(tag);
+    });
+  }
+
+  document.getElementById('btn-add-package').addEventListener('click', () => {
+    const input = document.getElementById('new-package');
+    const val = input.value.trim().toUpperCase().replace(/\s+/g, '_');
+    if (!val) return;
+    if (!activePackages.includes(val)) { activePackages.push(val); renderPackages(); }
+    input.value = '';
+  });
+
+  document.getElementById('new-package').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-add-package').click();
+  });
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  function enableSave() {
+    document.getElementById('btn-save').disabled = false;
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById('save-status');
+    el.textContent = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+  }
+
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    setStatus('Salvando...', 'saving');
+    document.getElementById('btn-save').disabled = true;
+
+    // Build personality: try raw JSON first, fallback to fields
+    let personality;
+    try {
+      personality = JSON.parse(document.getElementById('p-json-raw').value || '{}');
+    } catch {
+      personality = {
+        nome:  document.getElementById('p-nome').value.trim(),
+        tom:   document.getElementById('p-tom').value,
+        emoji: document.getElementById('p-emoji').checked,
+      };
+    }
+    // Always override with fields unless raw JSON was explicitly edited
+    if (!document.getElementById('p-json-raw').value.trim()) {
+      personality = {
+        nome:  document.getElementById('p-nome').value.trim(),
+        tom:   document.getElementById('p-tom').value,
+        emoji: document.getElementById('p-emoji').checked,
+      };
+    }
+
+    const body = {
+      system_prompt: document.getElementById('system-prompt').value,
+      personality,
+      scripts: {
+        saudacao:   document.getElementById('s-saudacao').value,
+        cotacao:    document.getElementById('s-cotacao').value,
+        objecao:    document.getElementById('s-objecao').value,
+        fechamento: document.getElementById('s-fechamento').value,
+      },
+      active_packages: activePackages,
+    };
+
+    const res = await apiFetch('/api/luna-config', { method: 'PUT', body: JSON.stringify(body) });
+    document.getElementById('btn-save').disabled = false;
+
+    if (!res || !res.success) {
+      setStatus('Erro ao salvar. Tente novamente.', 'error');
+      return;
+    }
+
+    document.getElementById('version-badge').textContent = `v${res.version}`;
+    setStatus(`Salvo como v${res.version}`, 'saved');
+    await loadHistory();
+  });
+
+  // ── History ───────────────────────────────────────────────────────────────
+  function renderHistory(history) {
+    const list = document.getElementById('history-list');
+    if (!history.length) {
+      list.innerHTML = '<li class="history-empty">Nenhuma versao anterior</li>';
+      return;
+    }
+    list.innerHTML = history.map(h => {
+      const date = new Date(h.saved_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<li class="history-item">
+        <span class="history-ver">v${h.version}</span>
+        <div class="history-meta">
+          <div class="history-by">${escHtml(h.saved_by)}</div>
+          <div class="history-date">${date}</div>
+        </div>
+        <button class="btn btn-ghost btn-icon btn-sm" title="Restaurar v${h.version}" data-version="${h.version}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        </button>
+      </li>`;
+    }).join('');
+
+    list.querySelectorAll('[data-version]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const v = btn.dataset.version;
+        if (!confirm(`Restaurar versao v${v}? A versao atual sera arquivada.`)) return;
+        setStatus('Restaurando...', 'saving');
+        const res = await apiFetch(`/api/luna-config/restore/${v}`, { method: 'POST', body: '{}' });
+        if (!res || !res.success) { setStatus('Erro ao restaurar.', 'error'); return; }
+        setStatus(`Restaurado para v${v} (agora v${res.version})`, 'saved');
+        await loadAll();
+      });
+    });
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+})();
+</script>
+</body>
+</html>
