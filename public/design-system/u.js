@@ -51,11 +51,14 @@
       window.location.href = 'login.html';
       return null;
     }
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
+    // Validate session against server (not just local cache)
+    const { data: { user }, error } = await sb.auth.getUser();
+    if (error || !user) {
+      await sb.auth.signOut(); // Clear stale session
       window.location.href = 'login.html';
       return null;
     }
+    const { data: { session } } = await sb.auth.getSession();
     return session;
   }
 

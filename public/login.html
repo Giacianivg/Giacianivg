@@ -56,8 +56,9 @@
 (async () => {
   const sb = DS.getSB();
   if (sb) {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) { window.location.href = 'dashboard.html'; return; }
+    const { data: { user }, error } = await sb.auth.getUser();
+    if (user && !error) { window.location.href = 'dashboard.html'; return; }
+    if (!user) await sb.auth.signOut(); // Clear any stale local session
   }
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {
