@@ -18,8 +18,9 @@
 | [EPIC-PLU-06](./EPIC-PLU-06-crm-reservas.md) | Fundacao CRM — Database, API e Motor de Reservas | 🔴 Alta | 31 | +R$15-20k/mês | Planning |
 | [EPIC-PLU-07](./EPIC-PLU-07-luna-crm-automacoes.md) | Luna <-> CRM e Automacoes de Follow-up | 🔴 Alta | 29 | +R$20-25k/mês | Planning |
 | [EPIC-PLU-08](./EPIC-PLU-08-dashboard-operacoes.md) | Dashboard de Operacoes e Metricas | 🟡 Média | 24 | Decisões operacionais | Planning |
+| [EPIC-PLU-09](./EPIC-PLU-09-design-system.md) | Luz da Lua Design System v1.0 | 🔴 Alta | 31 | Fundação UX/brand | Planning |
 
-**Total de Pontos:** 172 | **Impacto Total Estimado:** +R$110-145k/mês sobre base atual de R$30k
+**Total de Pontos:** 203 | **Impacto Total Estimado:** +R$110-145k/mês sobre base atual de R$30k
 
 ---
 
@@ -43,6 +44,9 @@ Wave 5 (Semanas 5-10): EPIC-PLU-07
 
 Wave 6 (Semanas 9-12): EPIC-PLU-08
   → Dashboard operacional com KPIs, calendario e relatorio diario
+
+Wave 7 (Paralelo, qualquer wave): EPIC-PLU-09
+  → Design System: tokens CSS + migração pages + landing pública
 ```
 
 ## Dependências entre Épicos
@@ -71,3 +75,20 @@ EPIC-PLU-08 (Dashboard)
   └─ Depende de: EPIC-PLU-06 + EPIC-PLU-07
   └─ Alimenta: EPIC-PLU-03 (dados de ocupacao para pricing)
 ```
+
+---
+
+## Historico de Decisoes (DECs)
+
+Todas as decisoes arquiteturais e estrategicas do sistema sao registradas em `ai-os/data/decision-history/`.
+
+| DEC | Titulo | Data | Score | Status |
+|-----|--------|------|-------|--------|
+| [DEC-001](../../ai-os/data/decision-history/DEC-001.md) | PRIMEIRA_RECEITA: Ativacao de Leads + Primeira Campanha | 2026-03-10 | 100% | APROVADO |
+| [DEC-002](../../ai-os/data/decision-history/DEC-002.md) | EVENT_BUS + COMMAND_CENTER: Camada de Orquestracao e Visibilidade | 2026-03-10 | 92% | IMPLEMENTADO |
+| [DEC-003](../../ai-os/data/decision-history/DEC-003.md) | PASCOA_SPRINT: Campanha Meta Ads + Pacote Escapada Romantica | 2026-03-10 | 100% | APROVADO |
+| [DEC-004](../../ai-os/data/decision-history/DEC-004.md) | PACOTE_PASCOA: Alteracoes Luna + Engine de Cotacao | 2026-03-10 | 94% | APROVADO |
+| [DEC-007](../../ai-os/data/decision-history/DEC-007.md) | BLACKBOARD_MEMORY: Estado Compartilhado Real entre Agentes | 2026-03-10 | 97% | APROVADO |
+
+> Regra: nenhuma feature, bugfix ou mudanca arquitetural sem DEC-XXX.md aprovado.
+> Ver `.claude/rules/orquestracao.md` para o fluxo obrigatorio completo.

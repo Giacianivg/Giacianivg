@@ -27,3 +27,33 @@ class LuzDaLuaEventBus extends EventEmitter {
 }
 
 module.exports = new LuzDaLuaEventBus();
+
+// ─── Blackboard Listeners — DEC-007 ────────────────────────────────────────────
+// Append only — não modifica lógica existente do EventBus
+// Writes são fire-and-forget (set() nunca bloqueia)
+
+const blackboard = require('./blackboard');
+
+module.exports.on('lead_received', async (data) => {
+  const leads = await blackboard.get('leads') || {};
+  blackboard.set('leads', {
+    ...leads,
+    total: (leads.total || 0) + 1,
+    ativos: (leads.ativos || 0) + 1,
+    ultimo_update: new Date().toISOString(),
+  });
+});
+
+module.exports.on('booking_confirmed', async (data) => {
+  const reservas = await blackboard.get('reservas') || {};
+  blackboard.set('reservas', {
+    ...reservas,
+    hoje: (reservas.hoje || 0) + 1,
+    mes: (reservas.mes || 0) + 1,
+  });
+});
+
+module.exports.on('message_received', async () => {
+  const leads = await blackboard.get('leads') || {};
+  blackboard.set('leads', { ...leads, ultimo_update: new Date().toISOString() });
+});
