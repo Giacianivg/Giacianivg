@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>Quartos — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: var(--sp-4);
+    }
+    .room-card {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .room-card-header {
+      padding: var(--sp-4);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--sp-3);
+    }
+    .room-title { font-size: 1rem; font-weight: 700; color: var(--tx1); margin-bottom: 2px; }
+    .room-sub   { font-size: .8125rem; color: var(--tx3); }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .status-dot.available  { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .status-dot.blocked    { background: var(--err); }
+    .status-dot.partial    { background: var(--gold); }
+    .status-dot.on_request { background: var(--royal-l); }
+    .status-dot.unknown    { background: var(--tx3); }
+
+    .status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .status-label.available  { background: var(--ok-bg);    color: var(--ok);     border: 1px solid rgba(34,197,94,.2); }
+    .status-label.blocked    { background: var(--err-bg);   color: var(--err);    border: 1px solid rgba(239,68,68,.2); }
+    .status-label.partial    { background: rgba(234,179,8,.1); color: var(--gold); border: 1px solid rgba(234,179,8,.2); }
+    .status-label.on_request { background: var(--royal-bg); color: var(--royal-l);border: 1px solid rgba(99,102,241,.2); }
+    .status-label.unknown    { background: var(--sur2);     color: var(--tx3);    border: 1px solid var(--bdr1); }
+
+    .room-card-body { padding: var(--sp-4); flex: 1; }
+    .room-desc { font-size: .8125rem; color: var(--tx2); line-height: 1.5; margin-bottom: var(--sp-3); }
+
+    .price-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-3);
+    }
+    .price-box {
+      background: var(--sur2);
+      border: 1px solid var(--bdr0);
+      border-radius: var(--r-md);
+      padding: var(--sp-2);
+      text-align: center;
+    }
+    .price-season { font-size: .7rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+    .price-val    { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .price-val.alta { color: var(--gold); }
+
+    .amenities-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1);
+    }
+    .amenity-tag {
+      font-size: .7rem;
+      padding: 2px 7px;
+      background: var(--sur2);
+      border: 1px solid var(--bdr0);
+      border-radius: 9999px;
+      color: var(--tx2);
+    }
+
+    .room-card-footer {
+      padding: var(--sp-3) var(--sp-4);
+      border-top: 1px solid var(--bdr1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-2);
+    }
+    .max-guests-badge {
+      font-size: .75rem;
+      color: var(--tx3);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-1);
+    }
+
+    .avail-strip {
+      display: flex;
+      gap: 2px;
+      margin-bottom: var(--sp-3);
+    }
+    .avail-cell {
+      flex: 1;
+      height: 6px;
+      border-radius: 2px;
+      background: var(--sur2);
+    }
+    .avail-cell.available  { background: var(--ok); }
+    .avail-cell.blocked    { background: var(--err); }
+    .avail-cell.partial    { background: var(--gold); }
+    .avail-cell.on_request { background: var(--royal-l); opacity: .5; }
+
+    /* Edit drawer */
+    .edit-drawer {
+      position: fixed;
+      top: 0; right: -440px;
+      width: 440px;
+      height: 100vh;
+      background: var(--sur1);
+      border-left: 1px solid var(--bdr1);
+      box-shadow: -4px 0 24px rgba(0,0,0,.3);
+      transition: right .25s ease;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .edit-drawer.open { right: 0; }
+    .drawer-head {
+      padding: var(--sp-4);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .drawer-title { font-size: 1rem; font-weight: 700; color: var(--tx1); }
+    .drawer-body { padding: var(--sp-4); flex: 1; overflow-y: auto; }
+    .drawer-foot {
+      padding: var(--sp-3) var(--sp-4);
+      border-top: 1px solid var(--bdr1);
+      display: flex;
+      gap: var(--sp-2);
+      justify-content: flex-end;
+    }
+    .field-group { margin-bottom: var(--sp-4); }
+    .field-label { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
+    .price-edit-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-2); }
+
+    .toast {
+      position: fixed;
+      bottom: var(--sp-4);
+      right: var(--sp-4);
+      padding: var(--sp-2) var(--sp-4);
+      background: var(--sur2);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      font-size: .875rem;
+      color: var(--tx1);
+      box-shadow: 0 4px 16px rgba(0,0,0,.3);
+      z-index: 300;
+      transition: opacity .3s, transform .3s;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-color: rgba(34,197,94,.3); color: var(--ok); }
+    .toast.err  { border-color: rgba(239,68,68,.3); color: var(--err); }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link active" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendario</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Quartos</h1>
+      </div>
+      <div class="topbar-right">
+        <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
+        <button class="btn btn-secondary" id="btn-refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <!-- Legend -->
+      <div style="display:flex;gap:var(--sp-4);margin-bottom:var(--sp-4);flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot available"></span>Disponivel hoje</span>
+        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot blocked"></span>Bloqueado</span>
+        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot partial"></span>Parcial</span>
+        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot on_request"></span>Sob consulta</span>
+        <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">Barra = proximos 14 dias</span>
+      </div>
+
+      <div class="rooms-grid" id="rooms-grid">
+        <!-- Cards injected by JS -->
+        <div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando quartos...</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Edit Drawer -->
+<div class="edit-drawer" id="edit-drawer">
+  <div class="drawer-head">
+    <span class="drawer-title" id="drawer-title">Editar quarto</span>
+    <button class="btn btn-ghost btn-icon" id="btn-close-drawer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div class="drawer-body">
+    <input type="hidden" id="edit-code">
+    <div class="field-group">
+      <label class="field-label" for="edit-name">Nome</label>
+      <input class="input" type="text" id="edit-name">
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="edit-desc">Descricao</label>
+      <textarea class="input" id="edit-desc" style="min-height:80px;resize:vertical"></textarea>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="edit-guests">Max. hospedes</label>
+      <input class="input" type="number" id="edit-guests" min="1" max="99">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Precos por temporada</label>
+      <div class="price-edit-grid">
+        <div>
+          <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Baixa</div>
+          <input class="input" type="number" id="edit-price-baixa" min="0" step="10" placeholder="300">
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Media</div>
+          <input class="input" type="number" id="edit-price-media" min="0" step="10" placeholder="350">
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:var(--gold);margin-bottom:4px">Alta</div>
+          <input class="input" type="number" id="edit-price-alta" min="0" step="10" placeholder="400">
+        </div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="edit-amenities">Comodidades (uma por linha)</label>
+      <textarea class="input" id="edit-amenities" style="min-height:100px;resize:vertical;font-size:.8rem"></textarea>
+    </div>
+    <div class="field-group">
+      <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;font-size:.875rem;color:var(--tx2)">
+        <input type="checkbox" id="edit-active" style="width:16px;height:16px;accent-color:var(--royal-l)">
+        Quarto ativo (visivel e cotavel)
+      </label>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn btn-secondary" id="btn-cancel-drawer">Cancelar</button>
+    <button class="btn btn-primary" id="btn-save-drawer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Salvar
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let authToken = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  sb.auth.getSession().then(({ data }) => {
+    const user = data?.session?.user;
+    if (!user) { window.location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    authToken = data.session.access_token;
+    loadRooms();
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+  });
+
+  async function apiFetch(path, options = {}) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(options.headers || {}) },
+    });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  // ── Date label ────────────────────────────────────────────────────────────
+  const today = new Date();
+  document.getElementById('date-label').textContent =
+    today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+
+  // ── Load rooms ────────────────────────────────────────────────────────────
+  let roomsCache = [];
+
+  async function loadRooms() {
+    const res = await apiFetch('/api/rooms');
+    if (!res || !res.success) { document.getElementById('rooms-grid').innerHTML = '<div class="card" style="padding:2rem;color:var(--err)">Erro ao carregar quartos.</div>'; return; }
+    roomsCache = res.rooms || [];
+    renderRooms(roomsCache);
+  }
+
+  function statusLabel(s) {
+    const labels = { available:'Disponivel', blocked:'Bloqueado', partial:'Parcial', on_request:'Sob consulta', unknown:'Sem dados' };
+    return labels[s] || s;
+  }
+
+  function renderRooms(rooms) {
+    const grid = document.getElementById('rooms-grid');
+    if (!rooms.length) { grid.innerHTML = '<div class="card" style="padding:2rem;text-align:center;color:var(--tx3)">Nenhum quarto cadastrado.</div>'; return; }
+
+    grid.innerHTML = rooms.map(room => {
+      const status = room.today_status || 'unknown';
+      const isGrupo = room.code === 'ALA_C_GRUPO';
+      const amenities = (room.amenities || []).slice(0, 5);
+
+      // 14-day strip from availability_30d (will be fetched per-room only in detail)
+      // For list view we show dots placeholder — actual strip loaded lazily
+
+      return `<div class="room-card" data-code="${room.code}">
+        <div class="room-card-header">
+          <div>
+            <div class="room-title">${escHtml(room.name)}</div>
+            <div class="room-sub">${escHtml(room.code)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-1)">
+            <span class="status-label ${status}">${statusLabel(status)}</span>
+            ${!room.active ? '<span style="font-size:.7rem;color:var(--err)">Inativo</span>' : ''}
+          </div>
+        </div>
+        <div class="room-card-body">
+          <p class="room-desc">${escHtml(room.description)}</p>
+          ${isGrupo
+            ? `<div style="font-size:.8125rem;color:var(--royal-l);margin-bottom:var(--sp-3)">Cotacao sob consulta — atendimento pela equipe</div>`
+            : `<div class="price-row">
+                <div class="price-box"><div class="price-season">Baixa</div><div class="price-val">${fmtBRL(room.base_price_baixa)}</div></div>
+                <div class="price-box"><div class="price-season">Media</div><div class="price-val">${fmtBRL(room.base_price_media)}</div></div>
+                <div class="price-box"><div class="price-season">Alta</div><div class="price-val alta">${fmtBRL(room.base_price_alta)}</div></div>
+              </div>`
+          }
+          <div class="avail-strip" id="strip-${room.code}">
+            ${Array(14).fill('<div class="avail-cell"></div>').join('')}
+          </div>
+          <div class="amenities-list">
+            ${amenities.map(a => `<span class="amenity-tag">${escHtml(a)}</span>`).join('')}
+            ${room.amenities && room.amenities.length > 5 ? `<span class="amenity-tag">+${room.amenities.length - 5}</span>` : ''}
+          </div>
+        </div>
+        <div class="room-card-footer">
+          <span class="max-guests-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            ${isGrupo ? 'Grupos grandes' : `Max. ${room.max_guests} hóspedes`}
+          </span>
+          <button class="btn btn-secondary btn-sm" data-edit="${room.code}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Bind edit buttons
+    grid.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => openDrawer(btn.dataset.edit));
+    });
+
+    // Load 14-day strips asynchronously
+    rooms.forEach(room => loadStrip(room.code));
+  }
+
+  // ── Avail strip (14 days) ─────────────────────────────────────────────────
+  async function loadStrip(code) {
+    const res = await apiFetch(`/api/rooms/${code}`);
+    if (!res || !res.success) return;
+    const dates = res.availability_30d || {};
+    const stripEl = document.getElementById(`strip-${code}`);
+    if (!stripEl) return;
+
+    const room = roomsCache.find(r => r.code === code);
+    if (room?.code === 'ALA_C_GRUPO') return;
+
+    const cells = [];
+    const d = new Date();
+    for (let i = 0; i < 14; i++) {
+      const key = d.toISOString().slice(0, 10);
+      cells.push(dates[key] || 'unknown');
+      d.setDate(d.getDate() + 1);
+    }
+    stripEl.innerHTML = cells.map(s => `<div class="avail-cell ${s}" title="${s}"></div>`).join('');
+  }
+
+  // ── Edit drawer ───────────────────────────────────────────────────────────
+  function openDrawer(code) {
+    const room = roomsCache.find(r => r.code === code);
+    if (!room) return;
+
+    document.getElementById('edit-code').value        = code;
+    document.getElementById('drawer-title').textContent = `Editar — ${room.name}`;
+    document.getElementById('edit-name').value        = room.name;
+    document.getElementById('edit-desc').value        = room.description;
+    document.getElementById('edit-guests').value      = room.max_guests;
+    document.getElementById('edit-price-baixa').value = room.base_price_baixa;
+    document.getElementById('edit-price-media').value = room.base_price_media;
+    document.getElementById('edit-price-alta').value  = room.base_price_alta;
+    document.getElementById('edit-amenities').value   = (room.amenities || []).join('\n');
+    document.getElementById('edit-active').checked    = room.active;
+
+    document.getElementById('edit-drawer').classList.add('open');
+    document.getElementById('drawer-backdrop').classList.add('open');
+  }
+
+  function closeDrawer() {
+    document.getElementById('edit-drawer').classList.remove('open');
+    document.getElementById('drawer-backdrop').classList.remove('open');
+  }
+
+  document.getElementById('btn-close-drawer').addEventListener('click', closeDrawer);
+  document.getElementById('btn-cancel-drawer').addEventListener('click', closeDrawer);
+  document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
+
+  document.getElementById('btn-save-drawer').addEventListener('click', async () => {
+    const code = document.getElementById('edit-code').value;
+    const body = {
+      name:              document.getElementById('edit-name').value.trim(),
+      description:       document.getElementById('edit-desc').value.trim(),
+      max_guests:        parseInt(document.getElementById('edit-guests').value, 10),
+      base_price_baixa:  parseFloat(document.getElementById('edit-price-baixa').value),
+      base_price_media:  parseFloat(document.getElementById('edit-price-media').value),
+      base_price_alta:   parseFloat(document.getElementById('edit-price-alta').value),
+      amenities:         document.getElementById('edit-amenities').value.split('\n').map(s => s.trim()).filter(Boolean),
+      active:            document.getElementById('edit-active').checked,
+    };
+
+    document.getElementById('btn-save-drawer').disabled = true;
+    const res = await apiFetch(`/api/rooms/${code}`, { method: 'PUT', body: JSON.stringify(body) });
+    document.getElementById('btn-save-drawer').disabled = false;
+
+    if (!res || !res.success) { showToast('Erro ao salvar.', 'err'); return; }
+
+    // Update cache
+    const idx = roomsCache.findIndex(r => r.code === code);
+    if (idx >= 0) roomsCache[idx] = { ...roomsCache[idx], ...res.room };
+
+    showToast(`${res.room.name} atualizado`, 'ok');
+    closeDrawer();
+    renderRooms(roomsCache);
+    loadStrip(code);
+  });
+
+  document.getElementById('btn-refresh').addEventListener('click', loadRooms);
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function fmtBRL(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+  }
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+})();
+</script>
+</body>
+</html>
