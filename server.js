@@ -188,6 +188,7 @@ app.use('/api',                            require('./routes/scoring'));
 app.use('/api/analytics',                  require('./routes/analytics'));
 app.use('/api/follow-ups',                 require('./routes/follow-ups'));
 app.use('/api/alerts',                     require('./routes/alerts'));
+app.use('/api/ai',                         require('./routes/ai-activity'));
 
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
 app.use('/webhook', require('./services/whatsapp/webhook'));
@@ -309,6 +310,7 @@ app.use((err, req, res, _next) => {
 
 // ─── Boot — only when run directly, not when required by tests ────────────────
 if (require.main === module) {
+  require('./ai/agents/crmAgent');
   require('./services/follow-up/follow-up-cron').startFollowUpCron();
   require('./services/follow-up/quote-event-listener').startQuoteEventListener();
 

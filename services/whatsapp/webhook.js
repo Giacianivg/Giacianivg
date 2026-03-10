@@ -26,10 +26,6 @@ app.use((req, res, next) => {
   // Only validate /webhook POST requests
   if (req.method !== 'POST' || req.path !== '/webhook') return next();
 
-  // TEMPORARY DEBUG: Disable signature validation to isolate the issue
-  console.warn('[security] DEBUG: Signature validation temporarily disabled for troubleshooting');
-  return next();
-
   const signature = req.headers['x-hub-signature-256'];
   const appSecret = process.env.WHATSAPP_APP_SECRET;
 

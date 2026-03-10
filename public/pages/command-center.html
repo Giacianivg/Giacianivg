@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="sb_publishable_CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs">
+  <title>AI Command Center — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="../design-system/t.css">
+  <link rel="stylesheet" href="../design-system/c.css">
+  <link rel="stylesheet" href="../design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .ai-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: var(--sp-4);
+    }
+    .ai-grid .panel-stream {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 768px) {
+      .ai-grid { grid-template-columns: 1fr; }
+      .ai-grid .panel-stream { grid-column: 1; }
+    }
+
+    /* Pulse badge */
+    .badge-pulse {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: .75rem;
+      font-weight: 600;
+      background: rgba(34,197,94,.12);
+      color: #4ade80;
+      border: 1px solid rgba(34,197,94,.3);
+    }
+    .badge-pulse::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse-dot 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.7); }
+    }
+
+    /* Agent cards */
+    .agent-grid { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+    .agent-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3); }
+    .agent-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+    .agent-name { font-weight: 600; font-size: .9375rem; }
+    .agent-listens { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
+    .event-tag { font-size: .6875rem; padding: 2px 7px; border-radius: 4px; background: var(--surface-3,rgba(255,255,255,.06)); color: var(--t-3); border: 1px solid var(--border); font-family: var(--mono); }
+    .badge-active  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 600; }
+    .badge-idle    { background: rgba(148,163,184,.1); color: var(--t-3); border: 1px solid var(--border); padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 600; }
+    .badge-n1      { background: rgba(239,68,68,.12);  color: #f87171; border: 1px solid rgba(239,68,68,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 700; }
+    .badge-n2      { background: rgba(234,179,8,.12);  color: #facc15; border: 1px solid rgba(234,179,8,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 700; }
+
+    /* Decision cards */
+    .decision-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3); margin-bottom: var(--sp-3); }
+    .decision-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+    .decision-action { font-weight: 600; font-size: .9rem; line-height: 1.4; }
+    .decision-meta { font-size: .8rem; color: var(--t-3); margin-bottom: var(--sp-2); }
+    .decision-impact { font-size: .8rem; color: var(--t-2); background: var(--surface-3,rgba(255,255,255,.04)); padding: 4px 8px; border-radius: 6px; margin-bottom: var(--sp-3); }
+    .decision-options { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+    .option-btn { font-size: .8rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-3,rgba(255,255,255,.04)); color: var(--t-2); cursor: default; }
+    .decision-actions { display: flex; gap: var(--sp-2); }
+    .btn-approve { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.3); padding: 5px 14px; border-radius: 6px; font-size: .8125rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-approve:hover { background: rgba(34,197,94,.25); }
+    .btn-reject  { background: rgba(239,68,68,.1);  color: #f87171; border: 1px solid rgba(239,68,68,.25);  padding: 5px 14px; border-radius: 6px; font-size: .8125rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-reject:hover  { background: rgba(239,68,68,.2); }
+    .empty-state-ai { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--t-3); font-size: .875rem; }
+    .empty-state-ai .es-icon { font-size: 2rem; margin-bottom: var(--sp-2); }
+
+    /* Event stream */
+    .stream-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
+    .stream-item { display: flex; align-items: baseline; gap: var(--sp-2); padding: 5px var(--sp-3); border-radius: 6px; font-size: .8125rem; line-height: 1.5; }
+    .stream-item:hover { background: var(--surface-2); }
+    .stream-time { font-size: .7rem; color: var(--t-4,var(--t-3)); font-family: var(--mono); white-space: nowrap; min-width: 52px; }
+    .stream-emoji { min-width: 20px; text-align: center; }
+    .stream-event { font-weight: 500; color: var(--t-2); }
+    .stream-data  { font-size: .75rem; color: var(--t-3); font-family: var(--mono); }
+
+    /* Panel section header */
+    .panel-section-header { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+    .panel-section-title  { font-size: .875rem; font-weight: 600; }
+    .events-count-badge   { font-size: .75rem; color: var(--t-3); }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="../dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="../dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="../leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link" href="../bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="../proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="../follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="../calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link active" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Alternar tema"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">🤖 AI Command Center</h1>
+      </div>
+      <div class="topbar-right" style="display:flex;align-items:center;gap:var(--sp-3)">
+        <span class="badge-pulse" id="system-status-badge">Sistema Ativo</span>
+        <button class="btn btn-ghost btn-sm" id="theme-toggle-topbar">☀️</button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="ai-grid">
+
+        <!-- PAINEL 1: Agentes -->
+        <div class="panel">
+          <div class="panel-section-header">
+            <span class="panel-section-title">⚙️ Agentes</span>
+            <span class="events-count-badge" id="events-today-badge">— eventos hoje</span>
+          </div>
+          <div class="panel-body" style="padding:var(--sp-3)">
+            <div class="agent-grid" id="agents-container">
+              <div class="skel skel-card" style="height:80px"></div>
+              <div class="skel skel-card" style="height:80px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAINEL 2: Decisões Pendentes -->
+        <div class="panel">
+          <div class="panel-section-header">
+            <span class="panel-section-title">⚡ Decisões Pendentes</span>
+            <span class="events-count-badge" id="pending-count-badge">—</span>
+          </div>
+          <div class="panel-body" style="padding:var(--sp-3)">
+            <div id="decisions-container">
+              <div class="skel skel-card" style="height:100px;margin-bottom:var(--sp-3)"></div>
+              <div class="skel skel-card" style="height:100px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAINEL 3: Event Stream -->
+        <div class="panel panel-stream">
+          <div class="panel-section-header">
+            <span class="panel-section-title">📡 Event Stream</span>
+            <span class="events-count-badge" style="font-size:.7rem;color:var(--t-4,var(--t-3))">atualiza a cada 5s</span>
+          </div>
+          <div class="panel-body" style="padding:var(--sp-2) 0">
+            <div class="stream-list" id="stream-container">
+              <div style="padding:var(--sp-3)">
+                <div class="skel skel-text" style="width:90%;margin-bottom:6px"></div>
+                <div class="skel skel-text" style="width:75%;margin-bottom:6px"></div>
+                <div class="skel skel-text" style="width:85%;margin-bottom:6px"></div>
+                <div class="skel skel-text" style="width:60%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../design-system/u.js"></script>
+<script>
+/* ─── Init ───────────────────────────────────────────────────── */
+DS.initTheme();
+
+const hamburger = document.getElementById('hamburger');
+const sidebar   = document.getElementById('sidebar');
+const backdrop  = document.getElementById('drawer-backdrop');
+if (hamburger) hamburger.addEventListener('click', () => { sidebar.classList.toggle('open'); backdrop.classList.toggle('open'); });
+if (backdrop)  backdrop.addEventListener('click', () => { sidebar.classList.remove('open'); backdrop.classList.remove('open'); });
+
+document.getElementById('theme-toggle-btn').addEventListener('click', () => DS.toggleTheme());
+document.getElementById('theme-toggle-topbar').addEventListener('click', () => DS.toggleTheme());
+
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  const sb = window._sb || null;
+  // Show user email
+  const emailEl = document.querySelector('[data-user-email]');
+  if (emailEl && session.user) emailEl.textContent = session.user.email || '';
+  const avatarEl = document.getElementById('user-avatar');
+  if (avatarEl && session.user) avatarEl.textContent = DS.initials(session.user.email || '?');
+  document.querySelector('[data-action="logout"]').addEventListener('click', () => DS.logout());
+})();
+
+/* ─── Event emoji map ────────────────────────────────────────── */
+const EMOJI_MAP = {
+  lead_scored:        '👤',
+  lead_received:      '👤',
+  decision_queued:    '⚠️',
+  decision_approved:  '✅',
+  decision_rejected:  '❌',
+  booking_confirmed:  '🛏️',
+  alert_generated:    '🔔',
+  system_started:     '🚀',
+};
+function eventEmoji(name) { return EMOJI_MAP[name] || '🔵'; }
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function summarizeData(data) {
+  if (!data || typeof data !== 'object') return '';
+  const parts = [];
+  const keys = ['name','phone','action','agent','score','label','id','reason'];
+  for (const k of keys) {
+    if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+      parts.push(`${k}:${data[k]}`);
+    }
+  }
+  return parts.slice(0, 3).join(' · ');
+}
+
+/* ─── Render Agents ──────────────────────────────────────────── */
+function renderAgents(data) {
+  const cont = document.getElementById('agents-container');
+  const badge = document.getElementById('events-today-badge');
+  if (!data || !data.agents) return;
+
+  badge.textContent = `${data.events_today ?? 0} eventos hoje`;
+
+  if (!data.agents.length) {
+    cont.innerHTML = '<div class="empty-state-ai"><div class="es-icon">⚙️</div>Nenhum agente registrado</div>';
+    return;
+  }
+
+  cont.innerHTML = data.agents.map(a => `
+    <div class="agent-card">
+      <div class="agent-card-header">
+        <span class="agent-name">${DS.esc(a.name || '—')}</span>
+        <span class="${a.status === 'active' ? 'badge-active' : 'badge-idle'}">${a.status === 'active' ? 'active' : 'idle'}</span>
+      </div>
+      <div class="agent-listens">
+        ${(a.listens || []).map(e => `<span class="event-tag">${DS.esc(e)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ─── Render Decisions ───────────────────────────────────────── */
+function renderDecisions(data) {
+  const cont    = document.getElementById('decisions-container');
+  const countBd = document.getElementById('pending-count-badge');
+  const pending = data?.decisions || [];
+  countBd.textContent = pending.length ? `${pending.length} pendente${pending.length > 1 ? 's' : ''}` : 'nenhuma pendente';
+
+  if (!pending.length) {
+    cont.innerHTML = `<div class="empty-state-ai"><div class="es-icon">✓</div>Nenhuma decisão pendente</div>`;
+    return;
+  }
+
+  cont.innerHTML = pending.map(d => {
+    const levelCls  = (d.type && ['price_change','campaign_launch','epic_approval','critical_deploy','guest_impact'].includes(d.type)) ? 'badge-n1' : 'badge-n2';
+    const levelLabel= levelCls === 'badge-n1' ? '🔴 N1' : '🟡 N2';
+    const opts      = (d.options || []).map(o => `<span class="option-btn">${DS.esc(o)}</span>`).join('');
+    return `
+      <div class="decision-card" id="decision-${d.id}">
+        <div class="decision-header">
+          <span class="decision-action">${DS.esc(d.action || '—')}</span>
+          <span class="${levelCls}">${levelLabel}</span>
+        </div>
+        <div class="decision-meta">por <strong>${DS.esc(d.agent || '—')}</strong>${d.recommendation ? ` · recomendação: <strong>${DS.esc(d.recommendation)}</strong>` : ''}</div>
+        ${d.impact ? `<div class="decision-impact">📊 ${DS.esc(d.impact)}</div>` : ''}
+        ${opts ? `<div class="decision-options">${opts}</div>` : ''}
+        <div class="decision-actions">
+          <button class="btn-approve" onclick="approveDecision(${d.id})">✅ Aprovar</button>
+          <button class="btn-reject"  onclick="rejectDecision(${d.id})">❌ Rejeitar</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ─── Render Stream ──────────────────────────────────────────── */
+let _lastStreamIds = new Set();
+function renderStream(events) {
+  const cont = document.getElementById('stream-container');
+  if (!events || !events.length) {
+    cont.innerHTML = '<div class="empty-state-ai" style="padding:var(--sp-4)"><div class="es-icon">📡</div>Sem eventos ainda</div>';
+    return;
+  }
+  const top20 = events.slice(0, 20);
+  cont.innerHTML = top20.map(e => `
+    <div class="stream-item">
+      <span class="stream-time">${fmtTime(e.time)}</span>
+      <span class="stream-emoji">${eventEmoji(e.event)}</span>
+      <span class="stream-event">${DS.esc(e.event || '—')}</span>
+      <span class="stream-data">${DS.esc(summarizeData(e.data))}</span>
+    </div>
+  `).join('');
+}
+
+/* ─── Actions ────────────────────────────────────────────────── */
+async function approveDecision(id) {
+  try {
+    await DS.api(`/api/ai/decisions/${id}/approve`, { method: 'POST' });
+    document.getElementById(`decision-${id}`)?.remove();
+    DS.toast('Decisão aprovada ✅', 'success');
+    loadDecisions();
+  } catch (e) {
+    DS.toast('Erro ao aprovar: ' + e.message, 'error');
+  }
+}
+
+async function rejectDecision(id) {
+  try {
+    await DS.api(`/api/ai/decisions/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason: 'Rejeitado pelo founder' }) });
+    document.getElementById(`decision-${id}`)?.remove();
+    DS.toast('Decisão rejeitada ❌', 'info');
+    loadDecisions();
+  } catch (e) {
+    DS.toast('Erro ao rejeitar: ' + e.message, 'error');
+  }
+}
+
+/* ─── Data fetchers ──────────────────────────────────────────── */
+async function loadStatus() {
+  try {
+    const data = await DS.api('/api/ai/status');
+    if (data) renderAgents(data);
+  } catch (e) {
+    document.getElementById('agents-container').innerHTML = `<div class="empty-state-ai">Erro ao carregar agentes</div>`;
+  }
+}
+
+async function loadDecisions() {
+  try {
+    const data = await DS.api('/api/ai/decisions?status=pending');
+    if (data) renderDecisions(data);
+  } catch (e) {
+    document.getElementById('decisions-container').innerHTML = `<div class="empty-state-ai">Erro ao carregar decisões</div>`;
+  }
+}
+
+async function loadStream() {
+  try {
+    const data = await DS.api('/api/ai/events?limit=20');
+    if (data) renderStream(data.events);
+  } catch (e) {
+    // silent — stream updates every 5s, don't flood toasts
+  }
+}
+
+/* ─── Boot ───────────────────────────────────────────────────── */
+loadStatus();
+loadDecisions();
+loadStream();
+
+setInterval(loadStream,    5000);
+setInterval(loadDecisions, 10000);
+setInterval(loadStatus,    30000);
+</script>
+</body>
+</html>
