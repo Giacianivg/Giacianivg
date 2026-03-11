@@ -3,7 +3,7 @@
  * Handles auth, API calls, and utility functions
  */
 
-const SUPABASE_URL  = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
 const SUPABASE_ANON = (() => {
   // Read from meta tag injected by page
   const meta = document.querySelector('meta[name="sb-anon"]');
