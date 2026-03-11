@@ -78,7 +78,7 @@
 (function () {
   'use strict';
 
-  const SUPABASE_URL  = 'https://ywsyfnkbczsrgddbmbwh.supabase.co';
+  const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
   const SUPABASE_ANON = 'CJx8bk3hyNERd7FTDo-k1A_8nr5_iNs';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -108,6 +108,13 @@
     setTimeout(() => { window.location.replace(url); }, delay);
   }
 
+  // Return URL salvo pela página de origem antes de redirecionar para login
+  function getReturnUrl() {
+    const next = sessionStorage.getItem('ldl-return-to') || '/dashboard.html';
+    sessionStorage.removeItem('ldl-return-to');
+    return next;
+  }
+
   async function handleCallback() {
     const hash   = window.location.hash.substring(1);   // strip leading #
     const params = new URLSearchParams(window.location.search);
@@ -123,7 +130,7 @@
         const { error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
         if (error) throw error;
         setSuccess('Redirecionando...');
-        redirectAfter('/dashboard.html', 1000);
+        redirectAfter(getReturnUrl(), 1000);
       } catch (err) {
         console.error('[auth-callback] setSession error:', err);
         setError('Token invalido ou expirado. Redirecionando para o login...');
@@ -141,7 +148,7 @@
         const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
         if (error) throw error;
         setSuccess('Senha redefinida. Redirecionando...');
-        redirectAfter('/dashboard.html', 1200);
+        redirectAfter(getReturnUrl(), 1200);
       } catch (err) {
         console.error('[auth-callback] verifyOtp error:', err);
         setError('Link expirado ou invalido. Solicite um novo link.');
@@ -158,7 +165,7 @@
         const { error } = await sb.auth.exchangeCodeForSession(code);
         if (error) throw error;
         setSuccess('Autenticado. Redirecionando...');
-        redirectAfter('/dashboard.html', 1000);
+        redirectAfter(getReturnUrl(), 1000);
       } catch (err) {
         console.error('[auth-callback] exchangeCodeForSession error:', err);
         setError('Codigo invalido ou expirado. Redirecionando para o login...');
@@ -172,7 +179,7 @@
     const { data } = await sb.auth.getSession();
     if (data?.session) {
       setSuccess('Sessao encontrada. Redirecionando...');
-      redirectAfter('/dashboard.html', 800);
+      redirectAfter(getReturnUrl(), 800);
     } else {
       setError('Nenhum token encontrado. Redirecionando para o login...');
       redirectAfter('/login.html?error=true', 2000);
