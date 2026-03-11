@@ -326,14 +326,19 @@
   let authToken = null;
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  sb.auth.getSession().then(({ data }) => {
-    const user = data?.session?.user;
-    if (!user) { sessionStorage.setItem('ldl-return-to', window.location.pathname); window.location.href = '/login.html'; return; }
+  sb.auth.getUser().then(async ({ data: { user }, error }) => {
+    if (error || !user) {
+      await sb.auth.signOut();
+      sessionStorage.setItem('ldl-return-to', window.location.pathname);
+      window.location.href = '/login.html';
+      return;
+    }
     const emailEl = document.querySelector('[data-user-email]');
     const avatarEl = document.getElementById('user-avatar');
     if (emailEl) emailEl.textContent = user.email;
     if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
-    authToken = data.session.access_token;
+    const { data: { session } } = await sb.auth.getSession();
+    authToken = session?.access_token;
     loadRooms();
   });
 
