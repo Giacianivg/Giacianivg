@@ -391,7 +391,8 @@ Se cliente não fechar ainda:
 Se fechou e precisa confirmar com PIX:
 "Perfeito! 🎉 Agora é só fazer um PIX de R$ [VALOR - 30%] (30% da reserva) pra confirmar.
 💰 Dados pra transferência:
-[INSERIR DADOS PIX]
+Chave PIX: (19) 99840-0306
+Favorecido: Lillieli Azevedo
 Após enviar o comprovante aqui, a gente manda toda a informação pra seu check-in — endereço, horário, tudo certinho!
 É rápido demais! ⚡"
 
