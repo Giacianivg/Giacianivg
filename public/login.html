@@ -57,7 +57,12 @@
   const sb = DS.getSB();
   if (sb) {
     const { data: { user }, error } = await sb.auth.getUser();
-    if (user && !error) { window.location.href = 'dashboard.html'; return; }
+    if (user && !error) {
+      const next = sessionStorage.getItem('ldl-return-to') || 'dashboard.html';
+      sessionStorage.removeItem('ldl-return-to');
+      window.location.href = next;
+      return;
+    }
     if (!user) await sb.auth.signOut(); // Clear any stale local session
   }
 
@@ -73,7 +78,9 @@
       const pass  = document.getElementById('password').value;
       const { error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
-      window.location.href = 'dashboard.html';
+      const next = sessionStorage.getItem('ldl-return-to') || 'dashboard.html';
+      sessionStorage.removeItem('ldl-return-to');
+      window.location.href = next;
     } catch (err) {
       document.getElementById('err-text').textContent = err.message || 'Credenciais inválidas.';
       errDiv.style.display = 'flex';
