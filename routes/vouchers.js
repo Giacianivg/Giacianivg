@@ -14,7 +14,11 @@
 const { Router } = require('express');
 const { supabaseAdmin }       = require('../services/supabase/client');
 const { ok, fail, notFound, serverError } = require('../services/utils/response');
-const { generateVoucherPDF }  = require('../services/voucher/voucher-generator');
+
+// Lazy-load pdf-lib: evita falha de cold start no Vercel se o módulo demorar a carregar
+function getVoucherGenerator() {
+  return require('../services/voucher/voucher-generator');
+}
 
 const router = Router();
 
@@ -27,7 +31,7 @@ router.get('/', async (req, res) => {
 
   let query = supabaseAdmin
     .from('vouchers')
-    .select('id, guest_name, room_type, check_in, check_out, guests, source, total_amount, status, download_token, created_at', { count: 'exact' })
+    .select('id, guest_name, room_type, check_in, check_out, guests, source, total_amount, status, download_token, created_at')
     .order('created_at', { ascending: false })
     .range(Number(offset), Number(offset) + Number(limit) - 1);
 
@@ -35,9 +39,9 @@ router.get('/', async (req, res) => {
   if (status  && VALID_STATUSES.includes(status))  query = query.eq('status', status);
   if (search) query = query.ilike('guest_name', `%${search}%`);
 
-  const { data, error, count } = await query;
+  const { data, error } = await query;
   if (error) return serverError(res, error);
-  return ok(res, { vouchers: data, count, limit: Number(limit), offset: Number(offset) });
+  return ok(res, { vouchers: data, count: data.length, limit: Number(limit), offset: Number(offset) });
 });
 
 // ─── POST /api/vouchers ───────────────────────────────────────────────────────
@@ -157,6 +161,7 @@ router.get('/:id/download', async (req, res) => {
   }
 
   try {
+    const { generateVoucherPDF } = getVoucherGenerator();
     const pdfBuffer = await generateVoucherPDF(data);
     const filename  = `voucher-${data.guest_name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
