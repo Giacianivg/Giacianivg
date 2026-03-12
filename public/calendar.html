@@ -11,15 +11,257 @@
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .cal-grid { display: grid; grid-template-columns: 80px repeat(var(--cal-days,31),1fr); gap:2px; font-size:.75rem; }
-    .cal-head-cell { text-align:center; padding:4px 2px; color:var(--tx3); font-size:.7rem; font-weight:600; }
-    .cal-room-label { display:flex; align-items:center; padding:4px 6px; font-size:.75rem; font-weight:600; color:var(--tx2); background:var(--bg2); border-radius:var(--r-sm); }
-    .cal-cell { min-height:44px; cursor:default; }
-    .cal-cell:hover { opacity:.85; }
-    .cal-today-col { background:rgba(230,184,0,.04); }
-    .legend { display:flex; gap:var(--sp-4); align-items:center; flex-wrap:wrap; }
-    .legend-item { display:flex; align-items:center; gap:var(--sp-2); font-size:.75rem; color:var(--tx2); }
-    .legend-dot { width:12px; height:12px; border-radius:3px; border:1px solid; }
+    /* ── Full-height layout ── */
+    html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+    .app-shell { height: 100vh; }
+    .main-content { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .page-body { flex: 1; display: flex; flex-direction: column; padding: var(--sp-3) !important; overflow: hidden; min-height: 0; }
+    .cal-area { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: var(--sp-2); }
+    .cal-scroll { flex: 1; overflow: auto; border: 1px solid var(--bdr1); border-radius: var(--r-md); background: var(--sur1); min-height: 0; }
+
+    /* ── Topbar extras ── */
+    .view-toggle { display: flex; gap: 2px; background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); padding: 2px; }
+    .view-btn { padding: 4px 14px; border-radius: 4px; font-size: .78rem; font-weight: 600; cursor: pointer; background: none; border: none; color: var(--tx3); transition: all .15s; }
+    .view-btn.active { background: var(--royal-bg); color: var(--royal-l); }
+    .nav-arrow { padding: 5px 10px; font-size: .875rem; background: none; border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx2); cursor: pointer; transition: all .15s; }
+    .nav-arrow:hover { background: var(--sur2); }
+    #period-label { font-weight: 700; font-size: .9375rem; color: var(--tx1); min-width: 180px; text-align: center; }
+    .today-btn { font-size: .75rem; padding: 4px 10px; }
+
+    /* ── Legend ── */
+    .legend { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--tx2); }
+    .legend-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+    .legend-sep { width: 1px; height: 14px; background: var(--bdr1); }
+
+    /* ══════════════════════════════
+       MONTHLY TIMELINE (Gantt)
+    ══════════════════════════════ */
+    .month-grid {
+      display: grid;
+      grid-template-columns: 88px repeat(var(--days, 31), minmax(32px, 1fr));
+      gap: 0;
+      font-size: .73rem;
+    }
+
+    /* Header cells */
+    .mh-corner { background: var(--sur2); padding: 6px 6px; border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); position: sticky; top: 0; z-index: 4; }
+    .mh-day {
+      background: var(--sur2);
+      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      text-align: center; padding: 4px 2px;
+      position: sticky; top: 0; z-index: 3;
+      cursor: default;
+    }
+    .mh-day .day-num  { font-weight: 700; color: var(--tx2); font-size: .75rem; }
+    .mh-day .day-name { font-size: .6rem; color: var(--tx3); }
+    .mh-day.is-today  { background: rgba(184,134,0,.12); }
+    .mh-day.is-today .day-num { color: var(--gold); }
+    .mh-day.is-weekend .day-num { color: var(--royal-l); }
+    .mh-day.is-event  { background: rgba(184,134,0,.08); }
+    .mh-day.is-event .day-name::after { content: '🌟'; font-size: .55rem; display: block; margin-top: 1px; }
+
+    /* Section label */
+    .month-section {
+      grid-column: 1 / -1;
+      background: var(--sur2);
+      padding: 4px 8px;
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--tx3);
+      border-top: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr0);
+      position: sticky; left: 0;
+    }
+
+    /* Room label */
+    .month-room-label {
+      background: var(--sur1);
+      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr0);
+      padding: 0 8px;
+      display: flex; align-items: center;
+      font-size: .76rem; font-weight: 600; color: var(--tx2);
+      white-space: nowrap;
+      position: sticky; left: 0; z-index: 2;
+      min-height: 52px;
+    }
+
+    /* Gantt canvas: spans all day columns */
+    .month-canvas {
+      grid-column: 2 / -1;
+      position: relative;
+      border-bottom: 1px solid var(--bdr0);
+      cursor: crosshair;
+      overflow: visible;
+    }
+    /* Day-line grid inside canvas (pure CSS) */
+    .month-canvas::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent calc(100% / var(--days, 31) - 1px),
+        var(--bdr0) calc(100% / var(--days, 31) - 1px),
+        var(--bdr0) calc(100% / var(--days, 31))
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Today highlight */
+    .today-stripe {
+      position: absolute; top: 0; bottom: 0;
+      background: rgba(234,179,8,.09);
+      pointer-events: none; z-index: 1;
+    }
+
+    /* Reservation bar */
+    .resv-bar {
+      position: absolute;
+      border-radius: 4px;
+      padding: 0 6px;
+      display: flex; align-items: center;
+      font-size: .68rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      cursor: pointer;
+      transition: filter .15s, transform .15s;
+      z-index: 2;
+      user-select: none;
+      min-width: 4px;
+    }
+    .resv-bar:hover { filter: brightness(1.15); transform: scaleY(1.04); }
+
+    /* Drag selection overlay */
+    .drag-sel {
+      position: absolute;
+      top: 2px; bottom: 2px;
+      background: rgba(99,102,241,.25);
+      border: 1.5px solid #6366f1;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* Price row */
+    .month-price-label {
+      background: var(--sur1);
+      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr0);
+      padding: 0 8px;
+      display: flex; align-items: center;
+      font-size: .68rem; color: var(--tx3);
+      white-space: nowrap;
+      position: sticky; left: 0; z-index: 2;
+      min-height: 28px;
+    }
+    .month-price-canvas {
+      grid-column: 2 / -1;
+      position: relative;
+      border-bottom: 1px solid var(--bdr0);
+    }
+    .month-price-canvas::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent calc(100% / var(--days, 31) - 1px),
+        var(--bdr0) calc(100% / var(--days, 31) - 1px),
+        var(--bdr0) calc(100% / var(--days, 31))
+      );
+      pointer-events: none;
+    }
+    .price-cells { display: flex; height: 100%; }
+    .price-cell {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      font-size: .65rem; font-weight: 600;
+    }
+    .price-cell.p-alta  { color: var(--gold); }
+    .price-cell.p-media { color: var(--royal-l); }
+    .price-cell.p-baixa { color: var(--tx3); }
+
+    /* ══════════════════════════════
+       WEEKLY DETAIL VIEW
+    ══════════════════════════════ */
+    .week-grid {
+      display: grid;
+      grid-template-columns: 88px repeat(7, 1fr);
+      gap: 0;
+      font-size: .76rem;
+    }
+    .wh-corner { background: var(--sur2); border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); padding: 8px 6px; position: sticky; top: 0; z-index: 4; }
+    .wh-day {
+      background: var(--sur2);
+      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      padding: 8px 4px; text-align: center;
+      position: sticky; top: 0; z-index: 3;
+    }
+    .wh-day .wday-name { font-size: .72rem; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; }
+    .wh-day .wday-num  { font-size: 1.125rem; font-weight: 800; color: var(--tx1); line-height: 1.2; }
+    .wh-day .wday-month { font-size: .65rem; color: var(--tx3); }
+    .wh-day.is-today { background: rgba(184,134,0,.1); }
+    .wh-day.is-today .wday-num { color: var(--gold); }
+    .wh-day.is-weekend .wday-name { color: var(--royal-l); }
+
+    .week-room-label {
+      background: var(--sur1);
+      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr1);
+      padding: 8px;
+      display: flex; flex-direction: column; justify-content: center;
+      font-size: .78rem; font-weight: 700; color: var(--tx2);
+      position: sticky; left: 0; z-index: 2;
+    }
+    .week-room-sub { font-size: .65rem; font-weight: 400; color: var(--tx3); margin-top: 2px; }
+
+    .week-cell {
+      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      padding: 6px 8px;
+      min-height: 80px;
+      transition: background .15s;
+      cursor: pointer;
+      position: relative;
+    }
+    .week-cell:hover { background: var(--sur2); }
+    .week-cell.wc-occupied  { background: rgba(59,130,246,.08); }
+    .week-cell.wc-checkin   { background: rgba(234,179,8,.1); border-top: 2px solid #eab308; }
+    .week-cell.wc-checkout  { background: rgba(59,130,246,.08); border-top: 2px solid #3b82f6; }
+    .week-cell.wc-available { background: transparent; }
+    .week-cell.wc-today     { outline: 2px solid var(--gold); outline-offset: -2px; }
+
+    .wc-guest-name { font-weight: 700; color: var(--tx1); font-size: .8rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wc-dates      { font-size: .68rem; color: var(--tx3); line-height: 1.4; }
+    .wc-badge      { display: inline-block; padding: 1px 6px; border-radius: 9999px; font-size: .65rem; font-weight: 700; margin-top: 3px; }
+    .wc-available-hint { color: var(--tx3); font-size: .72rem; opacity: .5; }
+
+    /* ── Reservation detail popover ── */
+    .resv-popover {
+      position: fixed;
+      z-index: 100;
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      padding: var(--sp-4);
+      width: 280px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.35);
+      animation: popIn .15s ease;
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+    .popover-title { font-size: .9375rem; font-weight: 800; color: var(--tx1); margin-bottom: var(--sp-3); }
+    .popover-row { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: 6px; }
+    .popover-label { color: var(--tx3); }
+    .popover-value { font-weight: 600; color: var(--tx1); }
+    .popover-close { position: absolute; top: 10px; right: 10px; background: none; border: none; cursor: pointer; color: var(--tx3); font-size: 1rem; line-height: 1; padding: 2px 5px; }
+    .popover-close:hover { color: var(--tx1); }
+
+    /* ── New reservation panel ── */
+    .new-resv-panel {
+      position: fixed; z-index: 100;
+      bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--sur1); border: 1px solid var(--royal-l);
+      border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4);
+      display: flex; align-items: center; gap: var(--sp-3);
+      box-shadow: 0 4px 24px rgba(0,0,0,.3);
+      animation: slideUp .2s ease;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    .new-resv-panel.hidden { display: none; }
   </style>
 </head>
 <body>
@@ -33,16 +275,17 @@
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
       <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
       <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
       <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
       <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
-      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
-      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
-            <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa</a>
+      <a class="nav-link active" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
       <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
       <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
     </nav>
@@ -51,7 +294,7 @@
       <div class="sidebar-user">
         <div class="avatar avatar-sm" id="user-avatar">?</div>
         <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
-        <button class="btn btn-ghost btn-icon" data-action="logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
     </div>
   </aside>
@@ -60,129 +303,558 @@
     <header class="topbar">
       <div class="topbar-left">
         <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-        <h1 class="page-title">Calendário de Ocupação</h1>
+        <h1 class="page-title">Calendário</h1>
       </div>
-      <div class="topbar-right">
-        <button class="btn btn-ghost btn-sm" id="prev-month">← Anterior</button>
-        <span id="month-label" style="font-weight:600;min-width:140px;text-align:center"></span>
-        <button class="btn btn-ghost btn-sm" id="next-month">Próximo →</button>
+      <div class="topbar-right" style="gap:var(--sp-2)">
+        <button class="btn btn-ghost btn-sm today-btn" id="btn-today">Hoje</button>
+        <button class="nav-arrow" id="btn-prev">&#8249;</button>
+        <span id="period-label">—</span>
+        <button class="nav-arrow" id="btn-next">&#8250;</button>
+        <div class="view-toggle">
+          <button class="view-btn active" id="btn-month">Mês</button>
+          <button class="view-btn" id="btn-week">Semana</button>
+        </div>
       </div>
     </header>
 
     <main class="page-body">
-      <div class="panel" style="margin-bottom:var(--sp-4)">
-        <div class="panel-body" style="padding:var(--sp-4)">
-          <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:var(--bg2);border-color:var(--bdr)"></div>Disponível</div>
-            <div class="legend-item"><div class="legend-dot" style="background:var(--royal-bg);border-color:var(--royal-bdr)"></div>Ocupado</div>
-            <div class="legend-item"><div class="legend-dot" style="background:var(--err-bg);border-color:rgba(239,68,68,.3)"></div>Bloqueado</div>
-            <div class="legend-item"><div class="legend-dot" style="border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)"></div>Hoje</div>
-          </div>
+      <div class="cal-area">
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,.7)"></div>Confirmado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(168,85,247,.7)"></div>Sinal pago</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(34,197,94,.7)"></div>Hospedado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(148,163,184,.5)"></div>Finalizado</div>
+          <div class="legend-sep"></div>
+          <div class="legend-item"><span style="font-size:.8rem;color:var(--gold)">🌟</span>&nbsp;Feriado / Evento</div>
+          <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique p/ detalhes · Arraste em vazio p/ nova reserva</div>
         </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-body-flush" style="overflow-x:auto;padding:var(--sp-4)">
-          <div id="cal-container"><div class="skel skel-card" style="height:240px"></div></div>
+        <!-- Calendar area -->
+        <div class="cal-scroll" id="cal-scroll">
+          <div id="cal-container">
+            <div class="skel skel-card" style="height:280px;margin:var(--sp-4)"></div>
+          </div>
         </div>
       </div>
     </main>
   </div>
 </div>
 
-<div id="toast-container"></div>
+<!-- Reservation popover -->
+<div class="resv-popover" id="resv-popover" style="display:none">
+  <button class="popover-close" id="popover-close">✕</button>
+  <div class="popover-title" id="pop-title">—</div>
+  <div id="pop-body"></div>
+  <div style="margin-top:var(--sp-3);display:flex;gap:var(--sp-2)">
+    <a class="btn btn-primary btn-sm" id="pop-link" href="bookings.html">Ver reserva</a>
+    <button class="btn btn-secondary btn-sm" id="pop-close2">Fechar</button>
+  </div>
+</div>
+
+<!-- New reservation panel (drag) -->
+<div class="new-resv-panel hidden" id="new-resv-panel">
+  <div>
+    <div style="font-size:.78rem;color:var(--tx3);margin-bottom:2px">Nova reserva</div>
+    <div style="font-size:.875rem;font-weight:700;color:var(--tx1)" id="nrp-label">—</div>
+  </div>
+  <a class="btn btn-primary btn-sm" id="nrp-link" href="bookings.html">Criar reserva</a>
+  <button class="btn btn-ghost btn-sm" id="nrp-close">✕</button>
+</div>
+
 <script src="design-system/u.js"></script>
 <script>
-const ROOMS = ['ALA_A', 'ALA_B', 'ALA_C_CASAL', 'ALA_C_GRUPO'];
-const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+(function () {
+  'use strict';
 
-let curYear, curMonth;
+  /* ── Auth ─────────────────────────────────────────────────────────────── */
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let authToken = null;
 
-function pad2(n) { return String(n).padStart(2,'0'); }
-function isoDate(y,m,d) { return `${y}-${pad2(m+1)}-${pad2(d)}`; }
-
-async function loadCalendar(year, month) {
-  document.getElementById('month-label').textContent = MONTHS_PT[month] + ' ' + year;
-  const cont = document.getElementById('cal-container');
-  cont.innerHTML = '<div class="skel skel-card" style="height:240px"></div>';
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const from = isoDate(year, month, 1);
-  const to   = isoDate(year, month, daysInMonth);
-  const today = new Date().toISOString().slice(0,10);
-
-  let calData = {};
-  try {
-    const res = await DS.api(`/api/availability/calendar?from=${from}&to=${to}`);
-    const rows = res?.calendar || [];
-    rows.forEach(row => { calData[row.date] = row.rooms || {}; });
-  } catch (err) {
-    DS.errorState(cont, err.message);
-    return;
-  }
-
-  const days = Array.from({length: daysInMonth}, (_,i) => i+1);
-
-  cont.style.setProperty('--cal-days', daysInMonth);
-
-  // Header row
-  let html = `<div class="cal-grid" style="--cal-days:${daysInMonth};min-width:${80 + daysInMonth*38}px">`;
-  html += '<div class="cal-head-cell"></div>';
-  days.forEach(d => {
-    const dateStr = isoDate(year, month, d);
-    const isToday = dateStr === today;
-    const dayOfWeek = new Date(dateStr).getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    html += `<div class="cal-head-cell" style="${isToday?'color:var(--gold);font-weight:700':''} ${isWeekend?'color:var(--royal-l)':''}">
-      <div>${d}</div><div style="font-size:.6rem">${DAYS_PT[dayOfWeek]}</div>
-    </div>`;
-  });
-
-  // Room rows
-  ROOMS.forEach(roomKey => {
-    html += `<div class="cal-room-label">${DS.esc(DS.room(roomKey))}</div>`;
-    days.forEach(d => {
-      const dateStr = isoDate(year, month, d);
-      const roomData = (calData[dateStr] || {})[roomKey] || {};
-      const status   = roomData.status || 'available';
-      const isToday  = dateStr === today;
-      const guest    = roomData.guest_name || roomData.guestName || '';
-      const reason   = roomData.block_reason || roomData.blockReason || '';
-      const tip      = guest || reason || status;
-      html += `<div class="cal-cell ${status}${isToday?' today':''}" data-tip="${DS.esc(tip)}">
-        ${guest ? `<div class="cal-guest">${DS.esc(guest.split(' ')[0])}</div>` : ''}
-        ${reason ? `<div class="cal-guest t-err">${DS.esc(reason.slice(0,8))}</div>` : ''}
-      </div>`;
+  sb.auth.getUser().then(({ data }) => {
+    const user = data?.user;
+    if (!user) { sessionStorage.setItem('ldl-return-to', '/calendar.html'); window.location.href = '/login.html'; return; }
+    document.querySelector('[data-user-email]').textContent = user.email;
+    document.getElementById('user-avatar').textContent = (user.email||'?')[0].toUpperCase();
+    sb.auth.getSession().then(({ data: sd }) => {
+      authToken = sd?.session?.access_token;
+      render();
     });
   });
 
-  html += '</div>';
-  cont.innerHTML = html;
-}
-
-(async () => {
-  const session = await DS.requireAuth();
-  if (!session) return;
-  DS.initNav();
-  const avEl = document.getElementById('user-avatar');
-  if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
-
-  const now = new Date();
-  curYear  = now.getFullYear();
-  curMonth = now.getMonth();
-  loadCalendar(curYear, curMonth);
-
-  document.getElementById('prev-month').addEventListener('click', () => {
-    curMonth--;
-    if (curMonth < 0) { curMonth = 11; curYear--; }
-    loadCalendar(curYear, curMonth);
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut(); window.location.href = '/login.html';
   });
-  document.getElementById('next-month').addEventListener('click', () => {
-    curMonth++;
-    if (curMonth > 11) { curMonth = 0; curYear++; }
-    loadCalendar(curYear, curMonth);
+
+  async function apiFetch(path) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const r = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+    if (r.status === 401) { window.location.href = '/login.html'; return null; }
+    return r.json();
+  }
+
+  /* ── State ───────────────────────────────────────────────────────────── */
+  const TODAY = new Date().toISOString().slice(0, 10);
+  let viewMode   = 'month';
+  let curYear    = new Date().getFullYear();
+  let curMonth   = new Date().getMonth();
+  let curWeekStart = getMonday(TODAY);
+  let resvCache  = {};  // key → reservations array
+
+  /* ── Constants ───────────────────────────────────────────────────────── */
+  const ROOMS = [
+    { code: 'ALA_A',       label: 'Ala A',     sub: '8 chalés',    color: '#3b82f6', bg: 'rgba(59,130,246,.75)' },
+    { code: 'ALA_B',       label: 'Ala B',     sub: '7 bangalôs',  color: '#22c55e', bg: 'rgba(34,197,94,.75)' },
+    { code: 'ALA_C_CASAL', label: 'Ala C',     sub: '5 suítes',    color: '#a855f7', bg: 'rgba(168,85,247,.75)' },
+    { code: 'ALA_C_GRUPO', label: 'Grupo',     sub: 'Sob consulta', color: '#f97316', bg: 'rgba(249,115,22,.75)' },
+  ];
+  const STATUS_COLORS = {
+    confirmed:     'rgba(59,130,246,.8)',
+    deposit_paid:  'rgba(168,85,247,.8)',
+    checked_in:    'rgba(34,197,94,.85)',
+    checked_out:   'rgba(148,163,184,.55)',
+    pending:       'rgba(234,179,8,.7)',
+  };
+  const STATUS_LABELS = {
+    confirmed: 'Confirmado', deposit_paid: 'Sinal pago', checked_in: 'Hospedado',
+    checked_out: 'Finalizado', pending: 'Pendente', cancelled: 'Cancelado',
+  };
+  const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const BASE_PRICES = {
+    ALA_A:       { baixa: 300, media: 300, alta: 400 },
+    ALA_B:       { baixa: 300, media: 350, alta: 400 },
+    ALA_C_CASAL: { baixa: 300, media: 300, alta: 400 },
+    ALA_C_GRUPO: { baixa: 600, media: 700, alta: 800 },
+  };
+  const EVENTS = [
+    { from: '2026-02-13', to: '2026-02-18', label: 'Carnaval' },
+    { from: '2026-03-28', to: '2026-04-06', label: 'Páscoa' },
+    { from: '2026-06-04', to: '2026-06-07', label: 'EBAA + Corpus' },
+    { from: '2026-09-05', to: '2026-09-07', label: 'Independência' },
+    { from: '2026-10-10', to: '2026-10-12', label: 'Aparecida' },
+    { from: '2026-11-20', to: '2026-11-22', label: 'Consciência Negra' },
+    { from: '2026-12-24', to: '2027-01-02', label: 'Natal/Réveillon' },
+  ];
+
+  /* ── Utility ─────────────────────────────────────────────────────────── */
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function isoDate(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+  function parseDateLocal(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+  function fmtDateBR(s) { if (!s) return '—'; const [y,m,d] = s.split('-'); return `${d}/${m}/${y.slice(2)}`; }
+  function fmtBRL(v) { return 'R$' + (v||0).toLocaleString('pt-BR'); }
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function getEventForDate(d) { return EVENTS.find(e => d >= e.from && d <= e.to) || null; }
+  function getSeason(d) {
+    const dt = parseDateLocal(d), m = dt.getMonth()+1, dow = dt.getDay();
+    if (getEventForDate(d)) return 'alta';
+    if (m === 1 || m === 7 || m === 12) return 'alta';
+    if (dow === 0 || dow === 6) return 'media';
+    return 'baixa';
+  }
+  function getMonday(dateStr) {
+    const d = parseDateLocal(dateStr);
+    const day = d.getDay();
+    const diff = (day === 0) ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().slice(0, 10);
+  }
+  function addDays(dateStr, n) {
+    const d = parseDateLocal(dateStr);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function nightsBetween(a, b) {
+    return Math.round((parseDateLocal(b) - parseDateLocal(a)) / 86400000);
+  }
+  function dateInRange(date, from, to) { return date >= from && date < to; }
+
+  /* ── Data ────────────────────────────────────────────────────────────── */
+  async function fetchReservations(from, to) {
+    const cacheKey = `${from}_${to}`;
+    if (resvCache[cacheKey]) return resvCache[cacheKey];
+    const resp = await apiFetch(`/api/reservations?checkin_from=${addDays(from, -40)}&checkin_to=${to}&limit=300`);
+    const data = (resp?.reservations || []).filter(r => r.status !== 'cancelled');
+    resvCache[cacheKey] = data;
+    return data;
+  }
+
+  /* ── Navigation ──────────────────────────────────────────────────────── */
+  function render() {
+    closePopover();
+    closeNewPanel();
+    if (viewMode === 'month') renderMonth(); else renderWeek();
+  }
+
+  document.getElementById('btn-month').addEventListener('click', () => {
+    viewMode = 'month';
+    document.getElementById('btn-month').classList.add('active');
+    document.getElementById('btn-week').classList.remove('active');
+    render();
   });
+  document.getElementById('btn-week').addEventListener('click', () => {
+    viewMode = 'week';
+    document.getElementById('btn-week').classList.add('active');
+    document.getElementById('btn-month').classList.remove('active');
+    render();
+  });
+  document.getElementById('btn-prev').addEventListener('click', () => {
+    if (viewMode === 'month') {
+      curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; }
+    } else { curWeekStart = addDays(curWeekStart, -7); }
+    render();
+  });
+  document.getElementById('btn-next').addEventListener('click', () => {
+    if (viewMode === 'month') {
+      curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; }
+    } else { curWeekStart = addDays(curWeekStart, 7); }
+    render();
+  });
+  document.getElementById('btn-today').addEventListener('click', () => {
+    const now = new Date();
+    curYear = now.getFullYear(); curMonth = now.getMonth();
+    curWeekStart = getMonday(TODAY);
+    render();
+  });
+
+  /* ══════════════════════════════════════════════════════════════════════
+     MONTHLY VIEW (Gantt timeline)
+  ══════════════════════════════════════════════════════════════════════ */
+  async function renderMonth() {
+    const daysInMonth = getDaysInMonth(curYear, curMonth);
+    const from = isoDate(curYear, curMonth, 1);
+    const to   = isoDate(curYear, curMonth, daysInMonth);
+
+    document.getElementById('period-label').textContent = `${MONTHS_PT[curMonth]} ${curYear}`;
+    const cont = document.getElementById('cal-container');
+    cont.innerHTML = '<div class="skel skel-card" style="height:280px;margin:var(--sp-4)"></div>';
+
+    const reservations = await fetchReservations(from, to);
+    if (!reservations) return;
+
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const minW = 88 + daysInMonth * 34;
+
+    let html = `<div class="month-grid" style="--days:${daysInMonth};min-width:${minW}px">`;
+
+    /* Header */
+    html += '<div class="mh-corner"></div>';
+    days.forEach(d => {
+      const ds = isoDate(curYear, curMonth, d);
+      const dow = parseDateLocal(ds).getDay();
+      const isWknd = dow === 0 || dow === 6;
+      const ev = getEventForDate(ds);
+      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', ev ? 'is-event' : ''].filter(Boolean).join(' ');
+      html += `<div class="${cls}" title="${ev ? ev.label : ''}">
+        <div class="day-num">${d}</div>
+        <div class="day-name">${DAYS_PT[dow]}</div>
+      </div>`;
+    });
+
+    /* Occupation section */
+    html += '<div class="month-section">Ocupação</div>';
+
+    ROOMS.forEach(room => {
+      const roomResvs = reservations.filter(r => r.room_type === room.code &&
+        r.checkin_date <= to && r.checkout_date > from);
+
+      /* Assign rows to avoid visual overlap */
+      const rowAssignment = [];
+      roomResvs.forEach(resv => {
+        let placed = false;
+        for (let ri = 0; ri < rowAssignment.length; ri++) {
+          const overlaps = rowAssignment[ri].some(r =>
+            r.checkin_date < resv.checkout_date && r.checkout_date > resv.checkin_date);
+          if (!overlaps) { rowAssignment[ri].push(resv); resv._row = ri; placed = true; break; }
+        }
+        if (!placed) { rowAssignment.push([resv]); resv._row = rowAssignment.length - 1; }
+      });
+
+      const rowCount = Math.max(1, rowAssignment.length);
+      const trackH   = rowCount * 40 + 10;
+
+      html += `<div class="month-room-label" style="min-height:${trackH}px">${room.label}</div>`;
+      html += `<div class="month-canvas" style="min-height:${trackH}px" data-room="${room.code}">`;
+
+      /* Today stripe */
+      if (TODAY >= from && TODAY <= to) {
+        const todayDay = parseDateLocal(TODAY).getDate();
+        const todayLeft = (todayDay - 1) / daysInMonth * 100;
+        const todayW    = 1 / daysInMonth * 100;
+        html += `<div class="today-stripe" style="left:${todayLeft}%;width:${todayW}%"></div>`;
+      }
+
+      /* Reservation bars */
+      roomResvs.forEach(resv => {
+        const checkinDate  = resv.checkin_date < from ? from : resv.checkin_date;
+        const checkoutDate = resv.checkout_date > to   ? addDays(to, 1) : resv.checkout_date;
+
+        const startDay = parseDateLocal(checkinDate).getDate();
+        const endDay   = parseDateLocal(checkoutDate).getDate();
+        const left  = (startDay - 1) / daysInMonth * 100;
+        const width = Math.max(0.5, (endDay - startDay)) / daysInMonth * 100;
+        const top   = 5 + (resv._row || 0) * 40;
+        const barH  = 34;
+
+        const barColor = STATUS_COLORS[resv.status] || STATUS_COLORS.confirmed;
+        const guestName = resv.leads?.name || 'Hóspede';
+        const nights = nightsBetween(resv.checkin_date, resv.checkout_date);
+
+        html += `<div class="resv-bar"
+          style="left:${left}%;width:${width}%;top:${top}px;height:${barH}px;background:${barColor};color:#fff"
+          data-resv-id="${resv.id}"
+          title="${escHtml(guestName)} · ${fmtDateBR(resv.checkin_date)}–${fmtDateBR(resv.checkout_date)} · ${nights} noites">
+          ${escHtml(guestName.split(' ')[0])}
+        </div>`;
+      });
+
+      html += '</div>';
+    });
+
+    /* Pricing section (Ala A / noite) */
+    html += '<div class="month-section">Preços — Ala A / noite</div>';
+    [
+      { label: 'Preço base',    key: 'base' },
+    ].forEach(row => {
+      html += `<div class="month-price-label">${row.label}</div>`;
+      html += `<div class="month-price-canvas" style="min-height:28px">
+        <div class="price-cells">`;
+      days.forEach(d => {
+        const ds = isoDate(curYear, curMonth, d);
+        const season = getSeason(ds);
+        const price  = BASE_PRICES.ALA_A[season] || 0;
+        const cls    = season === 'alta' ? 'p-alta' : season === 'media' ? 'p-media' : 'p-baixa';
+        const ev     = getEventForDate(ds);
+        html += `<div class="price-cell ${cls}" title="${ev ? ev.label : season}" style="${ev ? 'background:rgba(184,134,0,.1)' : ''}">${price ? 'R$' + price : ''}</div>`;
+      });
+      html += '</div></div>';
+    });
+
+    html += '</div>'; /* month-grid */
+    cont.innerHTML = html;
+
+    bindMonthEvents(cont, from, to, daysInMonth, reservations);
+  }
+
+  /* Month event bindings */
+  function bindMonthEvents(cont, from, to, daysInMonth, reservations) {
+    /* Click on reservation bar → popover */
+    cont.querySelectorAll('.resv-bar').forEach(bar => {
+      bar.addEventListener('click', e => {
+        e.stopPropagation();
+        const id   = bar.dataset.resvId;
+        const resv = reservations.find(r => r.id === id);
+        if (resv) showPopover(e, resv);
+      });
+    });
+
+    /* Drag on canvas → new reservation */
+    let drag = { active: false, room: null, startX: 0, startDay: 0, endDay: 0 };
+
+    cont.querySelectorAll('.month-canvas').forEach(canvas => {
+      const roomCode = canvas.dataset.room;
+      let selEl = null;
+
+      canvas.addEventListener('mousedown', e => {
+        if (e.target.classList.contains('resv-bar')) return;
+        drag = { active: true, room: roomCode, startX: e.offsetX, startDay: getDayFromX(e.offsetX, canvas.offsetWidth, daysInMonth), endDay: 0 };
+        selEl = document.createElement('div');
+        selEl.className = 'drag-sel';
+        canvas.appendChild(selEl);
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!drag.active || drag.room !== roomCode) return;
+        drag.endDay = getDayFromX(e.offsetX, canvas.offsetWidth, daysInMonth);
+        const s = Math.min(drag.startDay, drag.endDay);
+        const en = Math.max(drag.startDay, drag.endDay);
+        const left  = (s - 1) / daysInMonth * 100;
+        const width = Math.max(1, en - s + 1) / daysInMonth * 100;
+        if (selEl) { selEl.style.left = left + '%'; selEl.style.width = width + '%'; }
+      });
+
+      canvas.addEventListener('mouseup', e => {
+        if (!drag.active || drag.room !== roomCode) return;
+        drag.active = false;
+        if (selEl) { selEl.remove(); selEl = null; }
+        const s  = Math.min(drag.startDay, drag.endDay || drag.startDay);
+        const en = Math.max(drag.startDay, drag.endDay || drag.startDay) + 1;
+        const checkin  = isoDate(curYear, curMonth, s);
+        const checkout = isoDate(curYear, curMonth, Math.min(en, daysInMonth));
+        const room = ROOMS.find(r => r.code === roomCode);
+        showNewResvPanel(room?.label || roomCode, checkin, checkout);
+      });
+    });
+
+    cont.addEventListener('mouseleave', () => { drag.active = false; });
+  }
+
+  function getDayFromX(offsetX, totalWidth, daysInMonth) {
+    return Math.max(1, Math.min(daysInMonth, Math.ceil((offsetX / totalWidth) * daysInMonth)));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     WEEKLY VIEW
+  ══════════════════════════════════════════════════════════════════════ */
+  async function renderWeek() {
+    const weekEnd = addDays(curWeekStart, 6);
+    const from = curWeekStart, to = weekEnd;
+
+    const startDt = parseDateLocal(curWeekStart);
+    const endDt   = parseDateLocal(weekEnd);
+    const sameMonth = startDt.getMonth() === endDt.getMonth();
+    const label = sameMonth
+      ? `${startDt.getDate()}–${endDt.getDate()} ${MONTHS_PT[startDt.getMonth()]} ${startDt.getFullYear()}`
+      : `${startDt.getDate()} ${MONTHS_PT[startDt.getMonth()]} – ${endDt.getDate()} ${MONTHS_PT[endDt.getMonth()]} ${endDt.getFullYear()}`;
+    document.getElementById('period-label').textContent = label;
+
+    const cont = document.getElementById('cal-container');
+    cont.innerHTML = '<div class="skel skel-card" style="height:280px;margin:var(--sp-4)"></div>';
+
+    const reservations = await fetchReservations(from, to);
+    if (!reservations) return;
+
+    const days = Array.from({ length: 7 }, (_, i) => addDays(curWeekStart, i));
+
+    let html = '<div class="week-grid">';
+
+    /* Header */
+    html += '<div class="wh-corner"></div>';
+    days.forEach(ds => {
+      const dt = parseDateLocal(ds);
+      const dow = dt.getDay();
+      const isWknd = dow === 0 || dow === 6;
+      const ev = getEventForDate(ds);
+      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : ''].filter(Boolean).join(' ');
+      html += `<div class="${cls}" title="${ev ? '🌟 ' + ev.label : ''}">
+        <div class="wday-name">${DAYS_PT[dow]}${ev ? ' 🌟' : ''}</div>
+        <div class="wday-num">${dt.getDate()}</div>
+        <div class="wday-month">${MONTHS_PT[dt.getMonth()].slice(0,3)}</div>
+      </div>`;
+    });
+
+    /* Room rows */
+    ROOMS.forEach(room => {
+      html += `<div class="week-room-label">
+        <span>${room.label}</span>
+        <span class="week-room-sub">${room.sub}</span>
+      </div>`;
+
+      days.forEach(ds => {
+        const roomResvs = reservations.filter(r =>
+          r.room_type === room.code && dateInRange(ds, r.checkin_date, r.checkout_date));
+
+        const isToday = ds === TODAY;
+        let cellCls = 'week-cell';
+        if (isToday) cellCls += ' wc-today';
+
+        if (roomResvs.length === 0) {
+          html += `<div class="${cellCls} wc-available" data-room="${room.code}" data-date="${ds}">
+            <span class="wc-available-hint">Disponível</span>
+          </div>`;
+          return;
+        }
+
+        const resv = roomResvs[0];
+        const isCheckin  = resv.checkin_date  === ds;
+        const isCheckout = resv.checkout_date === ds;
+        const statusCls  = isCheckin ? 'wc-checkin' : isCheckout ? 'wc-checkout' : 'wc-occupied';
+        const guestName  = resv.leads?.name || 'Hóspede';
+        const nights     = nightsBetween(resv.checkin_date, resv.checkout_date);
+        const badgeColor = STATUS_COLORS[resv.status] || STATUS_COLORS.confirmed;
+        const evLabel    = isCheckin ? '🔑 Check-in' : isCheckout ? '🚪 Check-out' : '🛏 Hospedado';
+
+        html += `<div class="${cellCls} ${statusCls}" data-resv-id="${resv.id}">
+          <div class="wc-guest-name">${escHtml(guestName)}</div>
+          <div class="wc-dates">${fmtDateBR(resv.checkin_date)} → ${fmtDateBR(resv.checkout_date)}<br>${nights} noite${nights!==1?'s':''} · ${resv.guests||'—'} px</div>
+          <span class="wc-badge" style="background:${badgeColor};color:#fff">${evLabel}</span>
+        </div>`;
+      });
+    });
+
+    html += '</div>';
+    cont.innerHTML = html;
+
+    /* Week click handlers */
+    cont.querySelectorAll('[data-resv-id]').forEach(cell => {
+      cell.addEventListener('click', e => {
+        const id   = cell.dataset.resvId;
+        const resv = reservations.find(r => r.id === id);
+        if (resv) showPopover(e, resv);
+      });
+    });
+
+    cont.querySelectorAll('[data-room][data-date]').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const room = ROOMS.find(r => r.code === cell.dataset.room);
+        const date = cell.dataset.date;
+        showNewResvPanel(room?.label || cell.dataset.room, date, addDays(date, 2));
+      });
+    });
+  }
+
+  /* ── Popover ─────────────────────────────────────────────────────────── */
+  function showPopover(e, resv) {
+    const pop = document.getElementById('resv-popover');
+    const guestName = resv.leads?.name || 'Hóspede';
+    const nights    = nightsBetween(resv.checkin_date, resv.checkout_date);
+    document.getElementById('pop-title').textContent = guestName;
+    document.getElementById('pop-body').innerHTML = `
+      <div class="popover-row"><span class="popover-label">Quarto</span><span class="popover-value">${resv.room_type.replace(/_/g,' ')}</span></div>
+      <div class="popover-row"><span class="popover-label">Check-in</span><span class="popover-value">${fmtDateBR(resv.checkin_date)}</span></div>
+      <div class="popover-row"><span class="popover-label">Check-out</span><span class="popover-value">${fmtDateBR(resv.checkout_date)}</span></div>
+      <div class="popover-row"><span class="popover-label">Noites</span><span class="popover-value">${nights}</span></div>
+      <div class="popover-row"><span class="popover-label">Hóspedes</span><span class="popover-value">${resv.guests||'—'}</span></div>
+      <div class="popover-row"><span class="popover-label">Total</span><span class="popover-value">${fmtBRL(resv.total_amount)}</span></div>
+      <div class="popover-row"><span class="popover-label">Status</span><span class="popover-value">${STATUS_LABELS[resv.status]||resv.status}</span></div>
+      ${resv.reservation_number ? `<div class="popover-row"><span class="popover-label">Nº</span><span class="popover-value">${escHtml(resv.reservation_number)}</span></div>` : ''}
+    `;
+    document.getElementById('pop-link').href = `bookings.html?id=${resv.id}`;
+
+    // Position
+    pop.style.display = 'block';
+    const rect = e.target.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let left = rect.right + 8;
+    let top  = rect.top;
+    if (left + 290 > vw) left = rect.left - 298;
+    if (top + 280 > vh) top = vh - 290;
+    pop.style.left = Math.max(8, left) + 'px';
+    pop.style.top  = Math.max(8, top) + 'px';
+  }
+
+  function closePopover() {
+    document.getElementById('resv-popover').style.display = 'none';
+  }
+
+  document.getElementById('popover-close').addEventListener('click', closePopover);
+  document.getElementById('pop-close2').addEventListener('click', closePopover);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePopover(); closeNewPanel(); } });
+  document.getElementById('cal-container').addEventListener('click', e => {
+    if (!e.target.closest('.resv-bar') && !e.target.closest('[data-resv-id]')) closePopover();
+  });
+
+  /* ── New reservation panel ───────────────────────────────────────────── */
+  function showNewResvPanel(roomLabel, checkin, checkout) {
+    const panel = document.getElementById('new-resv-panel');
+    const nights = nightsBetween(checkin, checkout);
+    document.getElementById('nrp-label').textContent =
+      `${roomLabel} · ${fmtDateBR(checkin)} → ${fmtDateBR(checkout)} (${nights} noite${nights!==1?'s':''})`;
+    document.getElementById('nrp-link').href =
+      `bookings.html?room=${encodeURIComponent(roomLabel)}&checkin=${checkin}&checkout=${checkout}`;
+    panel.classList.remove('hidden');
+  }
+
+  function closeNewPanel() {
+    document.getElementById('new-resv-panel').classList.add('hidden');
+  }
+
+  document.getElementById('nrp-close').addEventListener('click', closeNewPanel);
+
 })();
 </script>
 </body>

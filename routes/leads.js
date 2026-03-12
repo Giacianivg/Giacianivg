@@ -53,9 +53,10 @@ router.get('/', async (req, res) => {
   const { data, error } = await query;
   if (error) return serverError(res, error);
 
-  // Map conversation count for frontend
+  // Map conversation count + phone alias for frontend
   const leads = (data || []).map(lead => ({
     ...lead,
+    phone:              lead.whatsapp_number,   // alias esperado pelo dashboard
     conversation_count: lead.conversations?.length || 0,
   }));
 

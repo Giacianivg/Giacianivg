@@ -10,6 +10,120 @@
   <link rel="stylesheet" href="design-system/c.css">
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Split-pane layout ── */
+    html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
+    .app-shell { height: 100vh; }
+    .main-content { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .page-body { flex: 1; min-height: 0; display: flex; overflow: hidden; padding: 0 !important; }
+
+    /* ── Leads list pane ── */
+    #leads-pane {
+      width: 340px;
+      min-width: 280px;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--bdr);
+      background: var(--sur1);
+      overflow: hidden;
+    }
+    #leads-search-bar {
+      padding: var(--sp-2) var(--sp-3);
+      border-bottom: 1px solid var(--bdr);
+      background: var(--sur2);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-1);
+    }
+    #leads-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .lead-item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-3);
+      cursor: pointer;
+      border-bottom: 1px solid var(--bdr0);
+      transition: background .12s;
+    }
+    .lead-item:hover { background: var(--sur2); }
+    .lead-item.active { background: rgba(var(--royal-r,59,130,246),.10); border-right: 3px solid var(--royal-l); }
+    .lead-item-info { flex: 1; min-width: 0; }
+    .lead-item-name { font-size: .875rem; font-weight: 600; color: var(--tx1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lead-item-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+    .lead-item-phone { font-size: .72rem; color: var(--tx3); font-family: monospace; }
+    .lead-item-time { font-size: .68rem; color: var(--tx3); }
+
+    /* ── Chat pane ── */
+    #chat-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    #chat-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--tx3);
+      gap: var(--sp-2);
+    }
+    #chat-empty svg { opacity: .3; }
+    #chat-header {
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--sur1);
+      border-bottom: 1px solid var(--bdr);
+      display: none;
+      align-items: center;
+      gap: var(--sp-2);
+      flex-shrink: 0;
+    }
+    #chat-header.show { display: flex; }
+    #chat-header-info { flex: 1; min-width: 0; }
+    #chat-header-name { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    #chat-header-sub { font-size: .75rem; color: var(--tx3); margin-top: 1px; }
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--sp-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+    .msg-row { display: flex; flex-direction: column; }
+    .msg-row.guest { align-items: flex-start; }
+    .msg-row.luna, .msg-row.team { align-items: flex-end; }
+    .msg-bubble {
+      max-width: 72%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: .8438rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .msg-bubble.guest { background: var(--sur2); color: var(--tx1); border-bottom-left-radius: 3px; }
+    .msg-bubble.luna  { background: rgba(59,130,246,.18); color: var(--tx1); border-bottom-right-radius: 3px; }
+    .msg-bubble.team  { background: rgba(34,197,94,.15); color: var(--tx1); border-bottom-right-radius: 3px; }
+    .msg-role { font-size: .62rem; color: var(--tx3); margin-top: 2px; padding: 0 4px; }
+    .msg-row.guest .msg-role { text-align: left; }
+    .msg-row.luna .msg-role, .msg-row.team .msg-role { text-align: right; }
+    #chat-polling-indicator {
+      display: none;
+      padding: 4px var(--sp-3);
+      font-size: .7rem;
+      color: var(--tx3);
+      background: var(--sur1);
+      border-top: 1px solid var(--bdr0);
+      flex-shrink: 0;
+    }
+    #chat-polling-indicator.show { display: block; }
+  </style>
 </head>
 <body>
 <div id="drawer-backdrop" class="drawer-backdrop"></div>
@@ -22,16 +136,17 @@
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
+      <a class="nav-link active" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
       <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
       <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
       <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
       <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
       <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
       <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
-            <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
       <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
       <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
     </nav>
@@ -54,106 +169,90 @@
     </header>
 
     <main class="page-body">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-wrap" style="max-width:280px;width:100%">
-            <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="input" type="search" id="search" placeholder="Buscar nome ou telefone…">
+      <!-- ── Painel esquerdo: lista de leads ── -->
+      <div id="leads-pane">
+        <div id="leads-search-bar">
+          <div class="search-wrap">
+            <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="input" type="search" id="search" placeholder="Buscar nome ou telefone…" style="font-size:.8125rem">
           </div>
-          <select class="select" id="score-filter" style="width:auto">
-            <option value="">Todos os scores</option>
-            <option value="HOT">🔴 Hot</option>
-            <option value="WARM">🟡 Warm</option>
-            <option value="NURTURE">🔵 Nurture</option>
-            <option value="COLD">⚫ Cold</option>
-          </select>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-1)">
+            <select class="select" id="score-filter" style="width:auto;font-size:.75rem;padding:3px 6px">
+              <option value="">Todos</option>
+              <option value="HOT">🔴 Hot</option>
+              <option value="WARM">🟡 Warm</option>
+              <option value="NURTURE">🔵 Nurture</option>
+              <option value="COLD">⚫ Cold</option>
+            </select>
+            <span style="font-size:.72rem;color:var(--tx3)" id="leads-count"></span>
+          </div>
         </div>
-        <div class="toolbar-right">
-          <span class="t-3" id="leads-count" style="font-size:.8125rem"></span>
+        <div id="leads-list">
+          <div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:200px"></div></div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-body-flush">
-          <div id="leads-table"><div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:200px"></div></div></div>
+      <!-- ── Painel direito: chat em tempo real ── -->
+      <div id="chat-pane">
+        <!-- Header do lead selecionado -->
+        <div id="chat-header">
+          <div class="avatar" id="chat-avatar" style="width:36px;height:36px;font-size:.875rem">?</div>
+          <div id="chat-header-info">
+            <div id="chat-header-name">—</div>
+            <div id="chat-header-sub"></div>
+          </div>
+          <div id="chat-header-badge"></div>
         </div>
-        <div class="panel-footer" id="pagination-wrap" style="display:none">
-          <div class="pagination" id="pagination"></div>
+
+        <!-- Empty state -->
+        <div id="chat-empty">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div style="font-size:.875rem;font-weight:600">Selecione um lead</div>
+          <div style="font-size:.8125rem">O histórico de conversa aparece aqui</div>
         </div>
+
+        <!-- Mensagens -->
+        <div id="chat-messages" style="display:none"></div>
+        <div id="chat-polling-indicator">🔄 Atualizando em tempo real (5s)</div>
       </div>
     </main>
-  </div>
-</div>
-
-<!-- Slide-over -->
-<div id="lead-detail-backdrop" class="slideover-backdrop"></div>
-<div class="slideover" id="lead-detail">
-  <div class="slideover-header">
-    <span class="slideover-title" id="detail-name">Detalhes do Lead</span>
-    <button class="close-btn" onclick="DS.closeSlideOver('lead-detail')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>
-  <div class="slideover-body">
-    <div id="detail-content"><div class="skel skel-card" style="height:200px"></div></div>
-    <div class="slideover-section" id="conv-section" style="display:none">
-      <div class="slideover-section-title">Conversa</div>
-      <div class="chat-list" id="chat-list"></div>
-    </div>
   </div>
 </div>
 
 <div id="toast-container"></div>
 <script src="design-system/u.js"></script>
 <script>
-const PAGE_SIZE = 20;
-let allLeads = [], filtered = [], page = 1;
+const PAGE_SIZE = 50;
+let allLeads = [], filtered = [], activeLead = null, pollTimer = null;
 
-function renderTable(data) {
-  const cont = document.getElementById('leads-table');
+// ── Renderiza lista de leads (estilo WhatsApp) ──────────────────────────────
+function renderList(data) {
+  const cont = document.getElementById('leads-list');
   if (!data.length) {
-    DS.emptyState(cont, 'Nenhum lead', 'Não há leads com esse filtro.', '');
+    cont.innerHTML = '<div style="padding:var(--sp-4);text-align:center;color:var(--tx3);font-size:.8125rem">Nenhum lead encontrado</div>';
     return;
   }
-  const start = (page - 1) * PAGE_SIZE;
-  const slice = data.slice(start, start + PAGE_SIZE);
-  cont.innerHTML = `<div class="tbl-wrap"><table class="tbl">
-    <thead><tr>
-      <th>Nome</th><th>Telefone</th><th>Score</th><th>Último contato</th><th></th>
-    </tr></thead>
-    <tbody>
-      ${slice.map(l => `<tr>
-        <td><div class="row" style="gap:var(--sp-2)">
-          <div class="avatar avatar-sm">${DS.initials(l.name || l.nome)}</div>
-          <span>${DS.esc(l.name || l.nome || '—')}</span>
-        </div></td>
-        <td class="td-mono td-muted">${DS.esc(l.phone || l.telefone || '—')}</td>
-        <td>${DS.scoreBadge(l.score_label || l.score_label || l.score)}</td>
-        <td class="td-muted">${DS.rel(l.last_message_at || l.updated_at)}</td>
-        <td class="td-action">
-          <button class="btn btn-ghost btn-sm" onclick="openDetail(${JSON.stringify(l).replace(/"/g,'&quot;')})">Ver →</button>
-        </td>
-      </tr>`).join('')}
-    </tbody>
-  </table></div>`;
-
-  renderPagination(data.length);
+  cont.innerHTML = data.slice(0, PAGE_SIZE).map(l => {
+    const name  = l.name || l.nome || '—';
+    const phone = l.phone || l.telefone || '';
+    const score = l.score_label || l.score || '';
+    const ts    = l.last_message_at || l.updated_at || '';
+    const isActive = activeLead && (activeLead.id === l.id);
+    return `<div class="lead-item${isActive ? ' active' : ''}" onclick="selectLead(${JSON.stringify(l).replace(/"/g,'&quot;')})">
+      <div class="avatar avatar-sm">${DS.initials(name)}</div>
+      <div class="lead-item-info">
+        <div class="lead-item-name">${DS.esc(name)}</div>
+        <div class="lead-item-meta">
+          <span class="lead-item-phone">${DS.esc(phone)}</span>
+          <span class="lead-item-time">${DS.rel(ts)}</span>
+        </div>
+      </div>
+      <div style="flex-shrink:0">${DS.scoreBadge(score)}</div>
+    </div>`;
+  }).join('');
 }
 
-function renderPagination(total) {
-  const pages = Math.ceil(total / PAGE_SIZE);
-  const wrap = document.getElementById('pagination-wrap');
-  if (pages <= 1) { wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
-  const pg = document.getElementById('pagination');
-  pg.innerHTML = `
-    <button class="page-btn" onclick="changePage(${page-1})" ${page===1?'disabled':''}>← Anterior</button>
-    <span class="page-info">${page} / ${pages}</span>
-    <button class="page-btn" onclick="changePage(${page+1})" ${page>=pages?'disabled':''}>Próxima →</button>`;
-}
-
-function changePage(p) { page = p; renderTable(filtered); }
-
+// ── Filtro ──────────────────────────────────────────────────────────────────
 function applyFilter() {
   const q = document.getElementById('search').value.toLowerCase();
   const s = document.getElementById('score-filter').value;
@@ -163,45 +262,67 @@ function applyFilter() {
     const score = l.score_label || l.score || '';
     return (!q || name.includes(q) || phone.includes(q)) && (!s || score === s);
   });
-  page = 1;
   document.getElementById('leads-count').textContent = filtered.length + ' leads';
-  renderTable(filtered);
+  renderList(filtered);
 }
 
-async function openDetail(lead) {
-  document.getElementById('detail-name').textContent = lead.name || lead.nome || 'Lead';
-  DS.openSlideOver('lead-detail');
-  document.getElementById('conv-section').style.display = 'none';
+// ── Abre conversa do lead selecionado ───────────────────────────────────────
+async function selectLead(lead) {
+  activeLead = lead;
+  applyFilter(); // re-render list to mark active
 
+  const name  = lead.name || lead.nome || 'Lead';
   const phone = lead.phone || lead.telefone || '';
-  document.getElementById('detail-content').innerHTML = `
-    <div class="slideover-section">
-      <div class="detail-row"><span class="detail-key">Nome</span><span class="detail-val">${DS.esc(lead.name || lead.nome || '—')}</span></div>
-      <div class="detail-row"><span class="detail-key">Telefone</span><span class="detail-val td-mono">${DS.esc(phone)}</span></div>
-      <div class="detail-row"><span class="detail-key">Score</span><span class="detail-val">${DS.scoreBadge(lead.score_label || lead.score)}</span></div>
-      <div class="detail-row"><span class="detail-key">Última msg</span><span class="detail-val">${DS.rel(lead.last_message_at || lead.updated_at)}</span></div>
-      <div class="detail-row"><span class="detail-key">Criado em</span><span class="detail-val">${DS.date(lead.created_at)}</span></div>
-    </div>`;
+  const score = lead.score_label || lead.score || '';
 
-  if (phone) {
-    try {
-      const convRes = await DS.api(`/api/conversations?phone=${encodeURIComponent(phone)}&limit=30`);
-      const msgs = convRes?.messages || convRes?.conversations || convRes || [];
-      if (msgs.length) {
-        const chatEl = document.getElementById('chat-list');
-        chatEl.innerHTML = msgs.slice().reverse().map(m => {
-          const cls = m.role === 'assistant' || m.role === 'luna' ? 'luna'
-                    : m.role === 'equipe' || m.role === 'team' ? 'team'
-                    : 'guest';
-          return `<div><div class="chat-bubble ${cls}">${DS.esc(m.content || m.message || '')}</div>
-            <div class="chat-ts">${DS.datetime(m.created_at || m.timestamp)}</div></div>`;
-        }).join('');
-        document.getElementById('conv-section').style.display = '';
-      }
-    } catch {}
-  }
+  // Header
+  document.getElementById('chat-avatar').textContent = DS.initials(name);
+  document.getElementById('chat-header-name').textContent = name;
+  document.getElementById('chat-header-sub').textContent = phone;
+  document.getElementById('chat-header-badge').innerHTML = DS.scoreBadge(score);
+  document.getElementById('chat-header').classList.add('show');
+  document.getElementById('chat-empty').style.display = 'none';
+  document.getElementById('chat-messages').style.display = 'flex';
+  document.getElementById('chat-polling-indicator').classList.add('show');
+
+  // Cancela poll anterior
+  if (pollTimer) clearInterval(pollTimer);
+
+  await loadMessages(phone);
+  pollTimer = setInterval(() => loadMessages(phone), 5000);
 }
 
+async function loadMessages(phone) {
+  if (!phone) return;
+  try {
+    const res = await DS.api(`/api/conversations?phone=${encodeURIComponent(phone)}&limit=50`);
+    const msgs = res?.messages || res?.conversations || (Array.isArray(res) ? res : []);
+    renderMessages(msgs);
+  } catch {}
+}
+
+function renderMessages(msgs) {
+  const cont = document.getElementById('chat-messages');
+  if (!msgs.length) {
+    cont.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:.8125rem;padding:var(--sp-4)">Sem mensagens ainda</div>';
+    return;
+  }
+  const sorted = [...msgs].sort((a, b) => new Date(a.created_at || a.timestamp || 0) - new Date(b.created_at || b.timestamp || 0));
+  cont.innerHTML = sorted.map(m => {
+    const role = m.role === 'assistant' || m.role === 'luna' ? 'luna'
+               : m.role === 'equipe' || m.role === 'team'   ? 'team'
+               : 'guest';
+    const roleLabel = role === 'luna' ? 'Luna' : role === 'team' ? 'Equipe' : 'Hóspede';
+    return `<div class="msg-row ${role}">
+      <div class="msg-bubble ${role}">${DS.esc(m.content || m.message || '')}</div>
+      <div class="msg-role">${roleLabel} · ${DS.datetime(m.created_at || m.timestamp)}</div>
+    </div>`;
+  }).join('');
+  // Auto-scroll para o final
+  cont.scrollTop = cont.scrollHeight;
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
 (async () => {
   const session = await DS.requireAuth();
   if (!session) return;
@@ -215,9 +336,9 @@ async function openDetail(lead) {
     allLeads = res?.leads || res?.data || (Array.isArray(res) ? res : []);
     filtered = [...allLeads];
     document.getElementById('leads-count').textContent = filtered.length + ' leads';
-    renderTable(filtered);
+    renderList(filtered);
   } catch (err) {
-    DS.errorState('leads-table', err.message);
+    document.getElementById('leads-list').innerHTML = `<div style="padding:var(--sp-4);color:var(--err);font-size:.8125rem">${DS.esc(err.message)}</div>`;
   }
 
   document.getElementById('search').addEventListener('input', applyFilter);

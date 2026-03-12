@@ -11,6 +11,35 @@
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* ── Stats bar ── */
+    .map-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+    .map-stat-card {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+    .map-stat-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .map-stat-icon.green  { background: rgba(34,197,94,.12); }
+    .map-stat-icon.red    { background: rgba(239,68,68,.12); }
+    .map-stat-icon.yellow { background: rgba(234,179,8,.12); }
+    .map-stat-icon.purple { background: rgba(99,102,241,.12); }
+    .map-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tx3); margin-bottom: 2px; }
+    .map-stat-value { font-size: 1.25rem; font-weight: 800; color: var(--tx1); }
+
     /* ── Map container ── */
     .map-wrap {
       background: var(--sur1);
@@ -19,16 +48,6 @@
       padding: var(--sp-4);
       overflow: hidden;
     }
-    .map-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--sp-4);
-      flex-wrap: wrap;
-      gap: var(--sp-2);
-    }
-    .map-title { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
-    .map-updated { font-size: .75rem; color: var(--tx3); }
 
     /* ── Legend ── */
     .legend {
@@ -56,35 +75,29 @@
     .ld-available { background: rgba(34,197,94,.2);  border-color: #22c55e; }
     .ld-occupied  { background: rgba(239,68,68,.2);  border-color: #ef4444; }
     .ld-checkin   { background: rgba(234,179,8,.2);  border-color: #eab308; }
-    .ld-request   { background: rgba(99,102,241,.2); border-color: #6366f1; }
+    .ld-checkout  { background: rgba(59,130,246,.2); border-color: #3b82f6; }
     .ld-unknown   { background: rgba(148,163,184,.1);border-color: #94a3b8; }
 
     /* ── SVG floor plan ── */
     .floor-svg {
       width: 100%;
-      max-width: 800px;
+      max-width: 860px;
       margin: 0 auto;
       display: block;
       cursor: default;
     }
-
-    /* Room base styles */
-    .room-area {
-      transition: fill .4s ease, stroke .4s ease;
-      cursor: pointer;
-    }
-    .room-label {
-      font-family: var(--f-sans, system-ui, sans-serif);
-      pointer-events: none;
-      user-select: none;
-    }
+    .room-area { transition: filter .3s ease; cursor: pointer; }
+    .room-label { font-family: var(--f-sans, system-ui, sans-serif); pointer-events: none; user-select: none; }
 
     /* Status fills */
     .s-available { fill: rgba(34,197,94,.15);  stroke: #22c55e; stroke-width: 2; }
     .s-occupied  { fill: rgba(239,68,68,.18);  stroke: #ef4444; stroke-width: 2; }
     .s-checkin   { fill: rgba(234,179,8,.2);   stroke: #eab308; stroke-width: 2.5; }
-    .s-request   { fill: rgba(99,102,241,.15); stroke: #6366f1; stroke-width: 1.5; stroke-dasharray: 6,3; }
+    .s-checkout  { fill: rgba(59,130,246,.18); stroke: #3b82f6; stroke-width: 2; }
     .s-unknown   { fill: rgba(148,163,184,.08);stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 4,4; }
+
+    /* Selected highlight */
+    .room-area.selected { filter: drop-shadow(0 0 10px rgba(255,255,255,.35)); }
 
     /* Pulse animations */
     @keyframes pulse-occupied {
@@ -93,62 +106,101 @@
     }
     @keyframes pulse-checkin {
       0%, 100% { filter: drop-shadow(0 0 0px rgba(234,179,8,0));  }
-      50%       { filter: drop-shadow(0 0 10px rgba(234,179,8,.8)); }
+      50%       { filter: drop-shadow(0 0 10px rgba(234,179,8,.9)); }
     }
     @keyframes pulse-available {
       0%, 100% { filter: drop-shadow(0 0 0px rgba(34,197,94,0));  }
       50%       { filter: drop-shadow(0 0 5px rgba(34,197,94,.4)); }
     }
-
     .anim-occupied  { animation: pulse-occupied  2s ease-in-out infinite; }
-    .anim-checkin   { animation: pulse-checkin   1.4s ease-in-out infinite; }
+    .anim-checkin   { animation: pulse-checkin   1.3s ease-in-out infinite; }
     .anim-available { animation: pulse-available 3s ease-in-out infinite; }
 
-    /* ── Room detail panel ── */
+    /* ── Detail panel ── */
     .room-detail {
       margin-top: var(--sp-4);
       background: var(--sur2);
       border: 1px solid var(--bdr1);
       border-radius: var(--r-md);
-      padding: var(--sp-3) var(--sp-4);
+      padding: var(--sp-4);
       display: none;
-      animation: fadeIn .2s ease;
+      animation: slideUp .2s ease;
     }
     .room-detail.show { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
     .detail-header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
-      margin-bottom: var(--sp-2);
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-3);
     }
-    .detail-name { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .detail-title-group { display: flex; flex-direction: column; gap: 4px; }
+    .detail-name { font-size: 1.0625rem; font-weight: 800; color: var(--tx1); }
+    .detail-sub  { font-size: .78rem; color: var(--tx3); }
+
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: var(--sp-3);
-      margin-top: var(--sp-2);
     }
-    .detail-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tx3); margin-bottom: 2px; }
+    .detail-stat-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tx3); margin-bottom: 3px; }
     .detail-stat-value { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 3px 10px;
+      padding: 4px 12px;
       border-radius: 9999px;
       font-size: .75rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .04em;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .sb-available { background: rgba(34,197,94,.12);  color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
     .sb-occupied  { background: rgba(239,68,68,.12);  color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
     .sb-checkin   { background: rgba(234,179,8,.12);  color: #eab308; border: 1px solid rgba(234,179,8,.3); }
-    .sb-request   { background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.3); }
+    .sb-checkout  { background: rgba(59,130,246,.12); color: #3b82f6; border: 1px solid rgba(59,130,246,.3); }
     .sb-unknown   { background: rgba(148,163,184,.1); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
+    .sb-bar       { background: rgba(184,134,0,.12);  color: var(--gold); border: 1px solid rgba(184,134,0,.3); }
+    .sb-store     { background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.3); }
+
+    .detail-divider { grid-column: 1/-1; height: 1px; background: var(--bdr0); margin: var(--sp-1) 0; }
+
+    /* Guest info box */
+    .guest-box {
+      grid-column: 1/-1;
+      background: var(--sur1);
+      border: 1px solid var(--bdr0);
+      border-radius: var(--r-sm);
+      padding: var(--sp-3);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+    .guest-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--royal-bg);
+      color: var(--royal-l);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .875rem; font-weight: 700; flex-shrink: 0;
+    }
+    .guest-name  { font-size: .875rem; font-weight: 700; color: var(--tx1); }
+    .guest-dates { font-size: .75rem; color: var(--tx3); margin-top: 2px; }
+
+    /* Inventory table */
+    .inv-wrap { grid-column: 1/-1; overflow: auto; max-height: 260px; margin-top: var(--sp-2); }
+    .inv-table { width: 100%; font-size: .78rem; border-collapse: collapse; }
+    .inv-table th { text-align: left; padding: 5px 8px; color: var(--tx3); font-weight: 600; border-bottom: 1px solid var(--bdr1); font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; }
+    .inv-table td { padding: 5px 8px; border-bottom: 1px solid var(--bdr0); }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-low { color: var(--err) !important; font-weight: 700 !important; }
+    .inv-mock-note { font-size: .68rem; color: var(--tx3); margin-top: 6px; opacity: .6; }
 
     /* ── Refresh indicator ── */
     .refresh-dot {
@@ -157,9 +209,13 @@
       background: var(--ok);
       display: inline-block;
       margin-right: 4px;
-      animation: pulse-available 2s ease-in-out infinite;
+      animation: pulse-available 2.5s ease-in-out infinite;
     }
     .refresh-dot.loading { background: var(--gold); animation: pulse-checkin 1s ease-in-out infinite; }
+
+    @media (max-width: 640px) {
+      .map-stats { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -173,15 +229,16 @@
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
       <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
       <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
       <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
       <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
       <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
       <a class="nav-link active" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa</a>
-      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendario</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
       <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
       <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
       <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
@@ -215,132 +272,222 @@
     </header>
 
     <main class="page-body">
+
+      <!-- Stats bar -->
+      <div class="map-stats">
+        <div class="map-stat-card">
+          <div class="map-stat-icon green">🏠</div>
+          <div>
+            <div class="map-stat-label">Disponíveis</div>
+            <div class="map-stat-value" id="stat-available">—</div>
+          </div>
+        </div>
+        <div class="map-stat-card">
+          <div class="map-stat-icon red">🔴</div>
+          <div>
+            <div class="map-stat-label">Ocupados</div>
+            <div class="map-stat-value" id="stat-occupied">—</div>
+          </div>
+        </div>
+        <div class="map-stat-card">
+          <div class="map-stat-icon yellow">🔑</div>
+          <div>
+            <div class="map-stat-label">Check-in hoje</div>
+            <div class="map-stat-value" id="stat-checkin">—</div>
+          </div>
+        </div>
+        <div class="map-stat-card">
+          <div class="map-stat-icon purple">📦</div>
+          <div>
+            <div class="map-stat-label">Check-out hoje</div>
+            <div class="map-stat-value" id="stat-checkout">—</div>
+          </div>
+        </div>
+      </div>
+
       <div class="map-wrap">
         <!-- Legend -->
         <div class="legend">
-          <span class="legend-item"><span class="legend-dot ld-available"></span>Disponivel</span>
+          <span class="legend-item"><span class="legend-dot ld-available"></span>Disponível</span>
           <span class="legend-item"><span class="legend-dot ld-occupied"></span>Ocupado</span>
           <span class="legend-item"><span class="legend-dot ld-checkin"></span>Check-in hoje</span>
-          <span class="legend-item"><span class="legend-dot ld-request"></span>Sob consulta</span>
+          <span class="legend-item"><span class="legend-dot ld-checkout"></span>Check-out hoje</span>
           <span class="legend-item"><span class="legend-dot ld-unknown"></span>Sem dados</span>
           <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">Clique no quarto para detalhes</span>
         </div>
 
         <!-- Floor plan SVG -->
-        <svg class="floor-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" id="floor-plan">
-
-          <!-- Defs: patterns and filters -->
+        <svg class="floor-svg" viewBox="0 0 800 510" xmlns="http://www.w3.org/2000/svg" id="floor-plan">
           <defs>
             <pattern id="garden-dots" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
               <circle cx="6" cy="6" r="1.5" fill="currentColor" opacity="0.15"/>
             </pattern>
-            <filter id="room-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur"/>
-              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-            </filter>
           </defs>
 
+          <!-- Base floor plan image -->
+          <image href="planta2.png" x="0" y="0" width="800" height="510"
+                 preserveAspectRatio="xMidYMid meet" opacity="0.28"/>
+
           <!-- Building shell -->
-          <rect x="2" y="2" width="796" height="496" rx="8" fill="none" stroke="var(--bdr2)" stroke-width="2"/>
+          <rect x="2" y="2" width="796" height="506" rx="8" fill="none" stroke="var(--bdr2)" stroke-width="1.5"/>
 
-          <!-- ── Reception strip ── -->
-          <rect x="2" y="2" width="796" height="46" rx="8" fill="var(--sur2)" opacity="0.8"/>
-          <rect x="2" y="34" width="796" height="14" fill="var(--sur2)" opacity="0.8"/><!-- square bottom corners -->
-          <text x="400" y="30" text-anchor="middle" fill="var(--tx3)" font-size="13" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="3">RECEPÇÃO / ENTRADA</text>
+          <!-- Reception strip -->
+          <rect x="2" y="2" width="796" height="40" rx="8" fill="var(--sur2)" opacity="0.9"/>
+          <rect x="2" y="28" width="796" height="14" fill="var(--sur2)" opacity="0.9"/>
+          <text x="260" y="24" text-anchor="middle" fill="var(--tx3)" font-size="11" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="3">RECEPÇÃO / ENTRADA</text>
 
-          <!-- ── Garden / pool area (center) ── -->
-          <rect x="205" y="54" width="300" height="290" rx="6" fill="url(#garden-dots)" stroke="var(--bdr1)" stroke-width="1" stroke-dasharray="5,3" color="var(--ok)"/>
-          <text x="355" y="155" text-anchor="middle" fill="var(--ok)" opacity="0.5" font-size="26" font-family="system-ui,sans-serif">🌿</text>
-          <text x="355" y="185" text-anchor="middle" fill="var(--tx3)" opacity="0.6" font-size="11" font-family="system-ui,sans-serif" font-weight="500" letter-spacing="2">ÁREA COMUM</text>
-          <text x="355" y="205" text-anchor="middle" fill="var(--tx3)" opacity="0.5" font-size="11" font-family="system-ui,sans-serif" font-weight="500" letter-spacing="2">JARDIM · PISCINA</text>
-
-          <!-- Pool circle -->
-          <ellipse cx="355" cy="255" rx="55" ry="40" fill="none" stroke="var(--royal-l)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.4"/>
-          <text x="355" y="259" text-anchor="middle" fill="var(--royal-l)" opacity="0.5" font-size="10" font-family="system-ui,sans-serif">PISCINA</text>
-
-          <!-- ── CORRIDORS ── -->
-          <!-- Left corridor vertical -->
-          <rect x="183" y="54" width="18" height="290" fill="var(--bg)" opacity="0.6"/>
-          <!-- Right corridor vertical -->
-          <rect x="515" y="54" width="18" height="290" fill="var(--bg)" opacity="0.6"/>
-
-          <!-- ── ALA_A ── -->
-          <g id="room-ALA_A" class="room-area anim-unknown" onclick="selectRoom('ALA_A')">
-            <rect x="10" y="54" width="170" height="155" rx="6" class="s-unknown" id="rect-ALA_A"/>
-            <!-- Door indicator -->
-            <rect x="162" y="118" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
-            <text x="95" y="108" text-anchor="middle" fill="var(--tx1)" font-size="16" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA A</text>
-            <text x="95" y="128" text-anchor="middle" fill="var(--tx3)" font-size="11" font-family="system-ui,sans-serif" class="room-label">máx. 3 hóspedes</text>
-            <text x="95" y="150" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_A" fill="var(--tx3)">—</text>
-            <!-- Furniture hint -->
-            <rect x="30" y="160" width="50" height="30" rx="3" fill="var(--bdr1)" opacity="0.3"/>
-            <rect x="90" y="160" width="50" height="30" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+          <!-- MERCEARIA (clicável) -->
+          <g id="room-MERCEARIA" onclick="selectMercearia()" style="cursor:pointer">
+            <rect x="528" y="4" width="115" height="34" rx="5" fill="rgba(99,102,241,.12)" stroke="#6366f1" stroke-width="1.5" id="rect-MERCEARIA"/>
+            <text x="585" y="18" text-anchor="middle" fill="#6366f1" font-size="10" font-weight="700" font-family="system-ui">🛒 MERCEARIA</text>
+            <text x="585" y="32" text-anchor="middle" fill="var(--tx3)" font-size="8" font-family="system-ui">Estoque geral</text>
           </g>
 
-          <!-- ── ALA_B ── -->
-          <g id="room-ALA_B" class="room-area anim-unknown" onclick="selectRoom('ALA_B')">
-            <rect x="10" y="224" width="170" height="120" rx="6" class="s-unknown" id="rect-ALA_B"/>
-            <rect x="162" y="272" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
-            <text x="95" y="268" text-anchor="middle" fill="var(--tx1)" font-size="16" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA B</text>
-            <text x="95" y="287" text-anchor="middle" fill="var(--tx3)" font-size="11" font-family="system-ui,sans-serif" class="room-label">máx. 5 hóspedes</text>
-            <text x="95" y="310" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_B" fill="var(--tx3)">—</text>
+          <!-- Garden / pool area -->
+          <rect x="156" y="122" width="490" height="250" rx="4" fill="url(#garden-dots)" stroke="var(--bdr1)" stroke-width="1" stroke-dasharray="5,3" color="var(--ok)" opacity="0.7"/>
+          <text x="401" y="210" text-anchor="middle" fill="var(--ok)" opacity="0.35" font-size="36" font-family="system-ui,sans-serif">🌿</text>
+          <text x="401" y="248" text-anchor="middle" fill="var(--tx3)" opacity="0.5" font-size="11" font-family="system-ui,sans-serif" font-weight="500" letter-spacing="2">JARDIM · PISCINA</text>
+          <ellipse cx="401" cy="300" rx="68" ry="46" fill="none" stroke="var(--royal-l)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.35"/>
+          <text x="401" y="304" text-anchor="middle" fill="var(--royal-l)" opacity="0.45" font-size="10" font-family="system-ui,sans-serif">PISCINA</text>
+
+          <!-- ══ ALA B — 7 quartos horizontal topo esquerda ══ -->
+          <text x="233" y="116" text-anchor="middle" fill="var(--tx3)" font-size="9" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" opacity="0.6">ALA B</text>
+          <g class="room-area" id="room-pin-01" onclick="selectRoom('ALA_B','B1')" style="cursor:pointer">
+            <rect x="5"   y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-01"/>
+            <text x="41"  y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B1</text>
+            <text x="41"  y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-01"></text>
+          </g>
+          <g class="room-area" id="room-pin-02" onclick="selectRoom('ALA_B','B2')" style="cursor:pointer">
+            <rect x="81"  y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-02"/>
+            <text x="117" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B2</text>
+            <text x="117" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-02"></text>
+          </g>
+          <g class="room-area" id="room-pin-03" onclick="selectRoom('ALA_B','B3')" style="cursor:pointer">
+            <rect x="157" y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-03"/>
+            <text x="193" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B3</text>
+            <text x="193" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-03"></text>
+          </g>
+          <g class="room-area" id="room-pin-04" onclick="selectRoom('ALA_B','B4')" style="cursor:pointer">
+            <rect x="233" y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-04"/>
+            <text x="269" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B4</text>
+            <text x="269" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-04"></text>
+          </g>
+          <g class="room-area" id="room-pin-05" onclick="selectRoom('ALA_B','B5')" style="cursor:pointer">
+            <rect x="309" y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-05"/>
+            <text x="345" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B5</text>
+            <text x="345" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-05"></text>
+          </g>
+          <g class="room-area" id="room-pin-06" onclick="selectRoom('ALA_B','B6')" style="cursor:pointer">
+            <rect x="385" y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-06"/>
+            <text x="421" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B6</text>
+            <text x="421" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-06"></text>
+          </g>
+          <g class="room-area" id="room-pin-07" onclick="selectRoom('ALA_B','B7')" style="cursor:pointer">
+            <rect x="461" y="44" width="72" height="66" rx="5" class="s-unknown" id="rect-pin-07"/>
+            <text x="497" y="72" text-anchor="middle" fill="var(--tx2)" font-size="13" font-weight="700" font-family="system-ui" class="room-label">B7</text>
+            <text x="497" y="86" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-07"></text>
           </g>
 
-          <!-- ── ALA_C_1 (top half of suite) ── -->
-          <g id="room-ALA_C_1" class="room-area anim-unknown" onclick="selectRoom('ALA_C_CASAL')">
-            <rect x="537" y="54" width="253" height="145" rx="6" class="s-unknown" id="rect-ALA_C_1"/>
-            <rect x="537" y="118" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
-            <text x="663" y="96" text-anchor="middle" fill="var(--tx3)" font-size="10" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" class="room-label">ALA C — SUITE</text>
-            <text x="663" y="115" text-anchor="middle" fill="var(--tx1)" font-size="15" font-weight="700" font-family="system-ui,sans-serif" class="room-label">C-1</text>
-            <text x="663" y="134" text-anchor="middle" fill="var(--tx3)" font-size="10" font-family="system-ui,sans-serif" class="room-label">quarto 1 de 2</text>
-            <text x="663" y="155" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_1" fill="var(--tx3)">—</text>
-            <!-- Bed symbols -->
-            <rect x="560" y="160" width="40" height="25" rx="3" fill="var(--bdr1)" opacity="0.3"/>
-            <rect x="610" y="160" width="40" height="25" rx="3" fill="var(--bdr1)" opacity="0.3"/>
+          <!-- ══ ALA A — 8 quartos coluna vertical direita ══ -->
+          <text x="726" y="40" text-anchor="middle" fill="var(--tx3)" font-size="9" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" opacity="0.6">ALA A</text>
+          <g class="room-area" id="room-pin-08" onclick="selectRoom('ALA_A','A1')" style="cursor:pointer">
+            <rect x="652" y="44"  width="142" height="48" rx="5" class="s-unknown" id="rect-pin-08"/>
+            <text x="723" y="64"  text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A1</text>
+            <text x="723" y="79"  text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-08"></text>
+          </g>
+          <g class="room-area" id="room-pin-09" onclick="selectRoom('ALA_A','A2')" style="cursor:pointer">
+            <rect x="652" y="96"  width="142" height="48" rx="5" class="s-unknown" id="rect-pin-09"/>
+            <text x="723" y="116" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A2</text>
+            <text x="723" y="131" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-09"></text>
+          </g>
+          <g class="room-area" id="room-pin-10" onclick="selectRoom('ALA_A','A3')" style="cursor:pointer">
+            <rect x="652" y="148" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-10"/>
+            <text x="723" y="168" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A3</text>
+            <text x="723" y="183" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-10"></text>
+          </g>
+          <g class="room-area" id="room-pin-11" onclick="selectRoom('ALA_A','A4')" style="cursor:pointer">
+            <rect x="652" y="200" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-11"/>
+            <text x="723" y="220" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A4</text>
+            <text x="723" y="235" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-11"></text>
+          </g>
+          <g class="room-area" id="room-pin-12" onclick="selectRoom('ALA_A','A5')" style="cursor:pointer">
+            <rect x="652" y="252" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-12"/>
+            <text x="723" y="272" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A5</text>
+            <text x="723" y="287" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-12"></text>
+          </g>
+          <g class="room-area" id="room-pin-13" onclick="selectRoom('ALA_A','A6')" style="cursor:pointer">
+            <rect x="652" y="304" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-13"/>
+            <text x="723" y="324" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A6</text>
+            <text x="723" y="339" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-13"></text>
+          </g>
+          <g class="room-area" id="room-pin-14" onclick="selectRoom('ALA_A','A7')" style="cursor:pointer">
+            <rect x="652" y="356" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-14"/>
+            <text x="723" y="376" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A7</text>
+            <text x="723" y="391" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-14"></text>
+          </g>
+          <g class="room-area" id="room-pin-15" onclick="selectRoom('ALA_A','A8')" style="cursor:pointer">
+            <rect x="652" y="408" width="142" height="48" rx="5" class="s-unknown" id="rect-pin-15"/>
+            <text x="723" y="428" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">A8</text>
+            <text x="723" y="443" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label" id="pin-status-15"></text>
           </g>
 
-          <!-- ── Suite connector ── -->
-          <rect x="537" y="199" width="253" height="14" fill="var(--bg)" opacity="0.5"/>
-          <text x="663" y="210" text-anchor="middle" fill="var(--tx3)" opacity="0.5" font-size="9" font-family="system-ui,sans-serif" letter-spacing="1">CORREDOR INTERNO</text>
-
-          <!-- ── ALA_C_2 (bottom half of suite) ── -->
-          <g id="room-ALA_C_2" class="room-area anim-unknown" onclick="selectRoom('ALA_C_CASAL')">
-            <rect x="537" y="213" width="253" height="131" rx="6" class="s-unknown" id="rect-ALA_C_2"/>
-            <rect x="537" y="265" width="4" height="24" rx="2" fill="var(--bg)" opacity="0.8"/>
-            <text x="663" y="258" text-anchor="middle" fill="var(--tx1)" font-size="15" font-weight="700" font-family="system-ui,sans-serif" class="room-label">C-2</text>
-            <text x="663" y="277" text-anchor="middle" fill="var(--tx3)" font-size="10" font-family="system-ui,sans-serif" class="room-label">quarto 2 de 2</text>
-            <text x="663" y="298" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_2" fill="var(--tx3)">—</text>
+          <!-- BAR (clicável) -->
+          <g id="room-BAR" onclick="selectBar()" style="cursor:pointer">
+            <rect x="652" y="460" width="142" height="44" rx="5" fill="rgba(184,134,0,.16)" stroke="var(--gold)" stroke-width="1.5" id="rect-BAR"/>
+            <text x="723" y="479" text-anchor="middle" fill="var(--gold)" font-size="12" font-weight="700" font-family="system-ui">🍹 BAR</text>
+            <text x="723" y="496" text-anchor="middle" fill="var(--tx3)" font-size="9" font-family="system-ui">17h – 22h</text>
           </g>
 
-          <!-- ── Suite brace / label ── -->
-          <rect x="787" y="54" width="3" height="290" rx="1" fill="var(--bdr2)" opacity="0.5"/>
-          <text x="797" y="200" text-anchor="middle" fill="var(--tx3)" opacity="0.4" font-size="9" font-family="system-ui,sans-serif"
-            transform="rotate(90,797,200)">ALA C SUITE — até 8 hóspedes</text>
-
-          <!-- ── ALA_C_GRUPO ── -->
-          <g id="room-ALA_C_GRUPO" class="room-area anim-unknown" onclick="selectRoom('ALA_C_GRUPO')">
-            <rect x="10" y="358" width="780" height="130" rx="6" class="s-unknown" id="rect-ALA_C_GRUPO"/>
-            <text x="400" y="403" text-anchor="middle" fill="var(--tx1)" font-size="17" font-weight="700" font-family="system-ui,sans-serif" class="room-label">ALA C — GRUPO</text>
-            <text x="400" y="423" text-anchor="middle" fill="var(--tx3)" font-size="12" font-family="system-ui,sans-serif" class="room-label">Espaço exclusivo para grupos grandes · sob consulta com a equipe</text>
-            <text x="400" y="455" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif" font-weight="600" class="room-label" id="status-text-ALA_C_GRUPO" fill="var(--tx3)">—</text>
+          <!-- ══ ALA C — 5 suítes centro-baixo ══ -->
+          <line x1="4" y1="376" x2="644" y2="376" stroke="var(--bdr1)" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="320" y="390" text-anchor="middle" fill="var(--tx3)" font-size="9" font-weight="600" font-family="system-ui,sans-serif" letter-spacing="2" opacity="0.65">ALA C — SUÍTES</text>
+          <g class="room-area" id="room-pin-16" onclick="selectRoom('ALA_C_CASAL','C1')" style="cursor:pointer">
+            <rect x="5"   y="396" width="116" height="68" rx="5" class="s-unknown" id="rect-pin-16"/>
+            <text x="63"  y="422" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">C1</text>
+            <text x="63"  y="436" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label">Suíte Casal</text>
+            <text x="63"  y="451" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui" class="room-label" id="pin-status-16"></text>
+          </g>
+          <g class="room-area" id="room-pin-17" onclick="selectRoom('ALA_C_CASAL','C2')" style="cursor:pointer">
+            <rect x="126" y="396" width="116" height="68" rx="5" class="s-unknown" id="rect-pin-17"/>
+            <text x="184" y="422" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">C2</text>
+            <text x="184" y="436" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label">Suíte Casal</text>
+            <text x="184" y="451" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui" class="room-label" id="pin-status-17"></text>
+          </g>
+          <g class="room-area" id="room-pin-18" onclick="selectRoom('ALA_C_CASAL','C3')" style="cursor:pointer">
+            <rect x="247" y="396" width="116" height="68" rx="5" class="s-unknown" id="rect-pin-18"/>
+            <text x="305" y="422" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">C3</text>
+            <text x="305" y="436" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label">Suíte Casal</text>
+            <text x="305" y="451" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui" class="room-label" id="pin-status-18"></text>
+          </g>
+          <g class="room-area" id="room-pin-19" onclick="selectRoom('ALA_C_CASAL','C4')" style="cursor:pointer">
+            <rect x="368" y="396" width="116" height="68" rx="5" class="s-unknown" id="rect-pin-19"/>
+            <text x="426" y="422" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">C4</text>
+            <text x="426" y="436" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label">Suíte Casal</text>
+            <text x="426" y="451" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui" class="room-label" id="pin-status-19"></text>
+          </g>
+          <g class="room-area" id="room-pin-20" onclick="selectRoom('ALA_C_CASAL','C5')" style="cursor:pointer">
+            <rect x="489" y="396" width="116" height="68" rx="5" class="s-unknown" id="rect-pin-20"/>
+            <text x="547" y="422" text-anchor="middle" fill="var(--tx2)" font-size="12" font-weight="700" font-family="system-ui" class="room-label">C5</text>
+            <text x="547" y="436" text-anchor="middle" fill="var(--tx3)" font-size="7.5" font-family="system-ui" class="room-label">Suíte Casal</text>
+            <text x="547" y="451" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui" class="room-label" id="pin-status-20"></text>
           </g>
 
-          <!-- ── Compass rose (decorative) ── -->
-          <g transform="translate(148,325)" opacity="0.25">
-            <circle cx="0" cy="0" r="18" fill="none" stroke="var(--tx3)" stroke-width="1"/>
-            <polygon points="0,-14 3,-4 0,-2 -3,-4" fill="var(--err)"/>
-            <polygon points="0,14 3,4 0,2 -3,4" fill="var(--tx3)"/>
-            <polygon points="-14,0 -4,-3 -2,0 -4,3" fill="var(--tx3)"/>
-            <polygon points="14,0 4,-3 2,0 4,3" fill="var(--tx3)"/>
-            <text x="0" y="-20" text-anchor="middle" fill="var(--tx3)" font-size="9" font-family="system-ui">N</text>
+          <!-- Compass rose -->
+          <g transform="translate(618,490)" opacity="0.2">
+            <circle cx="0" cy="0" r="14" fill="none" stroke="var(--tx3)" stroke-width="1"/>
+            <polygon points="0,-10 2,-3 0,-1.5 -2,-3" fill="var(--err)"/>
+            <polygon points="0,10 2,3 0,1.5 -2,3" fill="var(--tx3)"/>
+            <text x="0" y="-15" text-anchor="middle" fill="var(--tx3)" font-size="7" font-family="system-ui">N</text>
           </g>
-
         </svg>
 
-        <!-- Room detail panel -->
+        <!-- Detail panel -->
         <div class="room-detail" id="room-detail">
           <div class="detail-header">
-            <span class="detail-name" id="detail-name">—</span>
+            <div class="detail-title-group">
+              <span class="detail-name" id="detail-name">—</span>
+              <span class="detail-sub" id="detail-sub"></span>
+            </div>
             <span class="status-badge" id="detail-badge">—</span>
           </div>
           <div class="detail-grid" id="detail-grid"></div>
@@ -358,22 +505,27 @@
 
   const sbMeta = document.querySelector('meta[name="sb-anon"]');
   const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
-  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content : '';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
   let authToken = null;
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  sb.auth.getSession().then(({ data }) => {
-    const user = data?.session?.user;
-    if (!user) { sessionStorage.setItem('ldl-return-to', window.location.pathname); window.location.href = '/login.html'; return; }
+  sb.auth.getUser().then(({ data }) => {
+    const user = data?.user;
+    if (!user) {
+      sessionStorage.setItem('ldl-return-to', window.location.pathname);
+      window.location.href = '/login.html';
+      return;
+    }
     const emailEl = document.querySelector('[data-user-email]');
     const avatarEl = document.getElementById('user-avatar');
     if (emailEl) emailEl.textContent = user.email;
     if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
-    authToken = data.session.access_token;
-    loadMap();
-    // Auto-refresh every 60s
-    setInterval(loadMap, 60_000);
+    sb.auth.getSession().then(({ data: sd }) => {
+      authToken = sd?.session?.access_token;
+      loadMap();
+      setInterval(loadMap, 60_000);
+    });
   });
 
   document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
@@ -384,7 +536,10 @@
   document.getElementById('btn-refresh').addEventListener('click', loadMap);
 
   async function apiFetch(path) {
-    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) {
+      const { data } = await sb.auth.getSession();
+      authToken = data?.session?.access_token;
+    }
     if (!authToken) { window.location.href = '/login.html'; return null; }
     const res = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
     if (res.status === 401) { window.location.href = '/login.html'; return null; }
@@ -392,9 +547,33 @@
   }
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let roomsData   = {};   // code → room object
+  let roomsData = {};            // code → room object
+  let activeResv = {};           // room_type → reservation (most recent confirmed)
   let selectedCode = null;
+  let selectedPin  = null;
   const TODAY = new Date().toISOString().slice(0, 10);
+
+  const WING_PINS = {
+    ALA_A:       ['08','09','10','11','12','13','14','15'],
+    ALA_B:       ['01','02','03','04','05','06','07'],
+    ALA_C_CASAL: ['16','17','18','19','20'],
+  };
+
+  const WING_LABELS = {
+    ALA_A:       'Ala A — Chalés',
+    ALA_B:       'Ala B — Bangalôs',
+    ALA_C_CASAL: 'Ala C — Suítes Casal',
+  };
+
+  const STATUS_CFG = {
+    available: { rect: 's-available', anim: 'anim-available', label: 'Disponível',    badge: 'sb-available', color: '#22c55e' },
+    occupied:  { rect: 's-occupied',  anim: 'anim-occupied',  label: 'Ocupado',       badge: 'sb-occupied',  color: '#ef4444' },
+    checkin:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Check-in hoje', badge: 'sb-checkin',   color: '#eab308' },
+    checkout:  { rect: 's-checkout',  anim: '',               label: 'Check-out hoje',badge: 'sb-checkout',  color: '#3b82f6' },
+    partial:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Parcial',       badge: 'sb-checkin',   color: '#eab308' },
+    request:   { rect: 's-unknown',   anim: '',               label: 'Sob consulta',  badge: 'sb-unknown',   color: '#94a3b8' },
+    unknown:   { rect: 's-unknown',   anim: '',               label: 'Sem dados',     badge: 'sb-unknown',   color: '#94a3b8' },
+  };
 
   // ── Load ──────────────────────────────────────────────────────────────────
   async function loadMap() {
@@ -402,165 +581,304 @@
     dot.classList.add('loading');
     document.getElementById('last-updated').textContent = 'Atualizando...';
 
-    const [roomsRes, recentRes] = await Promise.all([
+    const [roomsRes, resvRes] = await Promise.all([
       apiFetch('/api/rooms'),
-      apiFetch('/api/financial/recent?limit=50'),
+      apiFetch(`/api/reservations?status=confirmed&checkin_from=${subDays(TODAY,1)}&limit=100`),
     ]);
 
-    // Which room_types have check-in today?
-    const checkinToday = new Set();
-    if (recentRes?.success) {
-      for (const r of (recentRes.reservations || [])) {
-        if (r.checkin_date === TODAY && ['confirmed', 'deposit_paid', 'checked_in'].includes(r.status)) {
-          checkinToday.add(r.room_type); // e.g. "ALA_A", "ALA_C_1", "ALA_C_2"
+    // Rooms data
+    if (roomsRes?.success) {
+      for (const r of (roomsRes.rooms || [])) roomsData[r.code] = r;
+    }
+
+    // Active reservations keyed by room_type
+    activeResv = {};
+    if (resvRes?.reservations) {
+      for (const r of resvRes.reservations) {
+        if (!activeResv[r.room_type] ||
+            new Date(r.checkin_date) > new Date(activeResv[r.room_type].checkin_date)) {
+          activeResv[r.room_type] = r;
         }
       }
     }
 
-    if (roomsRes?.success) {
-      for (const room of (roomsRes.rooms || [])) {
-        roomsData[room.code] = room;
-      }
-      applyStatuses(checkinToday);
-    }
+    applyStatuses();
+    updateStats();
 
     dot.classList.remove('loading');
     const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('last-updated').textContent = `Atualizado às ${now}`;
 
-    // Refresh detail panel if a room is selected
-    if (selectedCode) selectRoom(selectedCode);
+    if (selectedCode) selectRoom(selectedCode, selectedPin);
+  }
+
+  function subDays(dateStr, n) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
   }
 
   // ── Apply status to SVG ───────────────────────────────────────────────────
-  function applyStatuses(checkinToday) {
-    // ALA_A
-    const alaA = roomsData['ALA_A'];
-    if (alaA) {
-      const checkin = checkinToday.has('ALA_A');
-      applyRoomStatus('ALA_A', checkin ? 'checkin' : mapStatus(alaA.today_status), alaA);
-    }
+  function applyStatuses() {
+    ['ALA_A', 'ALA_B', 'ALA_C_CASAL'].forEach(wing => {
+      const room  = roomsData[wing];
+      const resv  = activeResv[wing];
+      let status  = 'unknown';
+      if (room) {
+        status = mapApiStatus(room.today_status);
+        if (resv) {
+          if (resv.checkin_date === TODAY)  status = 'checkin';
+          if (resv.checkout_date === TODAY) status = 'checkout';
+        }
+      }
+      applyWingPins(wing, status);
+    });
+  }
 
-    // ALA_B
-    const alaB = roomsData['ALA_B'];
-    if (alaB) {
-      const checkin = checkinToday.has('ALA_B');
-      applyRoomStatus('ALA_B', checkin ? 'checkin' : mapStatus(alaB.today_status), alaB);
-    }
-
-    // ALA_C_CASAL → applies to both ALA_C_1 and ALA_C_2
-    const alaC = roomsData['ALA_C_CASAL'];
-    if (alaC) {
-      const checkin = checkinToday.has('ALA_C_1') || checkinToday.has('ALA_C_2');
-      const status  = checkin ? 'checkin' : mapStatus(alaC.today_status);
-      applyRoomStatus('ALA_C_1',    status, alaC);
-      applyRoomStatus('ALA_C_2',    status, alaC);
-    }
-
-    // ALA_C_GRUPO
-    const grupo = roomsData['ALA_C_GRUPO'];
-    if (grupo) {
-      applyRoomStatus('ALA_C_GRUPO', 'request', grupo);
+  function applyWingPins(wing, status) {
+    const cfg = STATUS_CFG[status] || STATUS_CFG.unknown;
+    for (const num of (WING_PINS[wing] || [])) {
+      const rect = document.getElementById(`rect-pin-${num}`);
+      const grp  = document.getElementById(`room-pin-${num}`);
+      const txt  = document.getElementById(`pin-status-${num}`);
+      if (rect) rect.className.baseVal = cfg.rect;
+      if (grp)  grp.className.baseVal  = `room-area ${cfg.anim}`;
+      if (txt)  { txt.textContent = cfg.label; txt.setAttribute('fill', cfg.color); }
     }
   }
 
-  function mapStatus(apiStatus) {
-    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request', unknown: 'unknown' };
-    return map[apiStatus] || 'unknown';
+  function mapApiStatus(s) {
+    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request' };
+    return map[s] || 'unknown';
   }
 
-  const STATUS_CLASSES = {
-    available: { rect: 's-available', anim: 'anim-available', label: 'Disponivel',   badge: 'sb-available', color: '#22c55e' },
-    occupied:  { rect: 's-occupied',  anim: 'anim-occupied',  label: 'Ocupado',      badge: 'sb-occupied',  color: '#ef4444' },
-    checkin:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Check-in hoje',badge: 'sb-checkin',   color: '#eab308' },
-    partial:   { rect: 's-checkin',   anim: 'anim-checkin',   label: 'Parcial',      badge: 'sb-checkin',   color: '#eab308' },
-    request:   { rect: 's-request',   anim: '',               label: 'Sob consulta', badge: 'sb-request',   color: '#6366f1' },
-    unknown:   { rect: 's-unknown',   anim: '',               label: 'Sem dados',    badge: 'sb-unknown',   color: '#94a3b8' },
-  };
+  // ── Stats bar ─────────────────────────────────────────────────────────────
+  function updateStats() {
+    const wings = ['ALA_A', 'ALA_B', 'ALA_C_CASAL'];
+    let avail = 0, occ = 0, checkin = 0, checkout = 0;
 
-  function applyRoomStatus(svgId, status, room) {
-    const cfg  = STATUS_CLASSES[status] || STATUS_CLASSES.unknown;
-    const rect = document.getElementById(`rect-${svgId}`);
-    const grp  = document.getElementById(`room-${svgId}`);
-    const txt  = document.getElementById(`status-text-${svgId}`);
+    wings.forEach(wing => {
+      const room = roomsData[wing];
+      const resv = activeResv[wing];
+      if (!room) return;
+      const pins = WING_PINS[wing]?.length || 0;
+      const st   = mapApiStatus(room.today_status);
+      if (resv?.checkin_date  === TODAY) { checkin  += pins; return; }
+      if (resv?.checkout_date === TODAY) { checkout += pins; return; }
+      if (st === 'available') avail += pins;
+      else                    occ   += pins;
+    });
 
-    if (!rect || !grp) return;
-
-    // Update rect class
-    rect.className.baseVal = `room-area ${cfg.rect}`;
-
-    // Update group animation class
-    const baseClass = 'room-area';
-    grp.className.baseVal = `${baseClass} ${cfg.anim}`;
-
-    // Update status text
-    if (txt) {
-      txt.textContent = cfg.label;
-      txt.setAttribute('fill', cfg.color);
-    }
+    document.getElementById('stat-available').textContent = avail;
+    document.getElementById('stat-occupied').textContent  = occ;
+    document.getElementById('stat-checkin').textContent   = checkin;
+    document.getElementById('stat-checkout').textContent  = checkout;
   }
 
-  // ── Room detail panel ─────────────────────────────────────────────────────
-  window.selectRoom = function(code) {
+  // ── Detail panels ─────────────────────────────────────────────────────────
+  function clearSelected() {
+    document.querySelectorAll('.room-area.selected').forEach(el => el.classList.remove('selected'));
+  }
+
+  window.selectRoom = function(code, pinLabel) {
+    clearSelected();
     selectedCode = code;
-    const room = roomsData[code];
+    selectedPin  = pinLabel || code;
+
+    // Highlight all pins in the wing
+    for (const num of (WING_PINS[code] || [])) {
+      document.getElementById(`room-pin-${num}`)?.classList.add('selected');
+    }
+
+    const room  = roomsData[code];
+    const resv  = activeResv[code];
     const panel = document.getElementById('room-detail');
 
-    if (!room) { panel.classList.remove('show'); return; }
+    if (!room) {
+      document.getElementById('detail-name').textContent = pinLabel || code.replace(/_/g,' ');
+      document.getElementById('detail-sub').textContent  = WING_LABELS[code] || '';
+      const badge = document.getElementById('detail-badge');
+      badge.className = 'status-badge sb-unknown';
+      badge.textContent = 'Sem dados';
+      document.getElementById('detail-grid').innerHTML = `
+        <div style="grid-column:1/-1;color:var(--tx3);font-size:.8125rem;padding:var(--sp-2) 0">
+          Dados do quarto não disponíveis. Verifique a API /api/rooms.
+        </div>`;
+      panel.classList.add('show');
+      panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      return;
+    }
 
-    // Determine display status
-    const statusKey = mapStatus(room.today_status);
-    const cfg = STATUS_CLASSES[statusKey] || STATUS_CLASSES.unknown;
-    const isGrupo = code === 'ALA_C_GRUPO';
+    // Compute effective status
+    let statusKey = mapApiStatus(room.today_status);
+    if (resv?.checkin_date  === TODAY) statusKey = 'checkin';
+    if (resv?.checkout_date === TODAY) statusKey = 'checkout';
+    const cfg = STATUS_CFG[statusKey] || STATUS_CFG.unknown;
 
-    document.getElementById('detail-name').textContent = room.name;
-
+    document.getElementById('detail-name').textContent = pinLabel || room.name;
+    document.getElementById('detail-sub').textContent  = WING_LABELS[code] || room.name || '';
     const badge = document.getElementById('detail-badge');
     badge.className = `status-badge ${cfg.badge}`;
     badge.textContent = cfg.label;
 
     const fmtBRL = v => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+    const fmtDate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Guest box (if occupied/checkin)
+    let guestBox = '';
+    if (resv && ['occupied','checkin','checkout'].includes(statusKey)) {
+      const guestName  = resv.leads?.name || 'Hóspede';
+      const initials   = guestName.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+      const nights     = Math.round((new Date(resv.checkout_date) - new Date(resv.checkin_date)) / 86400000);
+      guestBox = `
+        <div class="guest-box">
+          <div class="guest-avatar">${escHtml(initials)}</div>
+          <div>
+            <div class="guest-name">${escHtml(guestName)}</div>
+            <div class="guest-dates">
+              Check-in: ${fmtDate(resv.checkin_date)} · Check-out: ${fmtDate(resv.checkout_date)} · ${nights} noite${nights !== 1 ? 's' : ''}
+            </div>
+          </div>
+          <div style="margin-left:auto;text-align:right;flex-shrink:0">
+            <div class="detail-stat-label">Valor total</div>
+            <div style="font-weight:700;color:var(--tx1)">${fmtBRL(resv.total_amount)}</div>
+          </div>
+        </div>`;
+    }
 
     document.getElementById('detail-grid').innerHTML = `
+      ${guestBox ? guestBox + '<div class="detail-divider"></div>' : ''}
       <div>
-        <div class="detail-stat-label">Hospedes max.</div>
-        <div class="detail-stat-value">${isGrupo ? 'Variavel' : room.max_guests}</div>
+        <div class="detail-stat-label">Capacidade</div>
+        <div class="detail-stat-value">${room.max_guests || '—'} hóspedes</div>
       </div>
-      ${!isGrupo ? `
       <div>
-        <div class="detail-stat-label">Preco baixa</div>
+        <div class="detail-stat-label">Preço baixa</div>
         <div class="detail-stat-value">${fmtBRL(room.base_price_baixa)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
       </div>
       <div>
-        <div class="detail-stat-label">Preco media</div>
+        <div class="detail-stat-label">Preço média</div>
         <div class="detail-stat-value">${fmtBRL(room.base_price_media)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
       </div>
       <div>
-        <div class="detail-stat-label">Preco alta</div>
+        <div class="detail-stat-label">Preço alta</div>
         <div class="detail-stat-value" style="color:var(--gold)">${fmtBRL(room.base_price_alta)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
-      </div>` : `
-      <div>
-        <div class="detail-stat-label">Cotacao</div>
-        <div class="detail-stat-value" style="font-size:.875rem">R$ 150–210/px</div>
-      </div>`}
-      <div style="grid-column:1/-1">
-        <div class="detail-stat-label">Descricao</div>
-        <div style="font-size:.8125rem;color:var(--tx2);margin-top:2px;line-height:1.5">${escHtml(room.description)}</div>
       </div>
-      ${room.amenities && room.amenities.length ? `
+      ${room.description ? `
+      <div style="grid-column:1/-1">
+        <div class="detail-stat-label">Descrição</div>
+        <div style="font-size:.8125rem;color:var(--tx2);margin-top:3px;line-height:1.55">${escHtml(room.description)}</div>
+      </div>` : ''}
+      ${room.amenities?.length ? `
       <div style="grid-column:1/-1">
         <div class="detail-stat-label" style="margin-bottom:var(--sp-1)">Comodidades</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${room.amenities.map(a => `<span style="font-size:.7rem;padding:2px 7px;background:var(--sur1);border:1px solid var(--bdr0);border-radius:9999px;color:var(--tx2)">${escHtml(a)}</span>`).join('')}
+          ${room.amenities.map(a=>`<span style="font-size:.7rem;padding:2px 8px;background:var(--sur1);border:1px solid var(--bdr0);border-radius:9999px;color:var(--tx2)">${escHtml(a)}</span>`).join('')}
         </div>
       </div>` : ''}
     `;
 
     panel.classList.add('show');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   };
 
-  function escHtml(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ── Bar ───────────────────────────────────────────────────────────────────
+  window.selectBar = function() {
+    clearSelected();
+    selectedCode = 'BAR';
+    const panel = document.getElementById('room-detail');
+    document.getElementById('detail-name').textContent = '🍹 Bar da Pousada';
+    document.getElementById('detail-sub').textContent  = 'Localização: Ala A · Térreo';
+    const badge = document.getElementById('detail-badge');
+    badge.className = 'status-badge sb-bar';
+    badge.textContent = 'Aberto · 17h–22h';
+    document.getElementById('detail-grid').innerHTML = `
+      <div><div class="detail-stat-label">Itens em estoque</div><div class="detail-stat-value">${BAR_INVENTORY.length}</div></div>
+      <div><div class="detail-stat-label">Estoque baixo</div><div class="detail-stat-value" style="color:${BAR_INVENTORY.filter(i=>i.qty<10).length>0?'var(--err)':'var(--ok)'}">${BAR_INVENTORY.filter(i=>i.qty<10).length} itens</div></div>
+      <div style="grid-column:1/-1"><div class="detail-stat-label" style="margin-bottom:var(--sp-2)">Cardápio & Estoque</div></div>
+      ${renderInvTable(BAR_INVENTORY)}
+    `;
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  };
+
+  // ── Mercearia ─────────────────────────────────────────────────────────────
+  window.selectMercearia = function() {
+    clearSelected();
+    selectedCode = 'MERCEARIA';
+    const panel = document.getElementById('room-detail');
+    document.getElementById('detail-name').textContent = '🛒 Mercearia';
+    document.getElementById('detail-sub').textContent  = 'Localização: Recepção';
+    const badge = document.getElementById('detail-badge');
+    badge.className = 'status-badge sb-store';
+    badge.textContent = 'Estoque geral';
+    document.getElementById('detail-grid').innerHTML = `
+      <div><div class="detail-stat-label">Itens em estoque</div><div class="detail-stat-value">${MERCADO_INVENTORY.length}</div></div>
+      <div><div class="detail-stat-label">Estoque baixo</div><div class="detail-stat-value" style="color:${MERCADO_INVENTORY.filter(i=>i.qty<8).length>0?'var(--err)':'var(--ok)'}">${MERCADO_INVENTORY.filter(i=>i.qty<8).length} itens</div></div>
+      <div style="grid-column:1/-1"><div class="detail-stat-label" style="margin-bottom:var(--sp-2)">Inventário</div></div>
+      ${renderInvTable(MERCADO_INVENTORY)}
+    `;
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  };
+
+  // ── Inventory tables (mock data — /api/inventory em breve) ─────────────────
+  const BAR_INVENTORY = [
+    { item: 'Cerveja long neck',      qty: 48, unit: 'un',   price: 12 },
+    { item: 'Cerveja lata 350ml',     qty: 72, unit: 'un',   price: 8  },
+    { item: 'Caipirinha limão',       qty: 30, unit: 'dose', price: 18 },
+    { item: 'Caipirinha maracujá',    qty: 25, unit: 'dose', price: 20 },
+    { item: 'Água mineral 500ml',     qty: 60, unit: 'un',   price: 5  },
+    { item: 'Refrigerante lata',      qty: 36, unit: 'un',   price: 7  },
+    { item: 'Suco de laranja 300ml',  qty: 20, unit: 'un',   price: 10 },
+    { item: 'Porção batata frita',    qty: 15, unit: 'un',   price: 25 },
+    { item: 'Tábua de frios',         qty: 8,  unit: 'un',   price: 45 },
+    { item: 'Coxinha de frango',      qty: 24, unit: 'un',   price: 8  },
+    { item: 'Pastéis (4 un)',         qty: 12, unit: 'un',   price: 22 },
+    { item: 'Queijo coalho grelhado', qty: 6,  unit: 'un',   price: 18 },
+  ];
+
+  const MERCADO_INVENTORY = [
+    { item: 'Água mineral 5L',      qty: 20, unit: 'galão', price: 8  },
+    { item: 'Café moído 500g',      qty: 12, unit: 'pc',    price: 15 },
+    { item: 'Açúcar 1kg',           qty: 8,  unit: 'pc',    price: 5  },
+    { item: 'Leite UHT integral',   qty: 24, unit: 'un',    price: 6  },
+    { item: 'Pão de forma',         qty: 6,  unit: 'un',    price: 9  },
+    { item: 'Manteiga 200g',        qty: 10, unit: 'un',    price: 12 },
+    { item: 'Toalha de papel',      qty: 30, unit: 'rolo',  price: 4  },
+    { item: 'Sabão em pó 1kg',      qty: 5,  unit: 'pc',    price: 18 },
+    { item: 'Desinfetante 500ml',   qty: 8,  unit: 'un',    price: 7  },
+    { item: 'Papel higiênico 12un', qty: 15, unit: 'pc',    price: 22 },
+    { item: 'Detergente 500ml',     qty: 12, unit: 'un',    price: 5  },
+    { item: 'Saco de lixo 100L',    qty: 4,  unit: 'rolo',  price: 14 },
+  ];
+
+  function renderInvTable(items) {
+    const LOW_QTY = 8;
+    return `
+      <div class="inv-wrap" style="grid-column:1/-1">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th style="text-align:right">Qtd</th>
+              <th>Un</th>
+              <th style="text-align:right">Preço</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(i => `
+              <tr>
+                <td style="color:var(--tx1)">${i.item}</td>
+                <td style="text-align:right" class="${i.qty < LOW_QTY ? 'inv-low' : ''}" style="color:var(--tx2)">${i.qty}</td>
+                <td style="color:var(--tx3)">${i.unit}</td>
+                <td style="text-align:right;color:var(--tx2)">R$${i.price}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="inv-mock-note">* Dados mockados — integração com /api/inventory em breve</div>
+      </div>`;
   }
 
 })();

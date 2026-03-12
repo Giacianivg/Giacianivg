@@ -10,353 +10,581 @@
   <link rel="stylesheet" href="design-system/c.css">
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Stats ───────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-5);
+    }
+    @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: var(--sur1); border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5);
+      display: flex; align-items: center; gap: var(--sp-4);
+    }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .si-total  { background: rgba(99,102,241,.12);  color: var(--royal-l); }
+    .si-active { background: rgba(34,197,94,.12);   color: var(--ok); }
+    .si-cancel { background: rgba(239,68,68,.12);   color: var(--err); }
+    .si-value  { background: rgba(234,179,8,.12);   color: var(--gold); }
+    .stat-num  { font-size: 1.75rem; font-weight: 800; color: var(--tx1); line-height: 1; }
+    .stat-lbl  { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
+
+    /* ── Toolbar ─────────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; gap: var(--sp-3);
+      margin-bottom: var(--sp-4); flex-wrap: wrap;
+    }
+    .toolbar-search { position: relative; flex: 1; min-width: 200px; }
+    .toolbar-search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--tx3); pointer-events: none; }
+    .toolbar-search input { width: 100%; padding-left: 34px; }
+
+    /* ── Table ───────────────────────────────────────────── */
+    .tbl-wrap {
+      background: var(--sur1); border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg); overflow: hidden;
+    }
+    .vtbl { width: 100%; border-collapse: collapse; }
+    .vtbl th {
+      padding: 11px 14px; text-align: left;
+      font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--tx3); background: var(--sur2); border-bottom: 1px solid var(--bdr1); white-space: nowrap;
+    }
+    .vtbl td {
+      padding: 13px 14px; font-size: .875rem; color: var(--tx2);
+      border-bottom: 1px solid var(--bdr0); vertical-align: middle;
+    }
+    .vtbl tr:last-child td { border-bottom: none; }
+    .vtbl tr:hover td { background: rgba(99,102,241,.03); }
+    .vtbl .name-cell { font-weight: 600; color: var(--tx1); }
+    .vtbl .mono { font-size: .75rem; font-family: monospace; color: var(--tx3); }
+
+    /* ── Badges ──────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 9px; border-radius: 9999px;
+      font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+    .b-active  { background: rgba(34,197,94,.1); color: var(--ok);  border: 1px solid rgba(34,197,94,.25); }
+    .b-active::before { background: var(--ok); }
+    .b-cancel  { background: rgba(239,68,68,.1); color: var(--err); border: 1px solid rgba(239,68,68,.25); }
+    .b-cancel::before { background: var(--err); }
+    .b-direct  { background: rgba(99,102,241,.1);  color: var(--royal-l); border: 1px solid rgba(99,102,241,.25); }
+    .b-direct::before { background: var(--royal-l); }
+    .b-wapp    { background: rgba(34,197,94,.1); color: var(--ok); border: 1px solid rgba(34,197,94,.25); }
+    .b-wapp::before { background: var(--ok); }
+    .b-booking { background: rgba(59,130,246,.1); color: #3b82f6; border: 1px solid rgba(59,130,246,.25); }
+    .b-booking::before { background: #3b82f6; }
+    .b-expedia { background: rgba(234,179,8,.1);  color: var(--gold); border: 1px solid rgba(234,179,8,.25); }
+    .b-expedia::before { background: var(--gold); }
+
+    /* ── Actions ─────────────────────────────────────────── */
+    .act-group { display: flex; gap: var(--sp-1); justify-content: flex-end; }
+    .act-btn {
+      padding: 5px 9px; border-radius: var(--r-sm);
+      border: 1px solid var(--bdr1); background: transparent;
+      cursor: pointer; color: var(--tx3);
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .75rem; text-decoration: none;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .act-btn:hover            { background: var(--sur2); color: var(--tx1); border-color: var(--bdr2); }
+    .act-btn.print:hover      { background: rgba(99,102,241,.1);  color: var(--royal-l); border-color: rgba(99,102,241,.3); }
+    .act-btn.send:hover       { background: rgba(34,197,94,.1);   color: var(--ok);      border-color: rgba(34,197,94,.3); }
+    .act-btn.cancel-v:hover   { background: rgba(239,68,68,.1);   color: var(--err);     border-color: rgba(239,68,68,.3); }
+    .act-btn:disabled         { opacity: .4; pointer-events: none; }
+
+    /* ── Modal confirm cancel ─────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+      z-index: 400; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--sur1); border: 1px solid var(--bdr2);
+      border-radius: var(--r-xl); box-shadow: 0 24px 60px rgba(0,0,0,.4);
+      width: 100%; max-width: 420px;
+      transform: scale(.96) translateY(8px); transition: transform .2s;
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+    .modal-head {
+      padding: var(--sp-5) var(--sp-5) var(--sp-4);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-body { padding: var(--sp-5); }
+    .modal-foot {
+      padding: var(--sp-4) var(--sp-5);
+      border-top: 1px solid var(--bdr1);
+      display: flex; gap: var(--sp-2); justify-content: flex-end;
+    }
+    .warn-box {
+      background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+      border-radius: var(--r-md); padding: var(--sp-4); text-align: center;
+    }
+    .warn-box p { font-size: .875rem; color: var(--tx2); margin-top: var(--sp-2); }
+
+    /* ── Empty ───────────────────────────────────────────── */
+    .empty-state {
+      padding: var(--sp-12) var(--sp-6); text-align: center; color: var(--tx3);
+    }
+    .empty-state p { font-size: .9375rem; margin-top: var(--sp-3); }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: var(--sp-5); right: var(--sp-5);
+      padding: var(--sp-2) var(--sp-4); border-radius: var(--r-md);
+      background: var(--sur2); border: 1px solid var(--bdr2);
+      font-size: .875rem; color: var(--tx1);
+      box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 500;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .25s, transform .25s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-color: rgba(34,197,94,.4);  color: var(--ok); }
+    .toast.err  { border-color: rgba(239,68,68,.4);  color: var(--err); }
+    .toast.warn { border-color: rgba(234,179,8,.4);  color: var(--gold); }
+  </style>
 </head>
 <body>
 <div id="drawer-backdrop" class="drawer-backdrop"></div>
 
 <div class="app-shell">
+  <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <a class="sidebar-brand" href="dashboard.html">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/>
+        <path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-name">Luz da Lua</div>
+        <div class="sidebar-brand-sub">Operações</div>
+      </div>
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
-      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
-      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
-      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
-      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
-      <a class="nav-link active" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Vouchers</a>
-      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
-      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
-      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <a class="nav-link" href="frontdesk.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/><circle cx="12" cy="7" r="1"/></svg>
+        Recepção
+      </a>
+      <a class="nav-link" href="dashboard.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link" href="leads.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Leads
+      </a>
+      <a class="nav-link" href="rooms.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Quartos
+      </a>
+      <a class="nav-link" href="bookings.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Reservas
+      </a>
+      <a class="nav-link" href="financial.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Financeiro
+      </a>
+      <a class="nav-link active" href="vouchers.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Vouchers
+      </a>
+      <a class="nav-link" href="vouchers-create.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+        Emitir Voucher
+      </a>
+      <a class="nav-link" href="follow-ups.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Follow-ups
+      </a>
+      <a class="nav-link" href="map.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Mapa da Pousada
+      </a>
+      <a class="nav-link" href="calendar.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendário
+      </a>
       <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
-      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
-      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+      <a class="nav-link" href="command-center.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+        Command Center
+      </a>
+      <a class="nav-link" href="luna-training.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+        Treinamento Luna
+      </a>
     </nav>
     <div class="sidebar-footer">
       <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
       <div class="sidebar-user">
         <div class="avatar avatar-sm" id="user-avatar">?</div>
         <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
-        <button class="btn btn-ghost btn-icon" data-action="logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
     </div>
   </aside>
 
+  <!-- Main -->
   <div class="main-content">
     <header class="topbar">
       <div class="topbar-left">
-        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <button class="hamburger" id="hamburger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <h1 class="page-title">Vouchers</h1>
       </div>
       <div class="topbar-right">
-        <span class="t-3" id="voucher-count" style="font-size:.8125rem"></span>
-        <button class="btn btn-primary btn-sm" id="btn-new-voucher">+ Novo Voucher</button>
+        <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
+        <a href="vouchers-create.html" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Emitir voucher
+        </a>
       </div>
     </header>
 
     <main class="page-body">
-      <div class="toolbar">
-        <div class="toolbar-left" style="gap:var(--sp-2);flex-wrap:wrap">
-          <input class="input" id="search-input" type="search" placeholder="Buscar por hóspede..." style="width:220px">
-          <select class="select" id="source-filter" style="width:auto">
-            <option value="">Todas as fontes</option>
-            <option value="direct">Reserva Direta</option>
-            <option value="booking">Booking.com</option>
-            <option value="expedia">Expedia</option>
-            <option value="whatsapp">WhatsApp</option>
-          </select>
-          <select class="select" id="status-filter" style="width:auto">
-            <option value="">Todos os status</option>
-            <option value="active">Ativo</option>
-            <option value="cancelled">Cancelado</option>
-          </select>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon si-total"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total emitidos</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div><div class="stat-num" id="s-active">—</div><div class="stat-lbl">Ativos</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-cancel"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          <div><div class="stat-num" id="s-cancel">—</div><div class="stat-lbl">Cancelados</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-value"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+          <div><div class="stat-num" id="s-value">—</div><div class="stat-lbl">Valor total ativo</div></div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-body-flush">
-          <div id="vouchers-container">
-            <div class="tbl-wrap"><table class="tbl">
-              <tbody>
-                <tr><td colspan="8"><div class="skel skel-line" style="width:60%"></div></td></tr>
-                <tr><td colspan="8"><div class="skel skel-line" style="width:45%"></div></td></tr>
-                <tr><td colspan="8"><div class="skel skel-line" style="width:70%"></div></td></tr>
-              </tbody>
-            </table></div>
-          </div>
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" id="q" type="text" placeholder="Buscar hóspede..." autocomplete="off">
         </div>
+        <select class="input" id="f-source" style="width:auto;min-width:130px">
+          <option value="">Todos os canais</option>
+          <option value="direct">Reserva Direta</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="booking">Booking.com</option>
+          <option value="expedia">Expedia</option>
+        </select>
+        <select class="input" id="f-status" style="width:auto;min-width:130px">
+          <option value="">Todos os status</option>
+          <option value="active">Ativo</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+        <button class="btn btn-secondary" id="btn-refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
       </div>
+
+      <!-- Table -->
+      <div class="tbl-wrap">
+        <table class="vtbl">
+          <thead>
+            <tr>
+              <th>Hóspede</th>
+              <th>Quarto</th>
+              <th>Check-in</th>
+              <th>Check-out</th>
+              <th>Noites</th>
+              <th>Hóspedes</th>
+              <th>Valor</th>
+              <th>Canal</th>
+              <th>Status</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="vtbody">
+            <tr><td colspan="10" style="text-align:center;padding:var(--sp-8);color:var(--tx3)">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
     </main>
   </div>
 </div>
 
-<!-- Modal novo voucher -->
-<div id="modal-voucher" class="modal" style="display:none">
-  <div class="modal-backdrop" id="modal-backdrop"></div>
-  <div class="modal-dialog" style="max-width:520px">
-    <div class="modal-header">
-      <h2 class="modal-title">Novo Voucher</h2>
-      <button class="btn btn-ghost btn-icon" id="btn-close-modal">
+<!-- Modal cancelar -->
+<div class="modal-overlay" id="modal-cancel">
+  <div class="modal">
+    <div class="modal-head">
+      <span style="font-size:1rem;font-weight:700;color:var(--err)">Cancelar voucher</span>
+      <button class="btn btn-ghost btn-icon" data-close="modal-cancel">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
     <div class="modal-body">
-      <form id="form-voucher">
-        <div class="form-group">
-          <label class="label">Nome do Hóspede *</label>
-          <input class="input" id="f-guest-name" type="text" placeholder="Ex: Maria Silva" required>
-        </div>
-        <div class="row" style="gap:var(--sp-3)">
-          <div class="form-group" style="flex:1">
-            <label class="label">Acomodação *</label>
-            <select class="select" id="f-room-type" required>
-              <option value="">Selecione...</option>
-              <option value="ALA_A">Ala A — Standard Casal</option>
-              <option value="ALA_B">Ala B — Família</option>
-              <option value="ALA_C_CASAL">Ala C — Grupo (Casal)</option>
-              <option value="ALA_C_GRUPO">Ala C — Grupo</option>
-            </select>
-          </div>
-          <div class="form-group" style="flex:1">
-            <label class="label">Fonte</label>
-            <select class="select" id="f-source">
-              <option value="direct">Reserva Direta</option>
-              <option value="booking">Booking.com</option>
-              <option value="expedia">Expedia</option>
-              <option value="whatsapp">WhatsApp</option>
-            </select>
-          </div>
-        </div>
-        <div class="row" style="gap:var(--sp-3)">
-          <div class="form-group" style="flex:1">
-            <label class="label">Check-in *</label>
-            <input class="input" id="f-check-in" type="date" required>
-          </div>
-          <div class="form-group" style="flex:1">
-            <label class="label">Check-out *</label>
-            <input class="input" id="f-check-out" type="date" required>
-          </div>
-        </div>
-        <div class="row" style="gap:var(--sp-3)">
-          <div class="form-group" style="flex:1">
-            <label class="label">Hóspedes *</label>
-            <input class="input" id="f-guests" type="number" min="1" max="20" value="2" required>
-          </div>
-          <div class="form-group" style="flex:1">
-            <label class="label">Valor Total (R$)</label>
-            <input class="input" id="f-total" type="number" min="0" step="0.01" placeholder="Opcional">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="label">Observações</label>
-          <input class="input" id="f-notes" type="text" placeholder="Ex: café da manhã incluído">
-        </div>
-        <div class="modal-footer" style="margin-top:var(--sp-5)">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-voucher">Gerar Voucher</button>
-        </div>
-      </form>
+      <div class="warn-box">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--err)" stroke-width="1.5" style="display:block;margin:0 auto var(--sp-2)">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <p id="cancel-name">Cancelar este voucher?</p>
+        <p style="margin-top:6px;font-size:.8125rem;color:var(--tx3)">O PDF deixa de ser válido e o registro fica arquivado.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-cancel">Voltar</button>
+      <button class="btn" id="btn-confirm-cancel" style="background:var(--err);border-color:var(--err);color:#fff">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        Cancelar voucher
+      </button>
     </div>
   </div>
 </div>
 
-<div id="toast-container"></div>
+<div class="toast" id="toast"></div>
 <script src="design-system/u.js"></script>
 <script>
-const SOURCE_LABEL = {
-  direct:   'Direta',
-  booking:  'Booking',
-  expedia:  'Expedia',
-  whatsapp: 'WhatsApp',
-};
-const SOURCE_BADGE = {
-  direct:   'badge-ok',
-  booking:  'badge-hot',
-  expedia:  'badge-pending',
-  whatsapp: 'badge-sent',
-};
-const ROOM_LABEL = {
-  ALA_A:        'Ala A',
-  ALA_B:        'Ala B',
-  ALA_C_CASAL:  'Ala C Casal',
-  ALA_C_GRUPO:  'Ala C Grupo',
-};
+(function () {
+  'use strict';
 
-let allVouchers = [], filtered = [];
+  // ── Auth ────────────────────────────────────────────────────
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const sb = supabase.createClient('https://vwgqhonbbiqubuahkyij.supabase.co', sbMeta?.content || '');
+  let authToken = null;
 
-function renderTable(list) {
-  const el = document.getElementById('vouchers-container');
-  document.getElementById('voucher-count').textContent = `${list.length} voucher${list.length !== 1 ? 's' : ''}`;
+  sb.auth.getUser().then(async ({ data: { user }, error }) => {
+    if (error || !user) { sessionStorage.setItem('ldl-return-to', location.pathname); location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    const { data: { session } } = await sb.auth.getSession();
+    authToken = session?.access_token;
+    load();
+  });
 
-  if (!list.length) {
-    DS.emptyState(el, 'Nenhum voucher', 'Crie o primeiro voucher clicando em "+ Novo Voucher".', '');
-    return;
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut(); location.href = '/login.html';
+  });
+
+  async function apiFetch(path, opts = {}) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(opts.headers || {}) },
+    });
+    return res.json();
   }
 
-  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
-    <thead><tr>
-      <th>Hóspede</th>
-      <th>Acomodação</th>
-      <th>Check-in</th>
-      <th>Check-out</th>
-      <th>Hóspedes</th>
-      <th>Valor</th>
-      <th>Fonte</th>
-      <th>Status</th>
-      <th></th>
-    </tr></thead>
-    <tbody>
-      ${list.map(v => {
-        const srcBadge  = SOURCE_BADGE[v.source]  || 'badge-muted';
-        const srcLabel  = SOURCE_LABEL[v.source]  || v.source || '—';
-        const roomLabel = ROOM_LABEL[v.room_type] || v.room_type || '—';
-        const statusBadge = v.status === 'active' ? 'badge-ok' : 'badge-err';
-        const statusLabel = v.status === 'active' ? 'Ativo' : 'Cancelado';
-        const downloadUrl = `/api/vouchers/${v.id}/download?token=${v.download_token}`;
-        return `<tr>
-          <td>
-            <div class="row" style="gap:var(--sp-2)">
-              <div class="avatar avatar-sm">${DS.initials(v.guest_name)}</div>
-              <div>
-                <div>${DS.esc(v.guest_name || '—')}</div>
-                <div class="t-3" style="font-size:.75rem">${DS.rel(v.created_at)}</div>
-              </div>
-            </div>
-          </td>
-          <td>${DS.esc(roomLabel)}</td>
-          <td class="td-mono">${DS.date(v.check_in)}</td>
-          <td class="td-mono">${DS.date(v.check_out)}</td>
-          <td>${v.guests}</td>
-          <td>${v.total_amount ? DS.cur(v.total_amount) : '<span class="t-3">—</span>'}</td>
-          <td><span class="badge ${srcBadge}">${DS.esc(srcLabel)}</span></td>
-          <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
-          <td class="td-action" style="white-space:nowrap">
-            <a class="btn btn-ghost btn-sm" href="${downloadUrl}" target="_blank" title="Baixar PDF">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  // ── State ────────────────────────────────────────────────────
+  let allVouchers = [];
+  let pendingCancelId = null;
+
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+
+  const ROOM = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
+  const SRC_BADGE = { direct:'b-direct', whatsapp:'b-wapp', booking:'b-booking', expedia:'b-expedia' };
+  const SRC_LABEL = { direct:'Direta', whatsapp:'WhatsApp', booking:'Booking', expedia:'Expedia' };
+
+  // ── Load ─────────────────────────────────────────────────────
+  async function load() {
+    const q      = document.getElementById('q').value.trim();
+    const source = document.getElementById('f-source').value;
+    const status = document.getElementById('f-status').value;
+
+    const params = new URLSearchParams({ limit: '200' });
+    if (source) params.set('source', source);
+    if (status) params.set('status', status);
+    if (q)      params.set('search', q);
+
+    document.getElementById('vtbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;padding:var(--sp-8);color:var(--tx3)">Carregando...</td></tr>';
+
+    const res = await apiFetch(`/api/vouchers?${params}`);
+    allVouchers = res?.vouchers || [];
+    updateStats(allVouchers);
+    renderTable(allVouchers);
+  }
+
+  function updateStats(vouchersList) {
+    const active  = vouchersList.filter(v => v.status === 'active');
+    const cancel  = vouchersList.filter(v => v.status === 'cancelled');
+    const total   = active.reduce((s, v) => s + (v.total_amount || 0), 0);
+    document.getElementById('s-total').textContent  = vouchersList.length;
+    document.getElementById('s-active').textContent = active.length;
+    document.getElementById('s-cancel').textContent = cancel.length;
+    document.getElementById('s-value').textContent  = fmtBRL(total);
+  }
+
+  // ── Render ───────────────────────────────────────────────────
+  function renderTable(list) {
+    const tbody = document.getElementById('vtbody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto;opacity:.4"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>Nenhum voucher encontrado.</p>
+        <a href="vouchers-create.html" class="btn btn-primary" style="margin-top:var(--sp-4)">Emitir primeiro voucher</a>
+      </div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = list.map(v => {
+      const nights = nightsBetween(v.check_in, v.check_out);
+      const srcBadge = SRC_BADGE[v.source] || 'b-direct';
+      const srcLabel = SRC_LABEL[v.source] || v.source || '—';
+      const dlUrl    = `/api/vouchers/${v.id}/download?token=${v.download_token}`;
+      const isActive = v.status === 'active';
+
+      return `<tr>
+        <td>
+          <div class="name-cell">${esc(v.guest_name)}</div>
+          <div class="mono">${timeAgo(v.created_at)}</div>
+        </td>
+        <td style="color:var(--royal-l);font-weight:600">${esc(ROOM[v.room_type] || v.room_type)}</td>
+        <td>${fmtDate(v.check_in)}</td>
+        <td>${fmtDate(v.check_out)}</td>
+        <td style="color:var(--tx3)">${nights}n</td>
+        <td>${v.guests}</td>
+        <td style="font-weight:700">${v.total_amount ? fmtBRL(v.total_amount) : '<span style="color:var(--tx3)">—</span>'}</td>
+        <td><span class="badge ${srcBadge}">${esc(srcLabel)}</span></td>
+        <td><span class="badge ${isActive ? 'b-active' : 'b-cancel'}">${isActive ? 'Ativo' : 'Cancelado'}</span></td>
+        <td>
+          <div class="act-group">
+            <a class="act-btn print" href="${dlUrl}" target="_blank" title="Imprimir / baixar PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               PDF
             </a>
-            ${v.status === 'active'
-              ? `<button class="btn btn-danger btn-sm" onclick="cancelVoucher('${DS.esc(v.id)}', this)" title="Cancelar voucher">Cancelar</button>`
-              : ''}
-          </td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table></div>`;
-}
+            <button class="act-btn send" data-id="${esc(v.id)}" data-name="${esc(v.guest_name)}" data-dl="${esc(dlUrl)}" title="Reenviar via WhatsApp" ${!isActive ? 'disabled' : ''}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Reenviar
+            </button>
+            ${isActive
+              ? `<button class="act-btn cancel-v" data-cancel-id="${esc(v.id)}" data-cancel-name="${esc(v.guest_name)}" title="Cancelar voucher">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </button>`
+              : '<button class="act-btn" disabled title="Já cancelado"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></button>'
+            }
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
 
-function applyFilters() {
-  const search = document.getElementById('search-input').value.trim().toLowerCase();
-  const source = document.getElementById('source-filter').value;
-  const status = document.getElementById('status-filter').value;
+    // Reenviar WhatsApp (copia link)
+    tbody.querySelectorAll('.act-btn.send').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dlUrl = btn.dataset.dl;
+        const name  = btn.dataset.name;
+        // Copy to clipboard as fallback; ideally opens WhatsApp
+        const text  = `Olá ${name}! Segue seu voucher de hospedagem da Pousada Luz da Lua: ${window.location.origin}${dlUrl}`;
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Link copiado! Cole no WhatsApp do hóspede.', 'ok');
+        }).catch(() => {
+          window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        });
+      });
+    });
 
-  filtered = allVouchers.filter(v => {
-    if (search && !v.guest_name.toLowerCase().includes(search)) return false;
-    if (source && v.source !== source) return false;
-    if (status && v.status !== status) return false;
-    return true;
+    // Cancelar
+    tbody.querySelectorAll('[data-cancel-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pendingCancelId = btn.dataset.cancelId;
+        document.getElementById('cancel-name').textContent = `Cancelar voucher de "${btn.dataset.cancelName}"?`;
+        document.getElementById('modal-cancel').classList.add('open');
+      });
+    });
+  }
+
+  // ── Cancel confirm ───────────────────────────────────────────
+  document.getElementById('btn-confirm-cancel').addEventListener('click', async () => {
+    if (!pendingCancelId) return;
+    const btn = document.getElementById('btn-confirm-cancel');
+    btn.disabled = true;
+    btn.textContent = 'Cancelando...';
+
+    const res = await apiFetch(`/api/vouchers/${pendingCancelId}`, {
+      method: 'PATCH', body: JSON.stringify({ status: 'cancelled' }),
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Cancelar voucher`;
+
+    closeModal('modal-cancel');
+    pendingCancelId = null;
+
+    if (!res || !res.voucher) { showToast('Erro ao cancelar.', 'err'); return; }
+    showToast('Voucher cancelado.', 'ok');
+    await load();
   });
-  renderTable(filtered);
-}
 
-async function cancelVoucher(id, btn) {
-  if (!confirm('Cancelar este voucher?')) return;
-  btn.disabled = true;
-  try {
-    await DS.api(`/api/vouchers/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled' }) });
-    DS.toast('Voucher cancelado', 'ok');
-    await reload();
-  } catch (e) {
-    DS.toast('Erro ao cancelar: ' + e.message, 'err');
-    btn.disabled = false;
+  // ── Modal helpers ────────────────────────────────────────────
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.close)));
+  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) closeModal(o.id); }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(o => closeModal(o.id)); });
+
+  // ── Filters ──────────────────────────────────────────────────
+  document.getElementById('q').addEventListener('input', debounce(load, 350));
+  document.getElementById('f-source').addEventListener('change', load);
+  document.getElementById('f-status').addEventListener('change', load);
+  document.getElementById('btn-refresh').addEventListener('click', load);
+
+  // ── Toast ────────────────────────────────────────────────────
+  let tt;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(tt);
+    tt = setTimeout(() => { el.className = 'toast'; }, 3500);
   }
-}
 
-async function reload() {
-  const source = document.getElementById('source-filter').value;
-  const status = document.getElementById('status-filter').value;
-  const search = document.getElementById('search-input').value.trim();
-
-  const params = new URLSearchParams({ limit: '200' });
-  if (source) params.set('source', source);
-  if (status) params.set('status', status);
-  if (search) params.set('search', search);
-
-  const res = await DS.api(`/api/vouchers?${params}`);
-  allVouchers = res?.vouchers || [];
-  filtered = [...allVouchers];
-  renderTable(filtered);
-}
-
-// Modal
-function openModal() {
-  document.getElementById('form-voucher').reset();
-  document.getElementById('modal-voucher').style.display = 'flex';
-}
-function closeModal() {
-  document.getElementById('modal-voucher').style.display = 'none';
-}
-
-document.getElementById('btn-new-voucher').addEventListener('click', openModal);
-document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
-document.getElementById('modal-backdrop').addEventListener('click', closeModal);
-
-document.getElementById('form-voucher').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('btn-submit-voucher');
-  btn.disabled = true;
-  btn.textContent = 'Gerando...';
-
-  try {
-    const body = {
-      guest_name:   document.getElementById('f-guest-name').value.trim(),
-      room_type:    document.getElementById('f-room-type').value,
-      check_in:     document.getElementById('f-check-in').value,
-      check_out:    document.getElementById('f-check-out').value,
-      guests:       Number(document.getElementById('f-guests').value),
-      source:       document.getElementById('f-source').value,
-    };
-    const total = document.getElementById('f-total').value;
-    if (total) body.total_amount = Number(total);
-    const notes = document.getElementById('f-notes').value.trim();
-    if (notes) body.notes = notes;
-
-    const res = await DS.api('/api/vouchers', { method: 'POST', body: JSON.stringify(body) });
-    DS.toast('Voucher criado!', 'ok');
-    closeModal();
-    // Abre PDF em nova aba automaticamente
-    window.open(res.download_url, '_blank');
-    await reload();
-  } catch (err) {
-    DS.toast('Erro: ' + err.message, 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Gerar Voucher';
+  // ── Helpers ──────────────────────────────────────────────────
+  function nightsBetween(from, to) {
+    if (!from || !to) return '—';
+    const d = Math.round((new Date(to) - new Date(from)) / 86_400_000);
+    return isNaN(d) ? '—' : d;
   }
-});
-
-// Filtros em tempo real
-document.getElementById('search-input').addEventListener('input', applyFilters);
-document.getElementById('source-filter').addEventListener('change', applyFilters);
-document.getElementById('status-filter').addEventListener('change', applyFilters);
-
-(async () => {
-  const session = await DS.requireAuth();
-  if (!session) return;
-  DS.initNav();
-  const avEl = document.getElementById('user-avatar');
-  if (avEl) avEl.textContent = (session.user.email || '').slice(0, 2).toUpperCase();
-
-  try {
-    await reload();
-  } catch (err) {
-    DS.errorState('vouchers-container', err.message);
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.slice(0,10).split('-');
+    return `${d}/${m}/${y.slice(2)}`;
   }
+  function fmtBRL(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+  }
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const s = Math.round((Date.now() - new Date(iso)) / 1000);
+    if (s < 60) return 'agora';
+    if (s < 3600) return `${Math.floor(s/60)}min atrás`;
+    if (s < 86400) return `${Math.floor(s/3600)}h atrás`;
+    return `${Math.floor(s/86400)}d atrás`;
+  }
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
 })();
 </script>
 </body>

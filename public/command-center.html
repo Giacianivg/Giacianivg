@@ -4,46 +4,206 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Z3Fob25iYmlxdWJ1YWhreWlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NDYwNDIsImV4cCI6MjA4ODQyMjA0Mn0.NLmNmJ8jrlYZXdDanapvvanTB1vnR3Qjfhcmo72rgnw">
-  <title>AI Command Center — Luz da Lua</title>
+  <title>Command Center — Luz da Lua</title>
   <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
   <link rel="stylesheet" href="design-system/t.css">
   <link rel="stylesheet" href="design-system/c.css">
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .ai-grid {
+    /* ── Layout ── */
+    .cc-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: auto auto;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: var(--sp-4);
     }
-    .ai-grid .panel-stream {
-      grid-column: 1 / -1;
+    .cc-full  { grid-column: 1 / -1; }
+    .cc-half  { grid-column: span 2; }
+    .cc-third { grid-column: span 1; }
+
+    @media (max-width: 1100px) {
+      .cc-grid { grid-template-columns: 1fr 1fr; }
+      .cc-half, .cc-third { grid-column: span 1; }
     }
-    @media (max-width: 768px) {
-      .ai-grid { grid-template-columns: 1fr; }
-      .ai-grid .panel-stream { grid-column: 1; }
+    @media (max-width: 720px) {
+      .cc-grid { grid-template-columns: 1fr; }
+      .cc-full, .cc-half, .cc-third { grid-column: 1; }
     }
 
-    /* Pulse badge */
+    /* ── KPI strip ── */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-4);
+    }
+    @media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .kpi-strip { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--sur2, var(--surface-2));
+      border: 1px solid var(--bdr0, var(--border));
+      border-radius: var(--r-lg, var(--radius-lg));
+      padding: var(--sp-4) var(--sp-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--kpi-grad, transparent);
+      opacity: .06;
+      pointer-events: none;
+    }
+    .kpi-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--r-md, var(--radius-md));
+      background: var(--kpi-bg, rgba(99,102,241,.15));
+      display: flex; align-items: center; justify-content: center;
+      color: var(--kpi-color, var(--royal-l));
+    }
+    .kpi-label { font-size: .75rem; color: var(--tx3, var(--t-3)); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value { font-size: 1.75rem; font-weight: 700; color: var(--tx1, var(--t-1)); line-height: 1.1; }
+    .kpi-sub   { font-size: .78rem; color: var(--tx3, var(--t-3)); }
+    .kpi-delta {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: .75rem; font-weight: 600;
+      padding: 2px 7px; border-radius: 9999px;
+    }
+    .kpi-delta.up   { background: rgba(34,197,94,.12); color: #4ade80; }
+    .kpi-delta.down { background: rgba(239,68,68,.12);  color: #f87171; }
+    .kpi-delta.neu  { background: rgba(148,163,184,.1); color: var(--tx3, var(--t-3)); }
+
+    /* ── Alert list ── */
+    .alert-list { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); }
+    .alert-item {
+      display: flex; gap: var(--sp-3); align-items: flex-start;
+      padding: var(--sp-3);
+      border-radius: var(--r-md, var(--radius-md));
+      border: 1px solid var(--bdr0, var(--border));
+      background: var(--sur2, var(--surface-2));
+    }
+    .alert-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 5px;
+    }
+    .alert-dot.critical { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,.5); }
+    .alert-dot.warning  { background: #facc15; box-shadow: 0 0 6px rgba(250,204,21,.4); }
+    .alert-dot.info     { background: var(--royal-l, #818cf8); }
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-title { font-size: .875rem; font-weight: 600; color: var(--tx1, var(--t-1)); }
+    .alert-desc  { font-size: .78rem; color: var(--tx3, var(--t-3)); margin-top: 2px; line-height: 1.4; }
+    .alert-time  { font-size: .7rem; color: var(--tx3, var(--t-3)); margin-top: 4px; font-family: var(--mono); }
+
+    /* ── Ops timeline ── */
+    .ops-list { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-3); max-height: 340px; overflow-y: auto; }
+    .ops-item {
+      display: flex; align-items: center; gap: var(--sp-3);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--r-md, var(--radius-md));
+      background: var(--sur2, var(--surface-2));
+      border: 1px solid var(--bdr0, var(--border));
+    }
+    .ops-badge {
+      font-size: .68rem; font-weight: 700; padding: 2px 7px; border-radius: 9999px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .ops-badge.cin  { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+    .ops-badge.cout { background: rgba(99,102,241,.12); color: var(--royal-l, #818cf8); border: 1px solid rgba(99,102,241,.25); }
+    .ops-name  { font-size: .875rem; font-weight: 600; color: var(--tx1, var(--t-1)); }
+    .ops-room  { font-size: .75rem; color: var(--tx3, var(--t-3)); }
+    .ops-nights { font-size: .75rem; color: var(--tx3, var(--t-3)); margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+
+    /* ── AI Recs ── */
+    .rec-list { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3); }
+    .rec-card {
+      padding: var(--sp-3);
+      border-radius: var(--r-md, var(--radius-md));
+      border: 1px solid var(--bdr0, var(--border));
+      background: var(--sur2, var(--surface-2));
+    }
+    .rec-header { display: flex; align-items: flex-start; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+    .rec-icon { font-size: 1.1rem; line-height: 1; flex-shrink: 0; padding-top: 1px; }
+    .rec-title { font-size: .875rem; font-weight: 600; color: var(--tx1, var(--t-1)); }
+    .rec-body  { font-size: .8rem; color: var(--tx2, var(--t-2)); line-height: 1.45; padding-left: calc(1.1rem + var(--sp-2)); }
+    .rec-action-link {
+      display: inline-block; margin-top: var(--sp-2); font-size: .75rem;
+      color: var(--royal-l, #818cf8); font-weight: 600; text-decoration: none;
+      padding-left: calc(1.1rem + var(--sp-2));
+    }
+    .rec-action-link:hover { text-decoration: underline; }
+    .rec-priority { font-size: .65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: auto; flex-shrink: 0; }
+    .rec-priority.high { background: rgba(239,68,68,.12); color: #f87171; }
+    .rec-priority.med  { background: rgba(250,204,21,.1);  color: #facc15; }
+    .rec-priority.low  { background: rgba(148,163,184,.1); color: var(--tx3, var(--t-3)); }
+
+    /* ── Bar chart ── */
+    .chart-wrap { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+    .bar-chart  { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
+    .bar-col    { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .bar-fill   {
+      width: 100%; border-radius: 4px 4px 0 0;
+      background: var(--royal-l, #818cf8);
+      opacity: .75;
+      transition: height .4s ease, opacity .2s;
+      min-height: 2px;
+    }
+    .bar-fill:hover { opacity: 1; }
+    .bar-label  { font-size: .65rem; color: var(--tx3, var(--t-3)); text-align: center; white-space: nowrap; }
+    .bar-val    { font-size: .65rem; color: var(--tx3, var(--t-3)); text-align: center; }
+    .chart-legend { display: flex; gap: var(--sp-4); margin-top: var(--sp-3); }
+    .legend-item { display: flex; align-items: center; gap: var(--sp-1); font-size: .75rem; color: var(--tx3, var(--t-3)); }
+    .legend-dot  { width: 8px; height: 8px; border-radius: 2px; }
+
+    /* ── Quick actions ── */
+    .qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); padding: var(--sp-3); }
+    .qa-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: var(--sp-3) var(--sp-2);
+      background: var(--sur2, var(--surface-2));
+      border: 1px solid var(--bdr0, var(--border));
+      border-radius: var(--r-md, var(--radius-md));
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      text-decoration: none;
+      color: var(--tx1, var(--t-1));
+    }
+    .qa-btn:hover { background: rgba(255,255,255,.05); border-color: var(--royal-l, #818cf8); }
+    .qa-btn:active { transform: scale(.97); }
+    .qa-btn.loading { opacity: .6; pointer-events: none; }
+    .qa-icon { font-size: 1.35rem; }
+    .qa-label { font-size: .8rem; font-weight: 600; text-align: center; line-height: 1.2; }
+    .qa-desc  { font-size: .68rem; color: var(--tx3, var(--t-3)); text-align: center; line-height: 1.3; }
+
+    /* ── Event stream ── */
+    .stream-list { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; }
+    .stream-item {
+      display: flex; align-items: baseline; gap: var(--sp-2);
+      padding: 5px var(--sp-4); border-radius: 6px;
+      font-size: .8125rem; line-height: 1.5;
+    }
+    .stream-item:hover { background: var(--sur2, var(--surface-2)); }
+    .stream-time  { font-size: .7rem; color: var(--tx3, var(--t-3)); font-family: var(--mono); white-space: nowrap; min-width: 56px; }
+    .stream-emoji { min-width: 20px; text-align: center; }
+    .stream-event { font-weight: 500; color: var(--tx2, var(--t-2)); }
+    .stream-data  { font-size: .75rem; color: var(--tx3, var(--t-3)); font-family: var(--mono); }
+
+    /* ── Panel section header ── */
+    .psh { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--bdr0, var(--border)); }
+    .psh-title { font-size: .875rem; font-weight: 600; }
+    .psh-badge { font-size: .75rem; color: var(--tx3, var(--t-3)); }
+
+    /* ── Pulse badge ── */
     .badge-pulse {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--sp-1);
-      padding: 2px 10px;
-      border-radius: 9999px;
-      font-size: .75rem;
-      font-weight: 600;
-      background: rgba(34,197,94,.12);
-      color: #4ade80;
-      border: 1px solid rgba(34,197,94,.3);
+      display: inline-flex; align-items: center; gap: var(--sp-1);
+      padding: 2px 10px; border-radius: 9999px; font-size: .75rem; font-weight: 600;
+      background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.3);
     }
     .badge-pulse::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #4ade80;
+      content: ''; width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
       animation: pulse-dot 1.8s ease-in-out infinite;
     }
     @keyframes pulse-dot {
@@ -51,53 +211,34 @@
       50%       { opacity: .4; transform: scale(.7); }
     }
 
-    /* Agent cards */
-    .agent-grid { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
-    .agent-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3); }
-    .agent-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
-    .agent-name { font-weight: 600; font-size: .9375rem; }
-    .agent-listens { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: var(--sp-2); }
-    .event-tag { font-size: .6875rem; padding: 2px 7px; border-radius: 4px; background: var(--surface-3,rgba(255,255,255,.06)); color: var(--t-3); border: 1px solid var(--border); font-family: var(--mono); }
-    .badge-active  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 600; }
-    .badge-idle    { background: rgba(148,163,184,.1); color: var(--t-3); border: 1px solid var(--border); padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 600; }
-    .badge-n1      { background: rgba(239,68,68,.12);  color: #f87171; border: 1px solid rgba(239,68,68,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 700; }
-    .badge-n2      { background: rgba(234,179,8,.12);  color: #facc15; border: 1px solid rgba(234,179,8,.25);  padding: 2px 8px; border-radius: 9999px; font-size: .7rem; font-weight: 700; }
+    /* ── Empty ── */
+    .empty-cc {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--sp-2); padding: var(--sp-6) var(--sp-4);
+      color: var(--tx3, var(--t-3)); font-size: .875rem; text-align: center;
+    }
+    .empty-cc-icon { font-size: 2rem; }
 
-    /* Decision cards */
-    .decision-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3); margin-bottom: var(--sp-3); }
-    .decision-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-2); }
-    .decision-action { font-weight: 600; font-size: .9rem; line-height: 1.4; }
-    .decision-meta { font-size: .8rem; color: var(--t-3); margin-bottom: var(--sp-2); }
-    .decision-impact { font-size: .8rem; color: var(--t-2); background: var(--surface-3,rgba(255,255,255,.04)); padding: 4px 8px; border-radius: 6px; margin-bottom: var(--sp-3); }
-    .decision-options { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-    .option-btn { font-size: .8rem; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-3,rgba(255,255,255,.04)); color: var(--t-2); cursor: default; }
-    .decision-actions { display: flex; gap: var(--sp-2); }
-    .btn-approve { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.3); padding: 5px 14px; border-radius: 6px; font-size: .8125rem; font-weight: 600; cursor: pointer; transition: background .15s; }
-    .btn-approve:hover { background: rgba(34,197,94,.25); }
-    .btn-reject  { background: rgba(239,68,68,.1);  color: #f87171; border: 1px solid rgba(239,68,68,.25);  padding: 5px 14px; border-radius: 6px; font-size: .8125rem; font-weight: 600; cursor: pointer; transition: background .15s; }
-    .btn-reject:hover  { background: rgba(239,68,68,.2); }
-    .empty-state-ai { text-align: center; padding: var(--sp-6) var(--sp-4); color: var(--t-3); font-size: .875rem; }
-    .empty-state-ai .es-icon { font-size: 2rem; margin-bottom: var(--sp-2); }
-
-    /* Event stream */
-    .stream-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
-    .stream-item { display: flex; align-items: baseline; gap: var(--sp-2); padding: 5px var(--sp-3); border-radius: 6px; font-size: .8125rem; line-height: 1.5; }
-    .stream-item:hover { background: var(--surface-2); }
-    .stream-time { font-size: .7rem; color: var(--t-4,var(--t-3)); font-family: var(--mono); white-space: nowrap; min-width: 52px; }
-    .stream-emoji { min-width: 20px; text-align: center; }
-    .stream-event { font-weight: 500; color: var(--t-2); }
-    .stream-data  { font-size: .75rem; color: var(--t-3); font-family: var(--mono); }
-
-    /* Panel section header */
-    .panel-section-header { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
-    .panel-section-title  { font-size: .875rem; font-weight: 600; }
-    .events-count-badge   { font-size: .75rem; color: var(--t-3); }
+    /* ── Occupancy ring ── */
+    .occ-ring-wrap { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
+    .occ-ring { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .occ-ring svg { transform: rotate(-90deg); }
+    .occ-ring-text {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .occ-pct  { font-size: 1.1rem; font-weight: 700; color: var(--tx1, var(--t-1)); }
+    .occ-lbl  { font-size: .6rem; color: var(--tx3, var(--t-3)); text-transform: uppercase; letter-spacing: .05em; }
+    .occ-rooms { display: flex; flex-direction: column; gap: var(--sp-1); }
+    .occ-row  { display: flex; align-items: center; gap: var(--sp-2); font-size: .8125rem; }
+    .occ-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   </style>
 </head>
 <body>
 <div id="drawer-backdrop" class="drawer-backdrop"></div>
 
 <div class="app-shell">
+  <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar">
     <a class="sidebar-brand" href="dashboard.html">
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
@@ -105,12 +246,13 @@
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
       <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
       <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
       <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
       <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
       <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
       <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
       <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
@@ -128,68 +270,180 @@
     </div>
   </aside>
 
+  <!-- ── Main ── -->
   <div class="main-content">
     <header class="topbar">
       <div class="topbar-left">
         <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-        <h1 class="page-title">🤖 AI Command Center</h1>
+        <h1 class="page-title">Command Center</h1>
       </div>
       <div class="topbar-right" style="display:flex;align-items:center;gap:var(--sp-3)">
-        <span class="badge-pulse" id="system-status-badge">Sistema Ativo</span>
+        <span class="badge-pulse" id="system-status">Sistema Ativo</span>
+        <button class="btn btn-ghost btn-sm" id="btn-refresh" title="Atualizar tudo">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        </button>
         <button class="btn btn-ghost btn-sm" id="theme-toggle-topbar">☀️</button>
       </div>
     </header>
 
-    <main class="page-body">
-      <div class="ai-grid">
+    <main class="page-body" style="display:flex;flex-direction:column;gap:var(--sp-4)">
 
-        <!-- PAINEL 1: Agentes -->
-        <div class="panel">
-          <div class="panel-section-header">
-            <span class="panel-section-title">⚙️ Agentes</span>
-            <span class="events-count-badge" id="events-today-badge">— eventos hoje</span>
+      <!-- ── 1. KPI Strip ── -->
+      <div class="kpi-strip" id="kpi-strip">
+        <div class="kpi-card"><div class="skel" style="height:80px;border-radius:var(--r-md)"></div></div>
+        <div class="kpi-card"><div class="skel" style="height:80px;border-radius:var(--r-md)"></div></div>
+        <div class="kpi-card"><div class="skel" style="height:80px;border-radius:var(--r-md)"></div></div>
+        <div class="kpi-card"><div class="skel" style="height:80px;border-radius:var(--r-md)"></div></div>
+      </div>
+
+      <!-- ── 2-3-4. Middle row (Alertas | Operações | AI Recs) ── -->
+      <div class="cc-grid">
+
+        <!-- Bloco 2: Alertas Inteligentes -->
+        <div class="panel cc-third">
+          <div class="psh">
+            <span class="psh-title">Alertas</span>
+            <span class="psh-badge" id="alerts-count-badge">—</span>
           </div>
-          <div class="panel-body" style="padding:var(--sp-3)">
-            <div class="agent-grid" id="agents-container">
-              <div class="skel skel-card" style="height:80px"></div>
-              <div class="skel skel-card" style="height:80px"></div>
+          <div id="alerts-container">
+            <div class="alert-list">
+              <div class="skel" style="height:64px;border-radius:var(--r-md)"></div>
+              <div class="skel" style="height:64px;border-radius:var(--r-md);margin-top:var(--sp-2)"></div>
             </div>
           </div>
         </div>
 
-        <!-- PAINEL 2: Decisões Pendentes -->
-        <div class="panel">
-          <div class="panel-section-header">
-            <span class="panel-section-title">⚡ Decisões Pendentes</span>
-            <span class="events-count-badge" id="pending-count-badge">—</span>
+        <!-- Bloco 3: Operações do Dia -->
+        <div class="panel cc-third">
+          <div class="psh">
+            <span class="psh-title">Operações Hoje</span>
+            <span class="psh-badge" id="ops-count-badge">—</span>
           </div>
-          <div class="panel-body" style="padding:var(--sp-3)">
-            <div id="decisions-container">
-              <div class="skel skel-card" style="height:100px;margin-bottom:var(--sp-3)"></div>
-              <div class="skel skel-card" style="height:100px"></div>
+          <div id="ops-container">
+            <div class="ops-list">
+              <div class="skel" style="height:52px;border-radius:var(--r-md)"></div>
+              <div class="skel" style="height:52px;border-radius:var(--r-md);margin-top:var(--sp-2)"></div>
             </div>
           </div>
         </div>
 
-        <!-- PAINEL 3: Event Stream -->
-        <div class="panel panel-stream">
-          <div class="panel-section-header">
-            <span class="panel-section-title">📡 Event Stream</span>
-            <span class="events-count-badge" style="font-size:.7rem;color:var(--t-4,var(--t-3))">atualiza a cada 5s</span>
+        <!-- Bloco 4: Recomendações AI -->
+        <div class="panel cc-third">
+          <div class="psh">
+            <span class="psh-title">Recomendações AI</span>
+            <span class="psh-badge" id="recs-count-badge">—</span>
           </div>
-          <div class="panel-body" style="padding:var(--sp-2) 0">
-            <div class="stream-list" id="stream-container">
-              <div style="padding:var(--sp-3)">
-                <div class="skel skel-text" style="width:90%;margin-bottom:6px"></div>
-                <div class="skel skel-text" style="width:75%;margin-bottom:6px"></div>
-                <div class="skel skel-text" style="width:85%;margin-bottom:6px"></div>
-                <div class="skel skel-text" style="width:60%"></div>
+          <div id="recs-container">
+            <div class="rec-list">
+              <div class="skel" style="height:80px;border-radius:var(--r-md)"></div>
+              <div class="skel" style="height:80px;border-radius:var(--r-md);margin-top:var(--sp-2)"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /cc-grid -->
+
+      <!-- ── 5-6. Bottom row (Charts | Quick Actions) ── -->
+      <div class="cc-grid">
+
+        <!-- Bloco 5: Gráfico de Receita Mensal -->
+        <div class="panel cc-half">
+          <div class="psh">
+            <span class="psh-title">Receita por Mês</span>
+            <span class="psh-badge" id="chart-subtitle">últimos 6 meses</span>
+          </div>
+          <!-- Ocupação ring + rooms breakdown -->
+          <div class="occ-ring-wrap" id="occ-ring-wrap" style="display:none">
+            <div class="occ-ring" id="occ-ring">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bdr0,var(--border))" stroke-width="8"/>
+                <circle id="occ-arc" cx="40" cy="40" r="32" fill="none" stroke="var(--royal-l,#818cf8)" stroke-width="8"
+                  stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
+                  style="transition:stroke-dashoffset .6s ease"/>
+              </svg>
+              <div class="occ-ring-text">
+                <span class="occ-pct" id="occ-pct">—%</span>
+                <span class="occ-lbl">ocupação</span>
               </div>
             </div>
+            <div class="occ-rooms" id="occ-rooms"></div>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <div class="bar-chart" id="bar-chart">
+              <div class="empty-cc"><div class="empty-cc-icon">📊</div>Carregando...</div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--royal-l,#818cf8)"></div>Receita total (R$)</div>
+            </div>
           </div>
         </div>
 
+        <!-- Bloco 6: Ações Rápidas -->
+        <div class="panel cc-third">
+          <div class="psh">
+            <span class="psh-title">Ações Rápidas</span>
+          </div>
+          <div class="qa-grid">
+            <a class="qa-btn" href="bookings.html">
+              <span class="qa-icon">📋</span>
+              <span class="qa-label">Nova Reserva</span>
+              <span class="qa-desc">Abrir formulário</span>
+            </a>
+            <a class="qa-btn" href="vouchers-create.html">
+              <span class="qa-icon">🎟️</span>
+              <span class="qa-label">Novo Voucher</span>
+              <span class="qa-desc">Emitir voucher</span>
+            </a>
+            <a class="qa-btn" href="leads.html">
+              <span class="qa-icon">👥</span>
+              <span class="qa-label">Ver Leads</span>
+              <span class="qa-desc">Gerir pipeline</span>
+            </a>
+            <a class="qa-btn" href="follow-ups.html">
+              <span class="qa-icon">📤</span>
+              <span class="qa-label">Follow-ups</span>
+              <span class="qa-desc">Fila pendente</span>
+            </a>
+            <a class="qa-btn" href="financial.html">
+              <span class="qa-icon">💰</span>
+              <span class="qa-label">Financeiro</span>
+              <span class="qa-desc">Relatórios</span>
+            </a>
+            <a class="qa-btn" href="luna-training.html">
+              <span class="qa-icon">🌙</span>
+              <span class="qa-label">Luna</span>
+              <span class="qa-desc">Treinamento</span>
+            </a>
+            <button class="qa-btn" id="qa-followup-btn" onclick="triggerFollowups()">
+              <span class="qa-icon">⚡</span>
+              <span class="qa-label">Disparar FU</span>
+              <span class="qa-desc">Fila imediata</span>
+            </button>
+            <button class="qa-btn" id="qa-refresh-btn" onclick="loadAll()">
+              <span class="qa-icon">🔄</span>
+              <span class="qa-label">Atualizar</span>
+              <span class="qa-desc">Todos os dados</span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /cc-grid -->
+
+      <!-- ── Event Stream (full width) ── -->
+      <div class="panel">
+        <div class="psh">
+          <span class="psh-title">Event Stream</span>
+          <span class="psh-badge" style="font-size:.7rem">atualiza a cada 10s</span>
+        </div>
+        <div class="stream-list" id="stream-container">
+          <div style="padding:var(--sp-3)">
+            <div class="skel skel-text" style="width:85%;margin-bottom:6px"></div>
+            <div class="skel skel-text" style="width:70%;margin-bottom:6px"></div>
+            <div class="skel skel-text" style="width:90%"></div>
+          </div>
+        </div>
       </div>
+
     </main>
   </div>
 </div>
@@ -197,7 +451,7 @@
 <div id="toast-container"></div>
 <script src="design-system/u.js"></script>
 <script>
-/* ─── Init ───────────────────────────────────────────────────── */
+/* ─── Init ─────────────────────────────────────────── */
 DS.initTheme();
 
 const hamburger = document.getElementById('hamburger');
@@ -205,190 +459,432 @@ const sidebar   = document.getElementById('sidebar');
 const backdrop  = document.getElementById('drawer-backdrop');
 if (hamburger) hamburger.addEventListener('click', () => { sidebar.classList.toggle('open'); backdrop.classList.toggle('open'); });
 if (backdrop)  backdrop.addEventListener('click', () => { sidebar.classList.remove('open'); backdrop.classList.remove('open'); });
-
 document.getElementById('theme-toggle-btn').addEventListener('click', () => DS.toggleTheme());
 document.getElementById('theme-toggle-topbar').addEventListener('click', () => DS.toggleTheme());
+document.getElementById('btn-refresh').addEventListener('click', () => loadAll());
 
-(async () => {
-  const session = await DS.requireAuth();
-  if (!session) return;
-  const sb = window._sb || null;
-  // Show user email
+/* ─── Auth + Supabase ───────────────────────────────── */
+const SUPA_URL = 'https://vwgqhonbbiqubuahkyij.supabase.co';
+const SUPA_KEY = document.querySelector('meta[name="sb-anon"]').content;
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let _token = null;
+
+async function boot() {
+  const { data: { user }, error } = await sb.auth.getUser();
+  if (error || !user) { window.location.href = 'login.html'; return; }
+  const { data: { session } } = await sb.auth.getSession();
+  _token = session?.access_token || null;
+
   const emailEl = document.querySelector('[data-user-email]');
-  if (emailEl && session.user) emailEl.textContent = session.user.email || '';
+  if (emailEl) emailEl.textContent = user.email || '';
   const avatarEl = document.getElementById('user-avatar');
-  if (avatarEl && session.user) avatarEl.textContent = DS.initials(session.user.email || '?');
-  document.querySelector('[data-action="logout"]').addEventListener('click', () => DS.logout());
+  if (avatarEl) avatarEl.textContent = initials(user.email || '?');
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut(); window.location.href = 'login.html';
+  });
+
+  await loadAll();
+  setInterval(loadStream, 10000);
+  setInterval(loadKpis,   60000);
+}
+
+function initials(str) {
+  const parts = str.split('@')[0].split(/[.\-_]/);
+  return parts.slice(0,2).map(p => p[0]?.toUpperCase() || '').join('') || '?';
+}
+
+async function apiFetch(path) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_token) headers['Authorization'] = `Bearer ${_token}`;
+  const res = await fetch(path, { headers });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+/* ─── Dates ─────────────────────────────────────────── */
+const TODAY = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+})();
+const YESTERDAY = (() => {
+  const d = new Date(); d.setDate(d.getDate()-45);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 })();
 
-/* ─── Event emoji map ────────────────────────────────────────── */
-const EMOJI_MAP = {
-  lead_scored:        '👤',
-  lead_received:      '👤',
-  decision_queued:    '⚠️',
-  decision_approved:  '✅',
-  decision_rejected:  '❌',
-  booking_confirmed:  '🛏️',
-  alert_generated:    '🔔',
-  system_started:     '🚀',
-};
-function eventEmoji(name) { return EMOJI_MAP[name] || '🔵'; }
-
+function fmtMoney(v) {
+  return 'R$\u00a0' + Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
 function fmtTime(iso) {
+  if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtDate(str) {
+  if (!str) return '—';
+  const [y,m,d] = str.split('-');
+  return `${d}/${m}`;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function nights(cin, cout) {
+  const a = new Date(cin), b = new Date(cout);
+  return Math.round((b-a)/(86400000));
+}
+function guestName(r) {
+  return r.leads?.name || r.guest_name || r.lead_name || '—';
+}
+function roomLabel(code) {
+  const m = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
+  return m[code] || code || '—';
 }
 
-function summarizeData(data) {
-  if (!data || typeof data !== 'object') return '';
-  const parts = [];
-  const keys = ['name','phone','action','agent','score','label','id','reason'];
-  for (const k of keys) {
-    if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
-      parts.push(`${k}:${data[k]}`);
+/* ─── Load all ─────────────────────────────────────── */
+async function loadAll() {
+  await Promise.all([loadKpis(), loadOps(), loadAlertsPanel(), loadChart(), loadStream()]);
+}
+
+/* ─── 1. KPI Strip ─────────────────────────────────── */
+async function loadKpis() {
+  try {
+    const [roomsData, financialData, checkinData, fuData] = await Promise.all([
+      apiFetch('/api/rooms').catch(() => null),
+      apiFetch('/api/financial/summary').catch(() => null),
+      apiFetch(`/api/reservations?checkin_from=${TODAY}&checkin_to=${TODAY}&limit=50`).catch(() => null),
+      apiFetch('/api/follow-ups?status=pending&limit=100').catch(() => null),
+    ]);
+
+    const rooms      = roomsData?.rooms || [];
+    const totalRooms = rooms.length || 4;
+    const occupied   = rooms.filter(r => r.status === 'occupied').length;
+    const occPct     = Math.round((occupied / totalRooms) * 100);
+
+    const kpis     = financialData?.kpis || {};
+    const saldo    = kpis.saldo_pendente || 0;
+    const receita  = kpis.receita_total  || 0;
+
+    const checkins  = (checkinData?.reservations || []).length;
+    const fuPending = (fuData?.follow_ups || fuData?.followUps || []).length;
+
+    // Occupancy ring (hidden in KPI, shown in chart panel)
+    updateOccRing(occPct, rooms);
+
+    renderKpis({ occPct, totalRooms, occupied, receita, saldo, checkins, fuPending });
+  } catch(e) {
+    console.error('loadKpis:', e);
+  }
+}
+
+function renderKpis({ occPct, totalRooms, occupied, receita, saldo, checkins, fuPending }) {
+  const strip = document.getElementById('kpi-strip');
+  const occColor = occPct >= 70 ? '#4ade80' : occPct >= 40 ? '#facc15' : '#f87171';
+  const occDeltaCls = occPct >= 70 ? 'up' : occPct >= 40 ? 'neu' : 'down';
+
+  strip.innerHTML = `
+    <div class="kpi-card" style="--kpi-bg:rgba(99,102,241,.15);--kpi-color:var(--royal-l,#818cf8)">
+      <div class="kpi-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
+      <div class="kpi-label">Ocupação</div>
+      <div class="kpi-value" style="color:${occColor}">${occPct}%</div>
+      <div style="display:flex;align-items:center;gap:var(--sp-2)">
+        <span class="kpi-delta ${occDeltaCls}">${occupied}/${totalRooms} quartos</span>
+      </div>
+    </div>
+    <div class="kpi-card" style="--kpi-bg:rgba(34,197,94,.15);--kpi-color:#4ade80">
+      <div class="kpi-icon" style="background:rgba(34,197,94,.15);color:#4ade80"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="kpi-label">Receita Total</div>
+      <div class="kpi-value">${fmtMoney(receita)}</div>
+      <div><span class="kpi-sub">saldo pendente: ${fmtMoney(saldo)}</span></div>
+    </div>
+    <div class="kpi-card" style="--kpi-bg:rgba(250,204,21,.15);--kpi-color:#facc15">
+      <div class="kpi-icon" style="background:rgba(250,204,21,.12);color:#facc15"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="kpi-label">Check-ins Hoje</div>
+      <div class="kpi-value">${checkins}</div>
+      <div><span class="kpi-sub">reservas com entrada hoje</span></div>
+    </div>
+    <div class="kpi-card" style="--kpi-bg:rgba(239,68,68,.15);--kpi-color:#f87171">
+      <div class="kpi-icon" style="background:rgba(239,68,68,.12);color:#f87171"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="kpi-label">Follow-ups Pendentes</div>
+      <div class="kpi-value" style="color:${fuPending>0?'#f87171':'#4ade80'}">${fuPending}</div>
+      <div><span class="kpi-sub">na fila de envio</span></div>
+    </div>
+  `;
+}
+
+/* ─── 2. Alertas ───────────────────────────────────── */
+async function loadAlertsPanel() {
+  const cont  = document.getElementById('alerts-container');
+  const badge = document.getElementById('alerts-count-badge');
+  try {
+    const data = await apiFetch('/api/alerts').catch(() => null);
+    const alerts = data?.alerts || [];
+    badge.textContent = alerts.length ? `${alerts.length} ativo${alerts.length>1?'s':''}` : 'nenhum';
+
+    if (!alerts.length) {
+      cont.innerHTML = '<div class="empty-cc"><div class="empty-cc-icon">✅</div>Nenhum alerta ativo</div>';
+      return;
     }
-  }
-  return parts.slice(0, 3).join(' · ');
-}
 
-/* ─── Render Agents ──────────────────────────────────────────── */
-function renderAgents(data) {
-  const cont = document.getElementById('agents-container');
-  const badge = document.getElementById('events-today-badge');
-  if (!data || !data.agents) return;
-
-  badge.textContent = `${data.events_today ?? 0} eventos hoje`;
-
-  if (!data.agents.length) {
-    cont.innerHTML = '<div class="empty-state-ai"><div class="es-icon">⚙️</div>Nenhum agente registrado</div>';
-    return;
-  }
-
-  cont.innerHTML = data.agents.map(a => `
-    <div class="agent-card">
-      <div class="agent-card-header">
-        <span class="agent-name">${DS.esc(a.name || '—')}</span>
-        <span class="${a.status === 'active' ? 'badge-active' : 'badge-idle'}">${a.status === 'active' ? 'active' : 'idle'}</span>
-      </div>
-      <div class="agent-listens">
-        ${(a.listens || []).map(e => `<span class="event-tag">${DS.esc(e)}</span>`).join('')}
-      </div>
-    </div>
-  `).join('');
-}
-
-/* ─── Render Decisions ───────────────────────────────────────── */
-function renderDecisions(data) {
-  const cont    = document.getElementById('decisions-container');
-  const countBd = document.getElementById('pending-count-badge');
-  const pending = data?.decisions || [];
-  countBd.textContent = pending.length ? `${pending.length} pendente${pending.length > 1 ? 's' : ''}` : 'nenhuma pendente';
-
-  if (!pending.length) {
-    cont.innerHTML = `<div class="empty-state-ai"><div class="es-icon">✓</div>Nenhuma decisão pendente</div>`;
-    return;
-  }
-
-  cont.innerHTML = pending.map(d => {
-    const levelCls  = (d.type && ['price_change','campaign_launch','epic_approval','critical_deploy','guest_impact'].includes(d.type)) ? 'badge-n1' : 'badge-n2';
-    const levelLabel= levelCls === 'badge-n1' ? '🔴 N1' : '🟡 N2';
-    const opts      = (d.options || []).map(o => `<span class="option-btn">${DS.esc(o)}</span>`).join('');
-    return `
-      <div class="decision-card" id="decision-${d.id}">
-        <div class="decision-header">
-          <span class="decision-action">${DS.esc(d.action || '—')}</span>
-          <span class="${levelCls}">${levelLabel}</span>
+    cont.innerHTML = `<div class="alert-list">${alerts.map(a => {
+      const sev = a.severity || 'info';
+      const dotCls = sev === 'critical' ? 'critical' : sev === 'warning' ? 'warning' : 'info';
+      const timeStr = a.created_at ? fmtTime(a.created_at) : '';
+      return `
+        <div class="alert-item">
+          <div class="alert-dot ${dotCls}"></div>
+          <div class="alert-body">
+            <div class="alert-title">${esc(a.title || a.type || '—')}</div>
+            ${a.message ? `<div class="alert-desc">${esc(a.message)}</div>` : ''}
+            ${timeStr ? `<div class="alert-time">${timeStr}</div>` : ''}
+          </div>
         </div>
-        <div class="decision-meta">por <strong>${DS.esc(d.agent || '—')}</strong>${d.recommendation ? ` · recomendação: <strong>${DS.esc(d.recommendation)}</strong>` : ''}</div>
-        ${d.impact ? `<div class="decision-impact">📊 ${DS.esc(d.impact)}</div>` : ''}
-        ${opts ? `<div class="decision-options">${opts}</div>` : ''}
-        <div class="decision-actions">
-          <button class="btn-approve" onclick="approveDecision(${d.id})">✅ Aprovar</button>
-          <button class="btn-reject"  onclick="rejectDecision(${d.id})">❌ Rejeitar</button>
+      `;
+    }).join('')}</div>`;
+  } catch(e) {
+    cont.innerHTML = '<div class="empty-cc">Erro ao carregar alertas</div>';
+  }
+}
+
+/* ─── 3. Operações do Dia ──────────────────────────── */
+async function loadOps() {
+  const cont  = document.getElementById('ops-container');
+  const badge = document.getElementById('ops-count-badge');
+  try {
+    const [cinData, coutData] = await Promise.all([
+      apiFetch(`/api/reservations?checkin_from=${TODAY}&checkin_to=${TODAY}&limit=50`).catch(() => null),
+      apiFetch(`/api/reservations?checkin_from=${YESTERDAY}&checkin_to=${TODAY}&limit=200`).catch(() => null),
+    ]);
+
+    const checkins  = (cinData?.reservations  || []);
+    const allRecent = (coutData?.reservations || []);
+    const checkouts = allRecent.filter(r => r.checkout_date === TODAY);
+
+    const total = checkins.length + checkouts.length;
+    badge.textContent = `${total} movimentaç${total===1?'ão':'ões'}`;
+
+    if (!total) {
+      cont.innerHTML = '<div class="empty-cc"><div class="empty-cc-icon">🌙</div>Sem movimentações hoje</div>';
+      return;
+    }
+
+    const rows = [
+      ...checkins.map(r => ({ type:'cin', r })),
+      ...checkouts.map(r => ({ type:'cout', r })),
+    ].sort((a,b) => {
+      const da = a.type==='cin' ? a.r.checkin_date : a.r.checkout_date;
+      const db = b.type==='cin' ? b.r.checkin_date : b.r.checkout_date;
+      return da < db ? -1 : 1;
+    });
+
+    cont.innerHTML = `<div class="ops-list">${rows.map(({type,r}) => {
+      const name = guestName(r);
+      const room = roomLabel(r.room_type);
+      const n    = r.checkin_date && r.checkout_date ? nights(r.checkin_date, r.checkout_date) : '?';
+      const saldo = Number(r.balance_amount||0);
+      return `
+        <div class="ops-item">
+          <span class="ops-badge ${type}">${type==='cin'?'Check-in':'Check-out'}</span>
+          <div style="flex:1;min-width:0">
+            <div class="ops-name">${esc(name)}</div>
+            <div class="ops-room">${esc(room)}${saldo>0?' · <span style="color:#facc15">R$'+Math.round(saldo)+' pendente</span>':''}</div>
+          </div>
+          <span class="ops-nights">${n}n</span>
         </div>
+      `;
+    }).join('')}</div>`;
+  } catch(e) {
+    cont.innerHTML = '<div class="empty-cc">Erro ao carregar operações</div>';
+  }
+}
+
+/* ─── 4. Recomendações AI ──────────────────────────── */
+async function loadRecsFromData(occPct, fuPending, checkins) {
+  // Called after loadKpis has data — compute recs
+  const recs = [];
+
+  if (occPct < 50) {
+    recs.push({
+      priority: 'high',
+      icon: '📉',
+      title: 'Baixa ocupação detectada',
+      body: `Apenas ${occPct}% de ocupação. Considere campanha de desconto ou follow-up agressivo com leads quentes.`,
+      link: 'leads.html',
+      linkLabel: 'Ver leads quentes →',
+    });
+  }
+
+  if (fuPending > 3) {
+    recs.push({
+      priority: 'high',
+      icon: '📤',
+      title: `${fuPending} follow-ups na fila`,
+      body: 'Disparo pendente pode reduzir taxa de conversão. Execute a fila agora.',
+      link: 'follow-ups.html',
+      linkLabel: 'Ir para Follow-ups →',
+    });
+  }
+
+  if (checkins > 0) {
+    recs.push({
+      priority: 'med',
+      icon: '🛎️',
+      title: `${checkins} check-in${checkins>1?'s':''} hoje`,
+      body: 'Certifique-se de ter os quartos prontos e a equipe avisada.',
+      link: 'frontdesk.html',
+      linkLabel: 'Ver Front Desk →',
+    });
+  }
+
+  recs.push({
+    priority: 'low',
+    icon: '🌙',
+    title: 'Treinar Luna',
+    body: 'Adicionar respostas personalizadas melhora a taxa de conversão via WhatsApp.',
+    link: 'luna-training.html',
+    linkLabel: 'Treinamento Luna →',
+  });
+
+  const cont  = document.getElementById('recs-container');
+  const badge = document.getElementById('recs-count-badge');
+  badge.textContent = `${recs.length} recomendaç${recs.length===1?'ão':'ões'}`;
+
+  cont.innerHTML = `<div class="rec-list">${recs.map(rec => `
+    <div class="rec-card">
+      <div class="rec-header">
+        <span class="rec-icon">${rec.icon}</span>
+        <span class="rec-title">${esc(rec.title)}</span>
+        <span class="rec-priority ${rec.priority}">${rec.priority==='high'?'Alta':rec.priority==='med'?'Média':'Baixa'}</span>
       </div>
-    `;
-  }).join('');
-}
-
-/* ─── Render Stream ──────────────────────────────────────────── */
-let _lastStreamIds = new Set();
-function renderStream(events) {
-  const cont = document.getElementById('stream-container');
-  if (!events || !events.length) {
-    cont.innerHTML = '<div class="empty-state-ai" style="padding:var(--sp-4)"><div class="es-icon">📡</div>Sem eventos ainda</div>';
-    return;
-  }
-  const top20 = events.slice(0, 20);
-  cont.innerHTML = top20.map(e => `
-    <div class="stream-item">
-      <span class="stream-time">${fmtTime(e.time)}</span>
-      <span class="stream-emoji">${eventEmoji(e.event)}</span>
-      <span class="stream-event">${DS.esc(e.event || '—')}</span>
-      <span class="stream-data">${DS.esc(summarizeData(e.data))}</span>
+      <div class="rec-body">${esc(rec.body)}</div>
+      ${rec.link ? `<a class="rec-action-link" href="${rec.link}">${esc(rec.linkLabel)}</a>` : ''}
     </div>
-  `).join('');
+  `).join('')}</div>`;
 }
 
-/* ─── Actions ────────────────────────────────────────────────── */
-async function approveDecision(id) {
-  try {
-    await DS.api(`/api/ai/decisions/${id}/approve`, { method: 'POST' });
-    document.getElementById(`decision-${id}`)?.remove();
-    DS.toast('Decisão aprovada ✅', 'success');
-    loadDecisions();
-  } catch (e) {
-    DS.toast('Erro ao aprovar: ' + e.message, 'error');
+/* ─── 5. Chart (Receita Mensal) + Occ Ring ─────────── */
+function updateOccRing(pct, rooms) {
+  const wrap  = document.getElementById('occ-ring-wrap');
+  const arc   = document.getElementById('occ-arc');
+  const pctEl = document.getElementById('occ-pct');
+  if (!wrap || !arc) return;
+  wrap.style.display = 'flex';
+  const circum = 201;
+  const offset = circum - (pct / 100) * circum;
+  arc.style.strokeDashoffset = offset;
+  arc.style.stroke = pct >= 70 ? '#4ade80' : pct >= 40 ? '#facc15' : '#f87171';
+  if (pctEl) pctEl.textContent = pct + '%';
+
+  const roomsEl = document.getElementById('occ-rooms');
+  if (roomsEl && rooms.length) {
+    const grouped = {};
+    for (const r of rooms) {
+      const lbl = roomLabel(r.room_type);
+      if (!grouped[lbl]) grouped[lbl] = { total: 0, occ: 0 };
+      grouped[lbl].total++;
+      if (r.status === 'occupied') grouped[lbl].occ++;
+    }
+    roomsEl.innerHTML = Object.entries(grouped).map(([lbl, v]) => {
+      const dotColor = v.occ === v.total ? '#4ade80' : v.occ > 0 ? '#facc15' : 'var(--tx3,var(--t-3))';
+      return `<div class="occ-row"><div class="occ-dot" style="background:${dotColor}"></div><span style="font-size:.8125rem;color:var(--tx2,var(--t-2))">${lbl}</span><span style="font-size:.75rem;color:var(--tx3,var(--t-3));margin-left:auto">${v.occ}/${v.total}</span></div>`;
+    }).join('');
   }
 }
 
-async function rejectDecision(id) {
+async function loadChart() {
+  const chartEl = document.getElementById('bar-chart');
   try {
-    await DS.api(`/api/ai/decisions/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason: 'Rejeitado pelo founder' }) });
-    document.getElementById(`decision-${id}`)?.remove();
-    DS.toast('Decisão rejeitada ❌', 'info');
-    loadDecisions();
-  } catch (e) {
-    DS.toast('Erro ao rejeitar: ' + e.message, 'error');
+    const data = await apiFetch('/api/financial/summary').catch(() => null);
+    const meses = data?.recentes_por_mes || [];
+
+    // Also grab KPI data for recs
+    const roomsData  = await apiFetch('/api/rooms').catch(() => null);
+    const cinData    = await apiFetch(`/api/reservations?checkin_from=${TODAY}&checkin_to=${TODAY}&limit=50`).catch(() => null);
+    const fuData     = await apiFetch('/api/follow-ups?status=pending&limit=100').catch(() => null);
+    const rooms      = roomsData?.rooms || [];
+    const totalRooms = rooms.length || 4;
+    const occupied   = rooms.filter(r => r.status === 'occupied').length;
+    const occPct     = Math.round((occupied / totalRooms) * 100);
+    const checkins   = (cinData?.reservations || []).length;
+    const fuPending  = (fuData?.follow_ups || fuData?.followUps || []).length;
+    loadRecsFromData(occPct, fuPending, checkins);
+
+    if (!meses.length) {
+      chartEl.innerHTML = '<div class="empty-cc"><div class="empty-cc-icon">📊</div>Sem dados de receita</div>';
+      return;
+    }
+
+    const maxVal = Math.max(...meses.map(m => m.total), 1);
+    const MON = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+    chartEl.innerHTML = meses.map(m => {
+      const pct   = Math.round((m.total / maxVal) * 100);
+      const [,mon] = (m.month || '').split('-');
+      const lbl   = MON[(parseInt(mon||1,10)-1)] || m.month;
+      const val   = m.total >= 1000 ? (m.total/1000).toFixed(1)+'k' : String(Math.round(m.total));
+      return `
+        <div class="bar-col" title="R$ ${Math.round(m.total).toLocaleString('pt-BR')} · ${m.count} reserva${m.count!==1?'s':''}">
+          <span class="bar-val">R$${val}</span>
+          <div class="bar-fill" style="height:${Math.max(pct,2)}%"></div>
+          <span class="bar-label">${lbl}</span>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    chartEl.innerHTML = '<div class="empty-cc">Erro ao carregar gráfico</div>';
   }
 }
 
-/* ─── Data fetchers ──────────────────────────────────────────── */
-async function loadStatus() {
-  try {
-    const data = await DS.api('/api/ai/status');
-    if (data) renderAgents(data);
-  } catch (e) {
-    document.getElementById('agents-container').innerHTML = `<div class="empty-state-ai">Erro ao carregar agentes</div>`;
-  }
-}
-
-async function loadDecisions() {
-  try {
-    const data = await DS.api('/api/ai/decisions?status=pending');
-    if (data) renderDecisions(data);
-  } catch (e) {
-    document.getElementById('decisions-container').innerHTML = `<div class="empty-state-ai">Erro ao carregar decisões</div>`;
-  }
+/* ─── Event Stream ──────────────────────────────────── */
+const EMOJI_MAP = {
+  message_received:'💬', lead_received:'👤', lead_scored:'📊',
+  followup_sent:'📤', followup_responded:'↩️', decision_queued:'⚠️',
+  decision_approved:'✅', decision_rejected:'❌', booking_confirmed:'🛏️',
+  alert_generated:'🔔', system_started:'🚀',
+};
+function eventEmoji(n) { return EMOJI_MAP[n] || '🔵'; }
+function summarizeData(d) {
+  if (!d || typeof d !== 'object') return '';
+  const keys = ['name','phone','action','agent','score','label','id','reason'];
+  return keys.filter(k => d[k]!=null&&d[k]!=='').map(k=>`${k}:${d[k]}`).slice(0,3).join(' · ');
 }
 
 async function loadStream() {
+  const cont = document.getElementById('stream-container');
   try {
-    const data = await DS.api('/api/ai/events?limit=20');
-    if (data) renderStream(data.events);
-  } catch (e) {
-    // silent — stream updates every 5s, don't flood toasts
+    const data = await apiFetch('/api/ai/events?limit=20').catch(() => null);
+    const events = data?.events || [];
+    if (!events.length) {
+      cont.innerHTML = '<div class="empty-cc" style="padding:var(--sp-4)"><div class="empty-cc-icon">📡</div>Sem eventos ainda</div>';
+      return;
+    }
+    cont.innerHTML = events.slice(0,20).map(e => `
+      <div class="stream-item">
+        <span class="stream-time">${fmtTime(e.time)}</span>
+        <span class="stream-emoji">${eventEmoji(e.event)}</span>
+        <span class="stream-event">${esc(e.event||'—')}</span>
+        <span class="stream-data">${esc(summarizeData(e.data))}</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    cont.innerHTML = '<div class="empty-cc" style="padding:var(--sp-3)">Event stream offline</div>';
   }
 }
 
-/* ─── Boot ───────────────────────────────────────────────────── */
-loadStatus();
-loadDecisions();
-loadStream();
+/* ─── Quick Action Handlers ─────────────────────────── */
+async function triggerFollowups() {
+  const btn = document.getElementById('qa-followup-btn');
+  btn.classList.add('loading');
+  try {
+    const data = await apiFetch('/api/follow-ups?status=pending&limit=5').catch(() => null);
+    const count = (data?.follow_ups || data?.followUps || []).length;
+    DS.toast(`${count} follow-up(s) pendentes na fila`, count > 0 ? 'warning' : 'success');
+  } catch(e) {
+    DS.toast('Erro ao verificar follow-ups', 'error');
+  } finally { btn.classList.remove('loading'); }
+}
 
-setInterval(loadStream,    5000);
-setInterval(loadDecisions, 10000);
-setInterval(loadStatus,    30000);
+/* ─── Boot ──────────────────────────────────────────── */
+boot();
 </script>
 </body>
 </html>

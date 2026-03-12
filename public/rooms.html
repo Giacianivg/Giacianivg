@@ -11,9 +11,154 @@
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* ── Stats ─────────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-5);
+    }
+    @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 500px) { .stats-row { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      padding: var(--sp-4) var(--sp-5);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+    .stat-icon {
+      width: 44px; height: 44px;
+      border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-icon.total    { background: rgba(99,102,241,.12); color: var(--royal-l); }
+    .stat-icon.avail    { background: rgba(34,197,94,.12);  color: var(--ok); }
+    .stat-icon.occupied { background: rgba(239,68,68,.12);  color: var(--err); }
+    .stat-icon.maint    { background: rgba(234,179,8,.12);  color: var(--gold); }
+    .stat-num  { font-size: 1.75rem; font-weight: 800; color: var(--tx1); line-height: 1; }
+    .stat-lbl  { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
+
+    /* ── Toolbar ────────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+      flex-wrap: wrap;
+    }
+    .toolbar-search {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+    }
+    .toolbar-search svg {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--tx3); pointer-events: none;
+    }
+    .toolbar-search input {
+      width: 100%;
+      padding-left: 34px;
+    }
+    .view-toggle {
+      display: flex;
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+    .view-toggle-btn {
+      padding: 7px 12px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: var(--tx3);
+      display: flex; align-items: center; gap: 5px;
+      font-size: .8125rem;
+      transition: background .15s, color .15s;
+    }
+    .view-toggle-btn.active { background: var(--royal-l); color: #fff; }
+    .view-toggle-btn:hover:not(.active) { background: var(--sur2); color: var(--tx1); }
+
+    /* ── Status badges ──────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 9999px;
+      font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .badge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .badge.available  { background: rgba(34,197,94,.1);  color: var(--ok);     border: 1px solid rgba(34,197,94,.25); }
+    .badge.occupied   { background: rgba(239,68,68,.1);  color: var(--err);    border: 1px solid rgba(239,68,68,.25); }
+    .badge.blocked    { background: rgba(239,68,68,.1);  color: var(--err);    border: 1px solid rgba(239,68,68,.25); }
+    .badge.maintenance{ background: rgba(234,179,8,.1);  color: var(--gold);   border: 1px solid rgba(234,179,8,.25); }
+    .badge.partial    { background: rgba(234,179,8,.1);  color: var(--gold);   border: 1px solid rgba(234,179,8,.25); }
+    .badge.on_request { background: rgba(99,102,241,.1); color: var(--royal-l);border: 1px solid rgba(99,102,241,.25); }
+    .badge.unknown    { background: var(--sur2);         color: var(--tx3);    border: 1px solid var(--bdr1); }
+    .badge.inactive   { background: var(--sur2);         color: var(--tx3);    border: 1px solid var(--bdr1); }
+
+    /* ── Table view ─────────────────────────────────────────── */
+    .rooms-table-wrap {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .rooms-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .rooms-table th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--tx3);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-bottom: 1px solid var(--bdr1);
+      background: var(--sur2);
+      white-space: nowrap;
+    }
+    .rooms-table td {
+      padding: 13px 16px;
+      font-size: .875rem;
+      color: var(--tx2);
+      border-bottom: 1px solid var(--bdr0);
+      vertical-align: middle;
+    }
+    .rooms-table tr:last-child td { border-bottom: none; }
+    .rooms-table tr:hover td { background: rgba(99,102,241,.04); }
+    .room-name-cell { font-weight: 600; color: var(--tx1); }
+    .room-code-tag  { font-size: .7rem; color: var(--tx3); margin-top: 1px; }
+    .price-cell     { font-weight: 600; color: var(--tx1); font-variant-numeric: tabular-nums; }
+    .guest-cell     { color: var(--tx2); }
+    .checkout-cell  { color: var(--tx3); font-size: .8125rem; }
+
+    .action-group { display: flex; gap: var(--sp-1); align-items: center; }
+    .action-btn {
+      padding: 5px 9px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--bdr1);
+      background: transparent;
+      cursor: pointer;
+      color: var(--tx3);
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: .75rem;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .action-btn:hover         { background: var(--sur2); color: var(--tx1); border-color: var(--bdr2); }
+    .action-btn.edit:hover    { background: rgba(99,102,241,.1); color: var(--royal-l); border-color: rgba(99,102,241,.3); }
+    .action-btn.maint:hover   { background: rgba(234,179,8,.1);  color: var(--gold);    border-color: rgba(234,179,8,.3); }
+    .action-btn.delete:hover  { background: rgba(239,68,68,.1);  color: var(--err);     border-color: rgba(239,68,68,.3); }
+
+    /* ── Grid view ──────────────────────────────────────────── */
     .rooms-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
       gap: var(--sp-4);
     }
     .room-card {
@@ -21,211 +166,259 @@
       border: 1px solid var(--bdr1);
       border-radius: var(--r-lg);
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
+      transition: border-color .2s;
     }
+    .room-card:hover { border-color: var(--bdr2); }
     .room-card-header {
       padding: var(--sp-4);
       border-bottom: 1px solid var(--bdr1);
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--sp-3);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3);
     }
-    .room-title { font-size: 1rem; font-weight: 700; color: var(--tx1); margin-bottom: 2px; }
-    .room-sub   { font-size: .8125rem; color: var(--tx3); }
-
-    .status-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 5px;
-    }
-    .status-dot.available  { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-    .status-dot.blocked    { background: var(--err); }
-    .status-dot.partial    { background: var(--gold); }
-    .status-dot.on_request { background: var(--royal-l); }
-    .status-dot.unknown    { background: var(--tx3); }
-
-    .status-label {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--sp-1);
-      padding: 2px 8px;
-      border-radius: 9999px;
-      font-size: .7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-    .status-label.available  { background: var(--ok-bg);    color: var(--ok);     border: 1px solid rgba(34,197,94,.2); }
-    .status-label.blocked    { background: var(--err-bg);   color: var(--err);    border: 1px solid rgba(239,68,68,.2); }
-    .status-label.partial    { background: rgba(234,179,8,.1); color: var(--gold); border: 1px solid rgba(234,179,8,.2); }
-    .status-label.on_request { background: var(--royal-bg); color: var(--royal-l);border: 1px solid rgba(99,102,241,.2); }
-    .status-label.unknown    { background: var(--sur2);     color: var(--tx3);    border: 1px solid var(--bdr1); }
-
+    .room-card-name { font-size: 1rem; font-weight: 700; color: var(--tx1); }
+    .room-card-code { font-size: .75rem; color: var(--tx3); margin-top: 2px; }
     .room-card-body { padding: var(--sp-4); flex: 1; }
-    .room-desc { font-size: .8125rem; color: var(--tx2); line-height: 1.5; margin-bottom: var(--sp-3); }
-
+    .room-desc      { font-size: .8125rem; color: var(--tx2); line-height: 1.5; margin-bottom: var(--sp-3); }
     .price-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--sp-2);
-      margin-bottom: var(--sp-3);
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-3);
     }
     .price-box {
-      background: var(--sur2);
-      border: 1px solid var(--bdr0);
-      border-radius: var(--r-md);
-      padding: var(--sp-2);
-      text-align: center;
+      background: var(--sur2); border: 1px solid var(--bdr0); border-radius: var(--r-sm);
+      padding: var(--sp-2); text-align: center;
     }
-    .price-season { font-size: .7rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
-    .price-val    { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .price-season { font-size: .65rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+    .price-val    { font-size: .9rem; font-weight: 700; color: var(--tx1); }
     .price-val.alta { color: var(--gold); }
-
-    .amenities-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--sp-1);
+    .guest-info {
+      display: flex; align-items: center; gap: var(--sp-2);
+      background: var(--sur2); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3);
+      margin-bottom: var(--sp-3);
     }
+    .guest-info-name  { font-size: .8125rem; font-weight: 600; color: var(--tx1); }
+    .guest-info-dates { font-size: .75rem; color: var(--tx3); }
+    .amenities-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
     .amenity-tag {
-      font-size: .7rem;
-      padding: 2px 7px;
-      background: var(--sur2);
-      border: 1px solid var(--bdr0);
-      border-radius: 9999px;
-      color: var(--tx2);
+      font-size: .7rem; padding: 2px 7px;
+      background: var(--sur2); border: 1px solid var(--bdr0); border-radius: 9999px; color: var(--tx2);
     }
-
     .room-card-footer {
       padding: var(--sp-3) var(--sp-4);
       border-top: 1px solid var(--bdr1);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sp-2);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
     }
-    .max-guests-badge {
-      font-size: .75rem;
-      color: var(--tx3);
-      display: flex;
-      align-items: center;
-      gap: var(--sp-1);
+    .cap-badge {
+      font-size: .75rem; color: var(--tx3);
+      display: flex; align-items: center; gap: 4px;
     }
 
-    .avail-strip {
-      display: flex;
-      gap: 2px;
-      margin-bottom: var(--sp-3);
-    }
-    .avail-cell {
-      flex: 1;
-      height: 6px;
-      border-radius: 2px;
-      background: var(--sur2);
-    }
-    .avail-cell.available  { background: var(--ok); }
-    .avail-cell.blocked    { background: var(--err); }
-    .avail-cell.partial    { background: var(--gold); }
-    .avail-cell.on_request { background: var(--royal-l); opacity: .5; }
+    /* ── Avail strip ────────────────────────────────────────── */
+    .avail-strip { display: flex; gap: 2px; margin-bottom: var(--sp-3); }
+    .avail-cell  { flex: 1; height: 5px; border-radius: 2px; background: var(--sur2); }
+    .avail-cell.available   { background: var(--ok); }
+    .avail-cell.blocked     { background: var(--err); }
+    .avail-cell.partial     { background: var(--gold); }
+    .avail-cell.on_request  { background: var(--royal-l); opacity: .5; }
 
-    /* Edit drawer */
-    .edit-drawer {
-      position: fixed;
-      top: 0; right: -440px;
-      width: 440px;
-      height: 100vh;
+    /* ── Modal ──────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px);
+      z-index: 400;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
       background: var(--sur1);
-      border-left: 1px solid var(--bdr1);
-      box-shadow: -4px 0 24px rgba(0,0,0,.3);
-      transition: right .25s ease;
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
+      border: 1px solid var(--bdr2);
+      border-radius: var(--r-xl);
+      box-shadow: 0 24px 60px rgba(0,0,0,.4);
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
       overflow: hidden;
+      transform: scale(.96) translateY(8px);
+      transition: transform .2s;
     }
-    .edit-drawer.open { right: 0; }
-    .drawer-head {
-      padding: var(--sp-4);
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+    .modal.modal-lg { max-width: 680px; }
+    .modal-head {
+      padding: var(--sp-5) var(--sp-5) var(--sp-4);
       border-bottom: 1px solid var(--bdr1);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
     }
-    .drawer-title { font-size: 1rem; font-weight: 700; color: var(--tx1); }
-    .drawer-body { padding: var(--sp-4); flex: 1; overflow-y: auto; }
-    .drawer-foot {
-      padding: var(--sp-3) var(--sp-4);
+    .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
+    .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
+    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
+    .modal-foot  {
+      padding: var(--sp-4) var(--sp-5);
       border-top: 1px solid var(--bdr1);
-      display: flex;
-      gap: var(--sp-2);
-      justify-content: flex-end;
+      display: flex; gap: var(--sp-2); justify-content: flex-end;
     }
-    .field-group { margin-bottom: var(--sp-4); }
-    .field-label { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
-    .price-edit-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-2); }
+    .field-group  { margin-bottom: var(--sp-4); }
+    .field-label  { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
+    .field-hint   { font-size: .75rem; color: var(--tx3); margin-top: var(--sp-1); }
+    .price-grid   { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-3); }
+    .price-grid-label { font-size: .75rem; color: var(--tx3); margin-bottom: 4px; font-weight: 500; }
+    .toggle-row   {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-3); background: var(--sur2); border-radius: var(--r-md); border: 1px solid var(--bdr1);
+    }
+    .toggle-row label { font-size: .875rem; color: var(--tx1); cursor: pointer; }
 
-    .toast {
-      position: fixed;
-      bottom: var(--sp-4);
-      right: var(--sp-4);
-      padding: var(--sp-2) var(--sp-4);
-      background: var(--sur2);
-      border: 1px solid var(--bdr1);
+    /* ── Maintenance history ────────────────────────────────── */
+    .maint-log { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-4); }
+    .maint-entry {
+      display: flex; gap: var(--sp-3);
+      padding: var(--sp-3);
+      background: var(--sur2); border-radius: var(--r-md); border: 1px solid var(--bdr0);
+    }
+    .maint-icon-wrap {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .maint-icon-wrap.open    { background: rgba(234,179,8,.15);  color: var(--gold); }
+    .maint-icon-wrap.done    { background: rgba(34,197,94,.15);  color: var(--ok); }
+    .maint-icon-wrap.urgent  { background: rgba(239,68,68,.15);  color: var(--err); }
+    .maint-entry-title { font-size: .875rem; font-weight: 600; color: var(--tx1); }
+    .maint-entry-date  { font-size: .75rem; color: var(--tx3); }
+    .maint-entry-note  { font-size: .8125rem; color: var(--tx2); margin-top: 3px; }
+
+    /* ── Delete confirm ─────────────────────────────────────── */
+    .delete-confirm-box {
+      background: rgba(239,68,68,.08);
+      border: 1px solid rgba(239,68,68,.2);
       border-radius: var(--r-md);
-      font-size: .875rem;
-      color: var(--tx1);
-      box-shadow: 0 4px 16px rgba(0,0,0,.3);
-      z-index: 300;
-      transition: opacity .3s, transform .3s;
-      opacity: 0;
-      transform: translateY(8px);
+      padding: var(--sp-4);
+      text-align: center;
+    }
+    .delete-confirm-box svg { color: var(--err); margin-bottom: var(--sp-2); }
+    .delete-confirm-text  { font-size: .9375rem; font-weight: 600; color: var(--tx1); margin-bottom: var(--sp-1); }
+    .delete-confirm-sub   { font-size: .8125rem; color: var(--tx3); }
+
+    /* ── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: var(--sp-5); right: var(--sp-5);
+      padding: var(--sp-2) var(--sp-4); border-radius: var(--r-md);
+      background: var(--sur2); border: 1px solid var(--bdr2);
+      font-size: .875rem; color: var(--tx1);
+      box-shadow: 0 4px 20px rgba(0,0,0,.35);
+      z-index: 500;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
       pointer-events: none;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.ok   { border-color: rgba(34,197,94,.3); color: var(--ok); }
-    .toast.err  { border-color: rgba(239,68,68,.3); color: var(--err); }
+    .toast.ok   { border-color: rgba(34,197,94,.4);  color: var(--ok); }
+    .toast.err  { border-color: rgba(239,68,68,.4);  color: var(--err); }
+    .toast.warn { border-color: rgba(234,179,8,.4);  color: var(--gold); }
+
+    /* ── Empty ──────────────────────────────────────────────── */
+    .empty-state {
+      padding: var(--sp-12) var(--sp-6);
+      text-align: center; color: var(--tx3);
+    }
+    .empty-state svg { margin-bottom: var(--sp-3); opacity: .4; }
+    .empty-state p { font-size: .9375rem; }
   </style>
 </head>
 <body>
 <div id="drawer-backdrop" class="drawer-backdrop"></div>
 
 <div class="app-shell">
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
     <a class="sidebar-brand" href="dashboard.html">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/>
+        <path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-name">Luz da Lua</div>
+        <div class="sidebar-brand-sub">Operações</div>
+      </div>
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
-      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
-      <a class="nav-link active" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
-      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
-      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
-      <a class="nav-link" href="proposals.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Propostas</a>
-      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
-      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
-      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <a class="nav-link" href="frontdesk.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/><circle cx="12" cy="7" r="1"/></svg>
+        Recepção
+      </a>
+      <a class="nav-link" href="dashboard.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link" href="leads.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Leads
+      </a>
+      <a class="nav-link active" href="rooms.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Quartos
+      </a>
+      <a class="nav-link" href="bookings.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Reservas
+      </a>
+      <a class="nav-link" href="financial.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Financeiro
+      </a>
+      <a class="nav-link" href="vouchers.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Vouchers
+      </a>
+      <a class="nav-link" href="follow-ups.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Follow-ups
+      </a>
+      <a class="nav-link" href="map.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Mapa da Pousada
+      </a>
+      <a class="nav-link" href="calendar.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendário
+      </a>
       <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
-      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
-      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+      <a class="nav-link" href="command-center.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+        Command Center
+      </a>
+      <a class="nav-link" href="luna-training.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+        Treinamento Luna
+      </a>
     </nav>
     <div class="sidebar-footer">
-      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="theme-toggle">
+        <span>Tema claro</span>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Alternar tema"></button>
+      </div>
       <div class="sidebar-user">
         <div class="avatar avatar-sm" id="user-avatar">?</div>
-        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
-        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-email" data-user-email></div>
+        </div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
     </div>
   </aside>
 
+  <!-- ── Main ───────────────────────────────────────────────── -->
   <div class="main-content">
     <header class="topbar">
       <div class="topbar-left">
-        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
         <h1 class="page-title">Quartos</h1>
       </div>
       <div class="topbar-right">
@@ -238,77 +431,247 @@
     </header>
 
     <main class="page-body">
-      <!-- Legend -->
-      <div style="display:flex;gap:var(--sp-4);margin-bottom:var(--sp-4);flex-wrap:wrap;">
-        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot available"></span>Disponivel hoje</span>
-        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot blocked"></span>Bloqueado</span>
-        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot partial"></span>Parcial</span>
-        <span style="display:flex;align-items:center;gap:var(--sp-1);font-size:.8125rem;color:var(--tx2)"><span class="status-dot on_request"></span>Sob consulta</span>
-        <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">Barra = proximos 14 dias</span>
+
+      <!-- Stats -->
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon total"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total de quartos</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon avail"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div><div class="stat-num" id="stat-avail">—</div><div class="stat-lbl">Disponíveis hoje</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon occupied"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div><div class="stat-num" id="stat-occupied">—</div><div class="stat-lbl">Ocupados</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon maint"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+          <div><div class="stat-num" id="stat-maint">—</div><div class="stat-lbl">Em manutenção</div></div>
+        </div>
       </div>
 
-      <div class="rooms-grid" id="rooms-grid">
-        <!-- Cards injected by JS -->
-        <div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando quartos...</div>
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="input" id="search-input" type="text" placeholder="Buscar quarto..." autocomplete="off">
+        </div>
+        <select class="input" id="filter-status" style="width:auto;min-width:140px">
+          <option value="">Todos os status</option>
+          <option value="available">Disponível</option>
+          <option value="blocked">Ocupado</option>
+          <option value="maintenance">Manutenção</option>
+          <option value="on_request">Sob consulta</option>
+        </select>
+        <select class="input" id="filter-type" style="width:auto;min-width:130px">
+          <option value="">Todos os tipos</option>
+          <option value="ALA_A">Ala A</option>
+          <option value="ALA_B">Ala B</option>
+          <option value="ALA_C_CASAL">Ala C Casal</option>
+          <option value="ALA_C_GRUPO">Ala C Grupo</option>
+        </select>
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="btn-view-table" title="Tabela">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+            Tabela
+          </button>
+          <button class="view-toggle-btn" id="btn-view-grid" title="Grid">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Grid
+          </button>
+        </div>
       </div>
+
+      <!-- Table view -->
+      <div id="view-table">
+        <div class="rooms-table-wrap">
+          <table class="rooms-table">
+            <thead>
+              <tr>
+                <th>Quarto</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Preço base</th>
+                <th>Capacidade</th>
+                <th>Hóspede atual</th>
+                <th>Checkout</th>
+                <th style="text-align:right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="rooms-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:var(--sp-8);color:var(--tx3)">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Grid view -->
+      <div id="view-grid" style="display:none">
+        <div class="rooms-grid" id="rooms-grid">
+          <div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando...</div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
 
-<!-- Edit Drawer -->
-<div class="edit-drawer" id="edit-drawer">
-  <div class="drawer-head">
-    <span class="drawer-title" id="drawer-title">Editar quarto</span>
-    <button class="btn btn-ghost btn-icon" id="btn-close-drawer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-  </div>
-  <div class="drawer-body">
-    <input type="hidden" id="edit-code">
-    <div class="field-group">
-      <label class="field-label" for="edit-name">Nome</label>
-      <input class="input" type="text" id="edit-name">
+<!-- ── Modal: Editar Quarto ────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-edit-title">Editar quarto</div>
+        <div class="modal-sub" id="modal-edit-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-edit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-    <div class="field-group">
-      <label class="field-label" for="edit-desc">Descricao</label>
-      <textarea class="input" id="edit-desc" style="min-height:80px;resize:vertical"></textarea>
-    </div>
-    <div class="field-group">
-      <label class="field-label" for="edit-guests">Max. hospedes</label>
-      <input class="input" type="number" id="edit-guests" min="1" max="99">
-    </div>
-    <div class="field-group">
-      <label class="field-label">Precos por temporada</label>
-      <div class="price-edit-grid">
-        <div>
-          <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Baixa</div>
-          <input class="input" type="number" id="edit-price-baixa" min="0" step="10" placeholder="300">
+    <div class="modal-body">
+      <input type="hidden" id="edit-code">
+      <div class="field-group">
+        <label class="field-label" for="edit-name">Nome do quarto</label>
+        <input class="input" type="text" id="edit-name" placeholder="Ex: Ala A — Chalé">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="edit-desc">Descrição</label>
+        <textarea class="input" id="edit-desc" style="min-height:80px;resize:vertical" placeholder="Breve descrição do quarto..."></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="edit-guests">Capacidade máxima</label>
+        <input class="input" type="number" id="edit-guests" min="1" max="99" placeholder="Ex: 4">
+        <p class="field-hint">Número máximo de hóspedes permitidos</p>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Preços por temporada (R$/noite)</label>
+        <div class="price-grid">
+          <div>
+            <div class="price-grid-label">Baixa</div>
+            <input class="input" type="number" id="edit-price-baixa" min="0" step="10" placeholder="300">
+          </div>
+          <div>
+            <div class="price-grid-label">Média</div>
+            <input class="input" type="number" id="edit-price-media" min="0" step="10" placeholder="350">
+          </div>
+          <div>
+            <div class="price-grid-label" style="color:var(--gold)">Alta</div>
+            <input class="input" type="number" id="edit-price-alta" min="0" step="10" placeholder="400">
+          </div>
         </div>
-        <div>
-          <div style="font-size:.75rem;color:var(--tx3);margin-bottom:4px">Media</div>
-          <input class="input" type="number" id="edit-price-media" min="0" step="10" placeholder="350">
-        </div>
-        <div>
-          <div style="font-size:.75rem;color:var(--gold);margin-bottom:4px">Alta</div>
-          <input class="input" type="number" id="edit-price-alta" min="0" step="10" placeholder="400">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="edit-amenities">Comodidades</label>
+        <textarea class="input" id="edit-amenities" style="min-height:90px;resize:vertical;font-size:.8rem" placeholder="Uma por linha:&#10;Ar-condicionado&#10;TV 32&quot;&#10;Frigobar"></textarea>
+        <p class="field-hint">Digite uma comodidade por linha</p>
+      </div>
+      <div class="field-group">
+        <div class="toggle-row">
+          <label for="edit-active">
+            <div style="font-weight:600;color:var(--tx1)">Quarto ativo</div>
+            <div style="font-size:.75rem;color:var(--tx3);margin-top:1px">Visível e disponível para cotação</div>
+          </label>
+          <input type="checkbox" id="edit-active" style="width:18px;height:18px;accent-color:var(--royal-l);cursor:pointer">
         </div>
       </div>
     </div>
-    <div class="field-group">
-      <label class="field-label" for="edit-amenities">Comodidades (uma por linha)</label>
-      <textarea class="input" id="edit-amenities" style="min-height:100px;resize:vertical;font-size:.8rem"></textarea>
-    </div>
-    <div class="field-group">
-      <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;font-size:.875rem;color:var(--tx2)">
-        <input type="checkbox" id="edit-active" style="width:16px;height:16px;accent-color:var(--royal-l)">
-        Quarto ativo (visivel e cotavel)
-      </label>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-edit">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-edit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar alterações
+      </button>
     </div>
   </div>
-  <div class="drawer-foot">
-    <button class="btn btn-secondary" id="btn-cancel-drawer">Cancelar</button>
-    <button class="btn btn-primary" id="btn-save-drawer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Salvar
-    </button>
+</div>
+
+<!-- ── Modal: Manutenção ───────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-maint">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-maint-title">Manutenção</div>
+        <div class="modal-sub" id="modal-maint-sub">Registrar ocorrência de manutenção</div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-maint">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="maint-code">
+      <div class="field-group">
+        <label class="field-label" for="maint-type">Tipo de ocorrência</label>
+        <select class="input" id="maint-type">
+          <option value="cleaning">🧹 Limpeza necessária</option>
+          <option value="repair">🔧 Reparo/conserto</option>
+          <option value="inspection">🔍 Inspeção de rotina</option>
+          <option value="upgrade">⬆️ Melhoria/upgrade</option>
+          <option value="other">📋 Outro</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="maint-priority">Prioridade</label>
+        <select class="input" id="maint-priority">
+          <option value="normal">Normal</option>
+          <option value="urgent">Urgente</option>
+          <option value="critical">Crítico — bloquear quarto</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="maint-note">Descrição / observações</label>
+        <textarea class="input" id="maint-note" style="min-height:80px;resize:vertical" placeholder="Descreva o problema ou tarefa..."></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="maint-estimated">Previsão de conclusão</label>
+        <input class="input" type="date" id="maint-estimated">
+      </div>
+
+      <!-- Histórico -->
+      <div style="margin-top:var(--sp-5)">
+        <div style="font-size:.875rem;font-weight:600;color:var(--tx2);margin-bottom:var(--sp-3);display:flex;align-items:center;gap:var(--sp-2)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico de manutenção
+        </div>
+        <div class="maint-log" id="maint-log">
+          <div style="text-align:center;padding:var(--sp-4);color:var(--tx3);font-size:.875rem">Sem registros anteriores</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-maint">Fechar</button>
+      <button class="btn btn-primary" id="btn-save-maint" style="background:var(--gold);border-color:var(--gold);color:#000">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        Registrar ocorrência
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Confirmar exclusão ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div class="modal-title" style="color:var(--err)">Confirmar exclusão</div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-delete">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-confirm-box">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto var(--sp-3)"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="delete-confirm-text" id="delete-confirm-name">Excluir quarto?</div>
+        <div class="delete-confirm-sub">Esta ação é irreversível. O histórico de disponibilidade e reservas associadas podem ser afetados.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-delete">Cancelar</button>
+      <button class="btn" id="btn-confirm-delete" style="background:var(--err);border-color:var(--err);color:#fff">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+        Sim, excluir
+      </button>
+    </div>
   </div>
 </div>
 
@@ -319,13 +682,13 @@
 (function () {
   'use strict';
 
+  // ── Auth & Supabase ──────────────────────────────────────────
   const sbMeta = document.querySelector('meta[name="sb-anon"]');
-  const SUPABASE_URL = 'https://vwgqhonbbiqubuahkyij.supabase.co';
-  const SUPABASE_ANON = sbMeta ? sbMeta.content.replace('sb_publishable_', '') : '';
+  const SUPABASE_URL  = 'https://vwgqhonbbiqubuahkyij.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content : '';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
   let authToken = null;
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
   sb.auth.getUser().then(async ({ data: { user }, error }) => {
     if (error || !user) {
       await sb.auth.signOut();
@@ -339,7 +702,7 @@
     if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
     const { data: { session } } = await sb.auth.getSession();
     authToken = session?.access_token;
-    loadRooms();
+    init();
   });
 
   document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
@@ -347,198 +710,481 @@
     window.location.href = '/login.html';
   });
 
-  async function apiFetch(path, options = {}) {
-    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
-    if (!authToken) { sessionStorage.setItem('ldl-return-to', window.location.pathname); window.location.href = '/login.html'; return null; }
+  async function apiFetch(path, opts = {}) {
+    if (!authToken) {
+      const { data } = await sb.auth.getSession();
+      authToken = data?.session?.access_token;
+    }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
     const res = await fetch(path, {
-      ...options,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(options.headers || {}) },
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(opts.headers || {}) },
     });
     if (res.status === 401) { window.location.href = '/login.html'; return null; }
     return res.json();
   }
 
-  // ── Date label ────────────────────────────────────────────────────────────
+  // ── State ────────────────────────────────────────────────────
+  let roomsCache  = [];
+  let currentView = 'table';
+  let pendingDeleteCode = null;
+  let maintHistory = {};  // code → [{type, note, priority, date, status}]
+
+  // ── Date label ───────────────────────────────────────────────
   const today = new Date();
   document.getElementById('date-label').textContent =
-    today.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+    today.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
-  // ── Load rooms ────────────────────────────────────────────────────────────
-  let roomsCache = [];
+  // ── Init ─────────────────────────────────────────────────────
+  function init() {
+    setupViewToggle();
+    setupFilters();
+    setupModalClosers();
+    setupModalActions();
+    loadRooms();
+  }
 
+  // ── Load rooms ───────────────────────────────────────────────
   async function loadRooms() {
+    setLoading(true);
     const res = await apiFetch('/api/rooms');
-    if (!res || !res.success) { document.getElementById('rooms-grid').innerHTML = '<div class="card" style="padding:2rem;color:var(--err)">Erro ao carregar quartos.</div>'; return; }
+    setLoading(false);
+    if (!res || !res.success) {
+      showToast('Erro ao carregar quartos.', 'err');
+      return;
+    }
     roomsCache = res.rooms || [];
-    renderRooms(roomsCache);
+    applyFilters();
+    updateStats(roomsCache);
   }
 
-  function statusLabel(s) {
-    const labels = { available:'Disponivel', blocked:'Bloqueado', partial:'Parcial', on_request:'Sob consulta', unknown:'Sem dados' };
-    return labels[s] || s;
+  function setLoading(on) {
+    if (on) {
+      document.getElementById('rooms-tbody').innerHTML =
+        '<tr><td colspan="8" style="text-align:center;padding:var(--sp-8);color:var(--tx3)">Carregando quartos...</td></tr>';
+      document.getElementById('rooms-grid').innerHTML =
+        '<div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando...</div>';
+    }
   }
 
-  function renderRooms(rooms) {
+  // ── Stats ────────────────────────────────────────────────────
+  function updateStats(rooms) {
+    const total    = rooms.filter(r => r.active !== false).length;
+    const avail    = rooms.filter(r => r.today_status === 'available').length;
+    const occupied = rooms.filter(r => r.today_status === 'blocked').length;
+    const maint    = rooms.filter(r => r.today_status === 'maintenance').length;
+
+    document.getElementById('stat-total').textContent    = total;
+    document.getElementById('stat-avail').textContent    = avail;
+    document.getElementById('stat-occupied').textContent = occupied;
+    document.getElementById('stat-maint').textContent    = maint;
+  }
+
+  // ── Filters ──────────────────────────────────────────────────
+  function setupFilters() {
+    ['search-input', 'filter-status', 'filter-type'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+    });
+  }
+
+  function applyFilters() {
+    const q      = document.getElementById('search-input').value.trim().toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const type   = document.getElementById('filter-type').value;
+
+    const filtered = roomsCache.filter(r => {
+      const matchQ    = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q);
+      const matchSt   = !status || r.today_status === status;
+      const matchType = !type || r.code === type;
+      return matchQ && matchSt && matchType;
+    });
+
+    renderTable(filtered);
+    renderGrid(filtered);
+  }
+
+  // ── View toggle ──────────────────────────────────────────────
+  function setupViewToggle() {
+    document.getElementById('btn-view-table').addEventListener('click', () => switchView('table'));
+    document.getElementById('btn-view-grid').addEventListener('click', () => switchView('grid'));
+  }
+
+  function switchView(v) {
+    currentView = v;
+    document.getElementById('view-table').style.display = v === 'table' ? '' : 'none';
+    document.getElementById('view-grid').style.display  = v === 'grid'  ? '' : 'none';
+    document.getElementById('btn-view-table').classList.toggle('active', v === 'table');
+    document.getElementById('btn-view-grid').classList.toggle('active', v === 'grid');
+  }
+
+  // ── Table render ─────────────────────────────────────────────
+  function renderTable(rooms) {
+    const tbody = document.getElementById('rooms-tbody');
+    if (!rooms.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><p>Nenhum quarto encontrado.</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rooms.map(r => {
+      const isGrupo = r.code === 'ALA_C_GRUPO';
+      const s = r.today_status || 'unknown';
+      const activeRow = r.active === false ? ' style="opacity:.5"' : '';
+
+      return `<tr${activeRow}>
+        <td>
+          <div class="room-name-cell">${esc(r.name)}</div>
+          <div class="room-code-tag">${esc(r.code)}</div>
+        </td>
+        <td>${typeLabel(r.code)}</td>
+        <td><span class="badge ${s}">${statusLabel(s)}</span>${r.active === false ? ' <span class="badge inactive">Inativo</span>' : ''}</td>
+        <td class="price-cell">${isGrupo ? '—' : fmtBRL(r.base_price_baixa)}</td>
+        <td>${isGrupo ? 'Grupos' : `${r.max_guests} pax`}</td>
+        <td class="guest-cell" id="guest-${r.code}">—</td>
+        <td class="checkout-cell" id="checkout-${r.code}">—</td>
+        <td>
+          <div class="action-group" style="justify-content:flex-end">
+            <button class="action-btn edit" data-action="edit" data-code="${esc(r.code)}" title="Editar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+              Editar
+            </button>
+            <button class="action-btn maint" data-action="maint" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Manutenção">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+              Manutenção
+            </button>
+            <button class="action-btn delete" data-action="delete" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Excluir">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // bind actions
+    tbody.querySelectorAll('[data-action]').forEach(btn => bindAction(btn));
+
+    // load availability strips async
+    rooms.forEach(r => loadGuestInfo(r.code));
+  }
+
+  // ── Grid render ──────────────────────────────────────────────
+  function renderGrid(rooms) {
     const grid = document.getElementById('rooms-grid');
-    if (!rooms.length) { grid.innerHTML = '<div class="card" style="padding:2rem;text-align:center;color:var(--tx3)">Nenhum quarto cadastrado.</div>'; return; }
+    if (!rooms.length) {
+      grid.innerHTML = `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><p>Nenhum quarto encontrado.</p></div>`;
+      return;
+    }
 
-    grid.innerHTML = rooms.map(room => {
-      const status = room.today_status || 'unknown';
-      const isGrupo = room.code === 'ALA_C_GRUPO';
-      const amenities = (room.amenities || []).slice(0, 5);
+    grid.innerHTML = rooms.map(r => {
+      const s = r.today_status || 'unknown';
+      const isGrupo = r.code === 'ALA_C_GRUPO';
+      const amenities = (r.amenities || []).slice(0, 5);
+      const inactive = r.active === false ? ' style="opacity:.55"' : '';
 
-      // 14-day strip from availability_30d (will be fetched per-room only in detail)
-      // For list view we show dots placeholder — actual strip loaded lazily
-
-      return `<div class="room-card" data-code="${room.code}">
+      return `<div class="room-card"${inactive}>
         <div class="room-card-header">
           <div>
-            <div class="room-title">${escHtml(room.name)}</div>
-            <div class="room-sub">${escHtml(room.code)}</div>
+            <div class="room-card-name">${esc(r.name)}</div>
+            <div class="room-card-code">${esc(r.code)} · ${typeLabel(r.code)}</div>
           </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-1)">
-            <span class="status-label ${status}">${statusLabel(status)}</span>
-            ${!room.active ? '<span style="font-size:.7rem;color:var(--err)">Inativo</span>' : ''}
-          </div>
+          <span class="badge ${s}">${statusLabel(s)}</span>
         </div>
         <div class="room-card-body">
-          <p class="room-desc">${escHtml(room.description)}</p>
+          <p class="room-desc">${esc(r.description)}</p>
           ${isGrupo
-            ? `<div style="font-size:.8125rem;color:var(--royal-l);margin-bottom:var(--sp-3)">Cotacao sob consulta — atendimento pela equipe</div>`
+            ? `<div style="font-size:.8125rem;color:var(--royal-l);margin-bottom:var(--sp-3)">Cotação sob consulta — atendimento pela equipe</div>`
             : `<div class="price-row">
-                <div class="price-box"><div class="price-season">Baixa</div><div class="price-val">${fmtBRL(room.base_price_baixa)}</div></div>
-                <div class="price-box"><div class="price-season">Media</div><div class="price-val">${fmtBRL(room.base_price_media)}</div></div>
-                <div class="price-box"><div class="price-season">Alta</div><div class="price-val alta">${fmtBRL(room.base_price_alta)}</div></div>
-              </div>`
-          }
-          <div class="avail-strip" id="strip-${room.code}">
+                <div class="price-box"><div class="price-season">Baixa</div><div class="price-val">${fmtBRL(r.base_price_baixa)}</div></div>
+                <div class="price-box"><div class="price-season">Média</div><div class="price-val">${fmtBRL(r.base_price_media)}</div></div>
+                <div class="price-box"><div class="price-season">Alta</div><div class="price-val alta">${fmtBRL(r.base_price_alta)}</div></div>
+              </div>`}
+          <div class="avail-strip" id="strip-${r.code}">
             ${Array(14).fill('<div class="avail-cell"></div>').join('')}
           </div>
+          <div class="guest-info" id="grid-guest-${r.code}" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--royal-l)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <div>
+              <div class="guest-info-name" id="grid-guest-name-${r.code}"></div>
+              <div class="guest-info-dates" id="grid-guest-dates-${r.code}"></div>
+            </div>
+          </div>
           <div class="amenities-list">
-            ${amenities.map(a => `<span class="amenity-tag">${escHtml(a)}</span>`).join('')}
-            ${room.amenities && room.amenities.length > 5 ? `<span class="amenity-tag">+${room.amenities.length - 5}</span>` : ''}
+            ${amenities.map(a => `<span class="amenity-tag">${esc(a)}</span>`).join('')}
+            ${r.amenities && r.amenities.length > 5 ? `<span class="amenity-tag">+${r.amenities.length - 5}</span>` : ''}
           </div>
         </div>
         <div class="room-card-footer">
-          <span class="max-guests-badge">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-            ${isGrupo ? 'Grupos grandes' : `Max. ${room.max_guests} hóspedes`}
+          <span class="cap-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            ${isGrupo ? 'Grupos grandes' : `Máx. ${r.max_guests} hóspedes`}
           </span>
-          <button class="btn btn-secondary btn-sm" data-edit="${room.code}">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Editar
-          </button>
+          <div style="display:flex;gap:var(--sp-1)">
+            <button class="action-btn edit" data-action="edit" data-code="${esc(r.code)}" title="Editar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="action-btn maint" data-action="maint" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Manutenção">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            </button>
+            <button class="action-btn delete" data-action="delete" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Excluir">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            </button>
+          </div>
         </div>
       </div>`;
     }).join('');
 
-    // Bind edit buttons
-    grid.querySelectorAll('[data-edit]').forEach(btn => {
-      btn.addEventListener('click', () => openDrawer(btn.dataset.edit));
-    });
-
-    // Load 14-day strips asynchronously
-    rooms.forEach(room => loadStrip(room.code));
+    grid.querySelectorAll('[data-action]').forEach(btn => bindAction(btn));
+    rooms.forEach(r => loadStripAndGuest(r.code));
   }
 
-  // ── Avail strip (14 days) ─────────────────────────────────────────────────
-  async function loadStrip(code) {
+  // ── Action binder ────────────────────────────────────────────
+  function bindAction(btn) {
+    const { action, code, name } = btn.dataset;
+    btn.addEventListener('click', () => {
+      if (action === 'edit')   openEditModal(code);
+      if (action === 'maint')  openMaintModal(code, name);
+      if (action === 'delete') openDeleteModal(code, name);
+    });
+  }
+
+  // ── Load availability strip ───────────────────────────────────
+  async function loadStripAndGuest(code) {
     const res = await apiFetch(`/api/rooms/${code}`);
     if (!res || !res.success) return;
+
+    // Strip
     const dates = res.availability_30d || {};
     const stripEl = document.getElementById(`strip-${code}`);
-    if (!stripEl) return;
-
-    const room = roomsCache.find(r => r.code === code);
-    if (room?.code === 'ALA_C_GRUPO') return;
-
-    const cells = [];
-    const d = new Date();
-    for (let i = 0; i < 14; i++) {
-      const key = d.toISOString().slice(0, 10);
-      cells.push(dates[key] || 'unknown');
-      d.setDate(d.getDate() + 1);
+    if (stripEl) {
+      const d = new Date();
+      const cells = [];
+      for (let i = 0; i < 14; i++) {
+        const key = d.toISOString().slice(0, 10);
+        cells.push(dates[key] || 'unknown');
+        d.setDate(d.getDate() + 1);
+      }
+      stripEl.innerHTML = cells.map(s => `<div class="avail-cell ${s}" title="${s}"></div>`).join('');
     }
-    stripEl.innerHTML = cells.map(s => `<div class="avail-cell ${s}" title="${s}"></div>`).join('');
   }
 
-  // ── Edit drawer ───────────────────────────────────────────────────────────
-  function openDrawer(code) {
+  // Load guest from reservations API (graceful — shows — if unavailable)
+  async function loadGuestInfo(code) {
+    // Attempt to fetch current reservation for this room
+    try {
+      const res = await apiFetch(`/api/reservations?room_code=${encodeURIComponent(code)}&status=confirmed&limit=1`);
+      if (!res || !res.success || !res.reservations || !res.reservations.length) return;
+      const r = res.reservations[0];
+      const guestName = r.guest_name || r.lead_name || '—';
+      const checkout  = r.checkout_date ? fmtDate(r.checkout_date) : '—';
+
+      // Table cells
+      const guestCell    = document.getElementById(`guest-${code}`);
+      const checkoutCell = document.getElementById(`checkout-${code}`);
+      if (guestCell)    guestCell.innerHTML    = `<span style="color:var(--tx1);font-weight:500">${esc(guestName)}</span>`;
+      if (checkoutCell) checkoutCell.textContent = checkout;
+
+      // Grid card guest info
+      const gridGuest = document.getElementById(`grid-guest-${code}`);
+      const gridName  = document.getElementById(`grid-guest-name-${code}`);
+      const gridDates = document.getElementById(`grid-guest-dates-${code}`);
+      if (gridGuest && gridName) {
+        gridName.textContent  = guestName;
+        if (gridDates) gridDates.textContent = `Checkout: ${checkout}`;
+        gridGuest.style.display = '';
+      }
+    } catch (_) {}
+  }
+
+  // ── Edit modal ───────────────────────────────────────────────
+  function openEditModal(code) {
     const room = roomsCache.find(r => r.code === code);
     if (!room) return;
 
-    document.getElementById('edit-code').value        = code;
-    document.getElementById('drawer-title').textContent = `Editar — ${room.name}`;
-    document.getElementById('edit-name').value        = room.name;
-    document.getElementById('edit-desc').value        = room.description;
-    document.getElementById('edit-guests').value      = room.max_guests;
-    document.getElementById('edit-price-baixa').value = room.base_price_baixa;
-    document.getElementById('edit-price-media').value = room.base_price_media;
-    document.getElementById('edit-price-alta').value  = room.base_price_alta;
-    document.getElementById('edit-amenities').value   = (room.amenities || []).join('\n');
-    document.getElementById('edit-active').checked    = room.active;
+    document.getElementById('edit-code').value           = code;
+    document.getElementById('modal-edit-title').textContent = `Editar — ${room.name}`;
+    document.getElementById('modal-edit-sub').textContent   = room.code;
+    document.getElementById('edit-name').value           = room.name;
+    document.getElementById('edit-desc').value           = room.description || '';
+    document.getElementById('edit-guests').value         = room.max_guests;
+    document.getElementById('edit-price-baixa').value    = room.base_price_baixa || '';
+    document.getElementById('edit-price-media').value    = room.base_price_media || '';
+    document.getElementById('edit-price-alta').value     = room.base_price_alta  || '';
+    document.getElementById('edit-amenities').value      = (room.amenities || []).join('\n');
+    document.getElementById('edit-active').checked       = room.active !== false;
 
-    document.getElementById('edit-drawer').classList.add('open');
-    document.getElementById('drawer-backdrop').classList.add('open');
+    openModal('modal-edit');
   }
 
-  function closeDrawer() {
-    document.getElementById('edit-drawer').classList.remove('open');
-    document.getElementById('drawer-backdrop').classList.remove('open');
-  }
-
-  document.getElementById('btn-close-drawer').addEventListener('click', closeDrawer);
-  document.getElementById('btn-cancel-drawer').addEventListener('click', closeDrawer);
-  document.getElementById('drawer-backdrop').addEventListener('click', closeDrawer);
-
-  document.getElementById('btn-save-drawer').addEventListener('click', async () => {
+  document.getElementById('btn-save-edit').addEventListener('click', async () => {
     const code = document.getElementById('edit-code').value;
     const body = {
-      name:              document.getElementById('edit-name').value.trim(),
-      description:       document.getElementById('edit-desc').value.trim(),
-      max_guests:        parseInt(document.getElementById('edit-guests').value, 10),
-      base_price_baixa:  parseFloat(document.getElementById('edit-price-baixa').value),
-      base_price_media:  parseFloat(document.getElementById('edit-price-media').value),
-      base_price_alta:   parseFloat(document.getElementById('edit-price-alta').value),
-      amenities:         document.getElementById('edit-amenities').value.split('\n').map(s => s.trim()).filter(Boolean),
-      active:            document.getElementById('edit-active').checked,
+      name:             document.getElementById('edit-name').value.trim(),
+      description:      document.getElementById('edit-desc').value.trim(),
+      max_guests:       parseInt(document.getElementById('edit-guests').value, 10),
+      base_price_baixa: parseFloat(document.getElementById('edit-price-baixa').value) || 0,
+      base_price_media: parseFloat(document.getElementById('edit-price-media').value) || 0,
+      base_price_alta:  parseFloat(document.getElementById('edit-price-alta').value)  || 0,
+      amenities:        document.getElementById('edit-amenities').value.split('\n').map(s => s.trim()).filter(Boolean),
+      active:           document.getElementById('edit-active').checked,
     };
 
-    document.getElementById('btn-save-drawer').disabled = true;
+    if (!body.name) { showToast('Nome é obrigatório.', 'warn'); return; }
+
+    const btn = document.getElementById('btn-save-edit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
     const res = await apiFetch(`/api/rooms/${code}`, { method: 'PUT', body: JSON.stringify(body) });
-    document.getElementById('btn-save-drawer').disabled = false;
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar alterações`;
 
     if (!res || !res.success) { showToast('Erro ao salvar.', 'err'); return; }
 
-    // Update cache
     const idx = roomsCache.findIndex(r => r.code === code);
     if (idx >= 0) roomsCache[idx] = { ...roomsCache[idx], ...res.room };
 
-    showToast(`${res.room.name} atualizado`, 'ok');
-    closeDrawer();
-    renderRooms(roomsCache);
-    loadStrip(code);
+    closeModal('modal-edit');
+    applyFilters();
+    updateStats(roomsCache);
+    showToast(`${res.room.name} atualizado com sucesso.`, 'ok');
   });
 
-  document.getElementById('btn-refresh').addEventListener('click', loadRooms);
+  // ── Maintenance modal ────────────────────────────────────────
+  function openMaintModal(code, name) {
+    document.getElementById('maint-code').value          = code;
+    document.getElementById('modal-maint-title').textContent = `Manutenção — ${name || code}`;
+    document.getElementById('maint-type').value     = 'cleaning';
+    document.getElementById('maint-priority').value = 'normal';
+    document.getElementById('maint-note').value     = '';
+    document.getElementById('maint-estimated').value = '';
+    renderMaintHistory(code);
+    openModal('modal-maint');
+  }
 
-  // ── Toast ─────────────────────────────────────────────────────────────────
+  function renderMaintHistory(code) {
+    const log = maintHistory[code] || [];
+    const el  = document.getElementById('maint-log');
+    if (!log.length) {
+      el.innerHTML = '<div style="text-align:center;padding:var(--sp-4);color:var(--tx3);font-size:.875rem">Sem registros anteriores nesta sessão.</div>';
+      return;
+    }
+    const iconClass = { urgent: 'urgent', critical: 'urgent', normal: 'open', done: 'done' };
+    el.innerHTML = log.slice().reverse().map(e => `
+      <div class="maint-entry">
+        <div class="maint-icon-wrap ${iconClass[e.priority] || 'open'}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <div>
+          <div class="maint-entry-title">${maintTypeLabel(e.type)} · ${priorityLabel(e.priority)}</div>
+          <div class="maint-entry-date">${e.date}${e.estimated ? ' · Prev: ' + fmtDate(e.estimated) : ''}</div>
+          ${e.note ? `<div class="maint-entry-note">${esc(e.note)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('btn-save-maint').addEventListener('click', () => {
+    const code     = document.getElementById('maint-code').value;
+    const type     = document.getElementById('maint-type').value;
+    const priority = document.getElementById('maint-priority').value;
+    const note     = document.getElementById('maint-note').value.trim();
+    const estimated = document.getElementById('maint-estimated').value;
+
+    const entry = {
+      type, priority, note, estimated,
+      date: new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }),
+    };
+
+    if (!maintHistory[code]) maintHistory[code] = [];
+    maintHistory[code].push(entry);
+
+    // If critical, mark room as blocked
+    if (priority === 'critical') {
+      const idx = roomsCache.findIndex(r => r.code === code);
+      if (idx >= 0) roomsCache[idx].today_status = 'maintenance';
+      updateStats(roomsCache);
+      applyFilters();
+    }
+
+    renderMaintHistory(code);
+    document.getElementById('maint-note').value = '';
+    showToast(`Ocorrência registrada para ${code}.`, 'ok');
+  });
+
+  // ── Delete modal ─────────────────────────────────────────────
+  function openDeleteModal(code, name) {
+    pendingDeleteCode = code;
+    document.getElementById('delete-confirm-name').textContent = `Excluir "${name || code}"?`;
+    openModal('modal-delete');
+  }
+
+  document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
+    if (!pendingDeleteCode) return;
+    showToast('Exclusão desativada nesta versão — use "Inativo" para ocultar o quarto.', 'warn');
+    closeModal('modal-delete');
+    pendingDeleteCode = null;
+  });
+
+  // ── Modal helpers ────────────────────────────────────────────
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+  function setupModalClosers() {
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.dataset.close));
+    });
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeModal(overlay.id);
+      });
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(o => closeModal(o.id));
+      }
+    });
+  }
+  function setupModalActions() {
+    document.getElementById('btn-refresh').addEventListener('click', loadRooms);
+  }
+
+  // ── Toast ────────────────────────────────────────────────────
   let toastTimer;
   function showToast(msg, type = '') {
     const el = document.getElementById('toast');
     el.textContent = msg;
     el.className = 'toast show' + (type ? ' ' + type : '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────
+  function statusLabel(s) {
+    return { available:'Disponível', blocked:'Ocupado', partial:'Parcial', on_request:'Sob consulta',
+             maintenance:'Manutenção', unknown:'Sem dados' }[s] || s;
+  }
+  function typeLabel(code) {
+    return { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' }[code] || code;
+  }
+  function maintTypeLabel(t) {
+    return { cleaning:'Limpeza', repair:'Reparo', inspection:'Inspeção', upgrade:'Upgrade', other:'Outro' }[t] || t;
+  }
+  function priorityLabel(p) {
+    return { normal:'Normal', urgent:'Urgente', critical:'Crítico' }[p] || p;
+  }
   function fmtBRL(v) {
     return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
   }
-  function escHtml(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function fmtDate(d) {
+    if (!d) return '—';
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' });
   }
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
 })();
 </script>
 </body>

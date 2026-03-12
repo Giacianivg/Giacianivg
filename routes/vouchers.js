@@ -41,7 +41,8 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await query;
   if (error) return serverError(res, error);
-  return ok(res, { vouchers: data, count: data.length, limit: Number(limit), offset: Number(offset) });
+  const vouchers = data || [];
+  return ok(res, { vouchers, count: vouchers.length, limit: Number(limit), offset: Number(offset) });
 });
 
 // ─── POST /api/vouchers ───────────────────────────────────────────────────────

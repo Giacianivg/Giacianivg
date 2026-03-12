@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3Z3Fob25iYmlxdWJ1YWhreWlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NDYwNDIsImV4cCI6MjA4ODQyMjA0Mn0.NLmNmJ8jrlYZXdDanapvvanTB1vnR3Qjfhcmo72rgnw">
+  <title>Emitir Voucher — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ── Layout 2 colunas ────────────────────────────────── */
+    .emit-layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: var(--sp-6);
+      align-items: start;
+    }
+    @media (max-width: 960px) { .emit-layout { grid-template-columns: 1fr; } }
+
+    /* ── Form panel ──────────────────────────────────────── */
+    .form-panel {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .form-panel-head {
+      padding: var(--sp-4) var(--sp-5);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex; align-items: center; gap: var(--sp-3);
+    }
+    .form-panel-icon {
+      width: 36px; height: 36px; border-radius: var(--r-md);
+      background: rgba(99,102,241,.12); color: var(--royal-l);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .form-panel-title { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .form-panel-body  { padding: var(--sp-5); }
+    .form-panel-foot  {
+      padding: var(--sp-4) var(--sp-5);
+      border-top: 1px solid var(--bdr1);
+      display: flex; gap: var(--sp-2); justify-content: flex-end;
+    }
+
+    .field  { margin-bottom: var(--sp-4); }
+    .label  { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
+    .hint   { font-size: .75rem; color: var(--tx3); margin-top: 3px; }
+    .row-2  { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+    .nights-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 9999px;
+      font-size: .75rem; font-weight: 600;
+      background: rgba(99,102,241,.12); color: var(--royal-l);
+      margin-top: var(--sp-2);
+    }
+
+    /* ── Preview panel ───────────────────────────────────── */
+    .preview-panel {
+      position: sticky;
+      top: var(--sp-4);
+    }
+    .preview-label {
+      font-size: .75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--tx3); margin-bottom: var(--sp-3);
+      display: flex; align-items: center; gap: var(--sp-2);
+    }
+    .preview-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--bdr1);
+    }
+
+    /* ── Voucher folha dobrada (A5 landscape = 210×148mm, em px ≈ 794×560) ── */
+    .voucher-paper {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+      overflow: hidden;
+      width: 100%;
+      max-width: 680px;
+      aspect-ratio: 210 / 105; /* folded = half A5, landscape */
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      color: #111;
+      font-family: 'Georgia', 'Times New Roman', serif;
+    }
+    .voucher-fold-line {
+      position: absolute;
+      left: 50%; top: 0; bottom: 0;
+      width: 1px;
+      background: repeating-linear-gradient(to bottom, #ccc 0, #ccc 6px, transparent 6px, transparent 12px);
+      z-index: 10;
+    }
+    .voucher-fold-label {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+      color: #999;
+      white-space: nowrap;
+      z-index: 11;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* FRENTE (lado esquerdo) */
+    .voucher-front {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .voucher-front::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(234,179,8,.12);
+    }
+    .voucher-front::after {
+      content: '';
+      position: absolute;
+      bottom: -20px; left: -20px;
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: rgba(99,102,241,.1);
+    }
+    .vf-brand { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+    .vf-moon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(234,179,8,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .vf-brand-name { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.9); font-family: system-ui, sans-serif; }
+    .vf-brand-sub  { font-size: 8px; color: rgba(255,255,255,.5); font-family: system-ui, sans-serif; }
+    .vf-type { font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: rgba(234,179,8,.8); margin-bottom: 4px; font-family: system-ui, sans-serif; }
+    .vf-guest { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; position: relative; z-index: 1; }
+    .vf-guest-label { font-size: 8px; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; font-family: system-ui, sans-serif; }
+    .vf-bottom { position: relative; z-index: 1; }
+    .vf-room {
+      display: inline-block;
+      background: rgba(234,179,8,.15);
+      border: 1px solid rgba(234,179,8,.3);
+      color: #f5c542;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-family: system-ui, sans-serif;
+      margin-bottom: 8px;
+    }
+    .vf-dates { font-size: 11px; color: rgba(255,255,255,.75); font-family: system-ui, sans-serif; }
+    .vf-dates strong { color: #fff; font-weight: 600; }
+
+    /* VERSO (lado direito) */
+    .voucher-back {
+      background: #fafaf8;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .vb-title { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #888; font-family: system-ui, sans-serif; margin-bottom: 8px; }
+    .vb-details { display: flex; flex-direction: column; gap: 6px; }
+    .vb-row { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .vb-key { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: .04em; font-family: system-ui, sans-serif; }
+    .vb-val { font-size: 11px; font-weight: 600; color: #222; font-family: system-ui, sans-serif; }
+    .vb-val.gold { color: #c8960a; }
+    .vb-notes {
+      font-size: 9px; color: #666; font-style: italic;
+      border-top: 1px solid #eee; padding-top: 8px;
+      font-family: system-ui, sans-serif;
+      line-height: 1.4;
+    }
+    .vb-footer {
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .vb-code { font-size: 8px; color: #bbb; font-family: monospace; }
+    .vb-qr {
+      width: 36px; height: 36px;
+      background: repeating-linear-gradient(0deg,#e0e0e0 0,#e0e0e0 2px,transparent 2px,transparent 4px),
+                  repeating-linear-gradient(90deg,#e0e0e0 0,#e0e0e0 2px,transparent 2px,transparent 4px);
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vb-valid {
+      font-size: 8px; font-family: system-ui, sans-serif;
+      color: #aaa; text-align: center;
+    }
+
+    /* ── Print-only styles (hidden in screen) ────────────── */
+    .print-actions {
+      display: flex; gap: var(--sp-2); margin-top: var(--sp-4);
+    }
+
+    /* ── Success state ───────────────────────────────────── */
+    .success-box {
+      display: none;
+      background: rgba(34,197,94,.08);
+      border: 1px solid rgba(34,197,94,.25);
+      border-radius: var(--r-lg);
+      padding: var(--sp-5);
+      text-align: center;
+    }
+    .success-box.show { display: block; }
+    .success-box svg { color: var(--ok); margin-bottom: var(--sp-3); }
+    .success-title { font-size: 1rem; font-weight: 700; color: var(--tx1); margin-bottom: var(--sp-1); }
+    .success-sub   { font-size: .875rem; color: var(--tx3); margin-bottom: var(--sp-4); }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: var(--sp-5); right: var(--sp-5);
+      padding: var(--sp-2) var(--sp-4); border-radius: var(--r-md);
+      background: var(--sur2); border: 1px solid var(--bdr2);
+      font-size: .875rem; color: var(--tx1);
+      box-shadow: 0 4px 20px rgba(0,0,0,.3); z-index: 500;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity .25s, transform .25s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.ok   { border-color: rgba(34,197,94,.4); color: var(--ok); }
+    .toast.err  { border-color: rgba(239,68,68,.4);  color: var(--err); }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/>
+        <path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-name">Luz da Lua</div>
+        <div class="sidebar-brand-sub">Operações</div>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/><circle cx="12" cy="7" r="1"/></svg>
+        Recepção
+      </a>
+      <a class="nav-link" href="dashboard.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link" href="leads.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Leads
+      </a>
+      <a class="nav-link" href="rooms.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Quartos
+      </a>
+      <a class="nav-link" href="bookings.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Reservas
+      </a>
+      <a class="nav-link" href="financial.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        Financeiro
+      </a>
+      <a class="nav-link" href="vouchers.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Vouchers
+      </a>
+      <a class="nav-link active" href="vouchers-create.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+        Emitir Voucher
+      </a>
+      <a class="nav-link" href="follow-ups.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Follow-ups
+      </a>
+      <a class="nav-link" href="map.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Mapa da Pousada
+      </a>
+      <a class="nav-link" href="calendar.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Calendário
+      </a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+        Command Center
+      </a>
+      <a class="nav-link" href="luna-training.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+        Treinamento Luna
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="page-title">Emitir Voucher</h1>
+      </div>
+      <div class="topbar-right">
+        <a href="vouchers.html" class="btn btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Ver todos os vouchers
+        </a>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="emit-layout">
+
+        <!-- Formulário -->
+        <div class="form-panel">
+          <div class="form-panel-head">
+            <div class="form-panel-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div>
+              <div class="form-panel-title">Dados do voucher</div>
+            </div>
+          </div>
+          <div class="form-panel-body">
+            <div class="field">
+              <label class="label" for="f-guest">Nome do hóspede *</label>
+              <input class="input" id="f-guest" type="text" placeholder="Ex: Maria Silva" autocomplete="off">
+            </div>
+            <div class="field">
+              <label class="label" for="f-room">Acomodação *</label>
+              <select class="input" id="f-room">
+                <option value="">Selecione...</option>
+                <option value="ALA_A">Ala A — Standard Casal</option>
+                <option value="ALA_B">Ala B — Família</option>
+                <option value="ALA_C_CASAL">Ala C — Grupo Casal</option>
+                <option value="ALA_C_GRUPO">Ala C — Grupo Grande</option>
+              </select>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label class="label" for="f-checkin">Check-in *</label>
+                <input class="input" id="f-checkin" type="date">
+              </div>
+              <div class="field">
+                <label class="label" for="f-checkout">Check-out *</label>
+                <input class="input" id="f-checkout" type="date">
+              </div>
+            </div>
+            <div id="nights-display" style="display:none;margin-top:-var(--sp-2);margin-bottom:var(--sp-3)">
+              <span class="nights-badge" id="nights-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="nights-text">— noites</span>
+              </span>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label class="label" for="f-guests">Hóspedes *</label>
+                <input class="input" id="f-guests" type="number" min="1" max="30" value="2">
+              </div>
+              <div class="field">
+                <label class="label" for="f-source">Canal</label>
+                <select class="input" id="f-source">
+                  <option value="direct">Reserva Direta</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="booking">Booking.com</option>
+                  <option value="expedia">Expedia</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="f-total">Valor total (R$)</label>
+              <input class="input" id="f-total" type="number" min="0" step="0.01" placeholder="Deixe em branco se não informar">
+            </div>
+            <div class="field">
+              <label class="label" for="f-notes">Observações / inclusões</label>
+              <input class="input" id="f-notes" type="text" placeholder="Ex: Café da manhã incluído · Estacionamento gratuito">
+              <p class="hint">Aparece no verso do voucher</p>
+            </div>
+          </div>
+          <div class="form-panel-foot">
+            <button class="btn btn-secondary" id="btn-reset">Limpar</button>
+            <button class="btn btn-primary" id="btn-gerar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Gerar & Baixar PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-panel">
+          <div class="preview-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview — folha dobrada ao meio
+          </div>
+
+          <div class="voucher-paper" id="voucher-preview">
+            <!-- FRENTE -->
+            <div class="voucher-front">
+              <div class="vf-brand">
+                <div class="vf-moon">🌙</div>
+                <div>
+                  <div class="vf-brand-name">Pousada Luz da Lua</div>
+                  <div class="vf-brand-sub">Socorro · SP · Brasil</div>
+                </div>
+              </div>
+              <div>
+                <div class="vf-guest-label">Hóspede</div>
+                <div class="vf-type">Voucher de Hospedagem</div>
+                <div class="vf-guest" id="pv-guest">—</div>
+              </div>
+              <div class="vf-bottom">
+                <div class="vf-room" id="pv-room">—</div>
+                <div class="vf-dates" id="pv-dates">—</div>
+              </div>
+            </div>
+            <!-- VERSO -->
+            <div class="voucher-back">
+              <div>
+                <div class="vb-title">Detalhes da reserva</div>
+                <div class="vb-details">
+                  <div class="vb-row">
+                    <span class="vb-key">Check-in</span>
+                    <span class="vb-val" id="pv-checkin">—</span>
+                  </div>
+                  <div class="vb-row">
+                    <span class="vb-key">Check-out</span>
+                    <span class="vb-val" id="pv-checkout">—</span>
+                  </div>
+                  <div class="vb-row">
+                    <span class="vb-key">Noites</span>
+                    <span class="vb-val" id="pv-nights">—</span>
+                  </div>
+                  <div class="vb-row">
+                    <span class="vb-key">Hóspedes</span>
+                    <span class="vb-val" id="pv-guests">—</span>
+                  </div>
+                  <div class="vb-row" id="pv-total-row" style="display:none">
+                    <span class="vb-key">Total</span>
+                    <span class="vb-val gold" id="pv-total">—</span>
+                  </div>
+                </div>
+              </div>
+              <div class="vb-notes" id="pv-notes" style="display:none"></div>
+              <div class="vb-footer">
+                <div>
+                  <div class="vb-code" id="pv-code">LDL-XXXXXXXX</div>
+                  <div class="vb-valid">Emitido em <span id="pv-date"></span></div>
+                </div>
+                <div class="vb-qr">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M21 14h-4v4m0 3h4v-3"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Fold indicator -->
+          <div style="position:relative;top:-8px;pointer-events:none">
+            <div style="position:absolute;left:50%;transform:translateX(-50%);background:var(--sur2);border:1px solid var(--bdr1);padding:2px 8px;border-radius:4px;font-size:.65rem;color:var(--tx3);white-space:nowrap">✂ dobrar aqui</div>
+          </div>
+
+          <!-- Ações pós-geração -->
+          <div class="success-box" id="success-box" style="margin-top:var(--sp-5)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block;margin:0 auto">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <div class="success-title">Voucher gerado com sucesso!</div>
+            <div class="success-sub" id="success-name"></div>
+            <div style="display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap">
+              <a class="btn btn-primary" id="btn-download-pdf" href="#" target="_blank">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Baixar PDF
+              </a>
+              <button class="btn btn-secondary" id="btn-novo">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Novo voucher
+              </button>
+              <a class="btn btn-secondary" href="vouchers.html">Ver todos</a>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.emit-layout -->
+    </main>
+  </div>
+</div>
+
+<div class="voucher-fold-line" style="display:none"></div>
+<div class="toast" id="toast"></div>
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Auth ────────────────────────────────────────────────────
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const sb = supabase.createClient('https://vwgqhonbbiqubuahkyij.supabase.co', sbMeta?.content || '');
+  let authToken = null;
+
+  sb.auth.getUser().then(async ({ data: { user }, error }) => {
+    if (error || !user) { sessionStorage.setItem('ldl-return-to', location.pathname); location.href = '/login.html'; return; }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    const { data: { session } } = await sb.auth.getSession();
+    authToken = session?.access_token;
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut(); location.href = '/login.html';
+  });
+
+  async function apiFetch(path, opts = {}) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}`, ...(opts.headers || {}) },
+    });
+    return res.json();
+  }
+
+  // ── Preview live update ──────────────────────────────────────
+  const ROOM_LABEL = {
+    ALA_A: 'Ala A — Standard Casal',
+    ALA_B: 'Ala B — Família',
+    ALA_C_CASAL: 'Ala C — Grupo Casal',
+    ALA_C_GRUPO: 'Ala C — Grupo Grande',
+  };
+
+  function updatePreview() {
+    const guest   = document.getElementById('f-guest').value.trim() || '—';
+    const room    = ROOM_LABEL[document.getElementById('f-room').value] || '—';
+    const ci      = document.getElementById('f-checkin').value;
+    const co      = document.getElementById('f-checkout').value;
+    const guests  = document.getElementById('f-guests').value || '—';
+    const total   = document.getElementById('f-total').value;
+    const notes   = document.getElementById('f-notes').value.trim();
+
+    document.getElementById('pv-guest').textContent    = guest;
+    document.getElementById('pv-room').textContent     = document.getElementById('f-room').value || '—';
+    document.getElementById('pv-guests').textContent   = guests + (parseInt(guests) > 1 ? ' pessoas' : ' pessoa');
+    document.getElementById('pv-date').textContent     = new Date().toLocaleDateString('pt-BR');
+
+    if (ci && co) {
+      const nights = Math.round((new Date(co) - new Date(ci)) / 86_400_000);
+      const fci = fmtDate(ci), fco = fmtDate(co);
+      document.getElementById('pv-dates').textContent = `${fci} → ${fco} · ${nights}n`;
+      document.getElementById('pv-checkin').textContent  = fci;
+      document.getElementById('pv-checkout').textContent = fco;
+      document.getElementById('pv-nights').textContent   = nights + (nights === 1 ? ' noite' : ' noites');
+      document.getElementById('nights-text').textContent = nights + (nights === 1 ? ' noite' : ' noites');
+      document.getElementById('nights-display').style.display = nights > 0 ? '' : 'none';
+      document.getElementById('nights-badge').style.display = nights > 0 ? '' : 'none';
+    } else {
+      document.getElementById('pv-dates').textContent = '—';
+      document.getElementById('pv-checkin').textContent = '—';
+      document.getElementById('pv-checkout').textContent = '—';
+      document.getElementById('pv-nights').textContent = '—';
+      document.getElementById('nights-display').style.display = 'none';
+    }
+
+    if (total) {
+      document.getElementById('pv-total').textContent = fmtBRL(parseFloat(total));
+      document.getElementById('pv-total-row').style.display = '';
+    } else {
+      document.getElementById('pv-total-row').style.display = 'none';
+    }
+
+    if (notes) {
+      document.getElementById('pv-notes').textContent = '📌 ' + notes;
+      document.getElementById('pv-notes').style.display = '';
+    } else {
+      document.getElementById('pv-notes').style.display = 'none';
+    }
+
+    // Random code for preview
+    document.getElementById('pv-code').textContent = 'LDL-' + Math.random().toString(36).slice(2,10).toUpperCase();
+  }
+
+  ['f-guest','f-room','f-checkin','f-checkout','f-guests','f-total','f-notes'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
+    document.getElementById(id).addEventListener('change', updatePreview);
+  });
+
+  // ── Gerar voucher ────────────────────────────────────────────
+  document.getElementById('btn-gerar').addEventListener('click', async () => {
+    const guest  = document.getElementById('f-guest').value.trim();
+    const room   = document.getElementById('f-room').value;
+    const ci     = document.getElementById('f-checkin').value;
+    const co     = document.getElementById('f-checkout').value;
+    const guests = parseInt(document.getElementById('f-guests').value, 10);
+    const source = document.getElementById('f-source').value;
+    const total  = document.getElementById('f-total').value;
+    const notes  = document.getElementById('f-notes').value.trim();
+
+    if (!guest) { showToast('Nome do hóspede é obrigatório.', 'err'); return; }
+    if (!room)  { showToast('Selecione a acomodação.', 'err'); return; }
+    if (!ci || !co) { showToast('Informe as datas de check-in e check-out.', 'err'); return; }
+    if (new Date(co) <= new Date(ci)) { showToast('Check-out deve ser após check-in.', 'err'); return; }
+
+    const btn = document.getElementById('btn-gerar');
+    btn.disabled = true;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg> Gerando...`;
+
+    const body = { guest_name: guest, room_type: room, check_in: ci, check_out: co, guests, source };
+    if (total) body.total_amount = parseFloat(total);
+    if (notes) body.notes = notes;
+
+    const res = await apiFetch('/api/vouchers', { method: 'POST', body: JSON.stringify(body) });
+
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Gerar & Baixar PDF`;
+
+    if (!res || !res.id) {
+      showToast('Erro ao gerar voucher. Tente novamente.', 'err');
+      return;
+    }
+
+    // Atualiza o código real no preview
+    document.getElementById('pv-code').textContent = 'LDL-' + res.id.slice(0, 8).toUpperCase();
+
+    // Mostra caixa de sucesso
+    document.getElementById('success-name').textContent = `Voucher para ${guest} criado com sucesso.`;
+    document.getElementById('btn-download-pdf').href = res.download_url;
+    document.getElementById('success-box').classList.add('show');
+
+    // Abre PDF automaticamente
+    window.open(res.download_url, '_blank');
+    showToast('Voucher gerado! PDF aberto em nova aba.', 'ok');
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    ['f-guest','f-room','f-checkin','f-checkout','f-total','f-notes'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('f-guests').value = '2';
+    document.getElementById('f-source').value = 'direct';
+    document.getElementById('success-box').classList.remove('show');
+    updatePreview();
+  });
+
+  document.getElementById('btn-novo').addEventListener('click', () => {
+    document.getElementById('btn-reset').click();
+  });
+
+  // ── Toast ────────────────────────────────────────────────────
+  let tt;
+  function showToast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(tt);
+    tt = setTimeout(() => { el.className = 'toast'; }, 3500);
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y.slice(2)}`;
+  }
+  function fmtBRL(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+  }
+
+  // Init preview
+  updatePreview();
+
+  // Default check-in = today, check-out = +2
+  const today = new Date();
+  const plus2 = new Date(today.getTime() + 2 * 86400000);
+  document.getElementById('f-checkin').value  = today.toISOString().slice(0,10);
+  document.getElementById('f-checkout').value = plus2.toISOString().slice(0,10);
+  updatePreview();
+
+})();
+</script>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>
