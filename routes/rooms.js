@@ -48,6 +48,7 @@ router.get('/', async (req, res) => {
     const { data: rooms, error } = await supabaseAdmin
       .from('rooms')
       .select('*')
+      .eq('active', true)
       .order('sort_order', { ascending: true });
 
     if (error) return serverError(res, error);

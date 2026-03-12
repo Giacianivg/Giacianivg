@@ -486,9 +486,9 @@
         </select>
         <select class="input" id="filter-type" style="width:auto;min-width:130px">
           <option value="">Todas as alas</option>
-          <option value="ALA_A">Ala A</option>
-          <option value="ALA_B">Ala B</option>
-          <option value="ALA_C">Ala C</option>
+          <option value="A">Ala A</option>
+          <option value="B">Ala B</option>
+          <option value="C">Ala C</option>
         </select>
         <div class="view-toggle">
           <button class="view-toggle-btn" id="btn-view-table" title="Tabela">
@@ -878,8 +878,10 @@
     const filtered = roomsCache.filter(r => {
       const matchQ    = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q);
       const matchSt   = !status || r.today_status === status;
-      const matchType = !type || r.code === type ||
-        (type === 'ALA_C' && (r.code === 'ALA_C_CASAL' || r.code === 'ALA_C_GRUPO'));
+      const matchType = !type ||
+        (type === 'A' && /^A\d/.test(r.code)) ||
+        (type === 'B' && /^B\d/.test(r.code)) ||
+        (type === 'C' && /^C\d/.test(r.code));
       return matchQ && matchSt && matchType;
     });
 
@@ -992,9 +994,9 @@
     }
 
     const alas = [
-      { id: 'A', label: 'Ala A', rooms: rooms.filter(r => r.code === 'ALA_A') },
-      { id: 'B', label: 'Ala B', rooms: rooms.filter(r => r.code === 'ALA_B') },
-      { id: 'C', label: 'Ala C', rooms: rooms.filter(r => r.code === 'ALA_C_CASAL' || r.code === 'ALA_C_GRUPO') },
+      { id: 'A', label: 'Ala A', rooms: rooms.filter(r => /^A\d/.test(r.code)) },
+      { id: 'B', label: 'Ala B', rooms: rooms.filter(r => /^B\d/.test(r.code)) },
+      { id: 'C', label: 'Ala C', rooms: rooms.filter(r => /^C\d/.test(r.code)) },
     ].filter(a => a.rooms.length > 0);
 
     if (!alas.length) {
@@ -1306,6 +1308,9 @@
              maintenance:'Manutenção', unknown:'Sem dados' }[s] || s;
   }
   function typeLabel(code) {
+    if (/^A\d/.test(code)) return 'Ala A';
+    if (/^B\d/.test(code)) return 'Ala B';
+    if (/^C\d/.test(code)) return 'Ala C';
     return { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' }[code] || code;
   }
   function maintTypeLabel(t) {
