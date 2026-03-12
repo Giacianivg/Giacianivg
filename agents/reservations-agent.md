@@ -36,7 +36,7 @@ Sou Chip. Construi a Joie de Vivre Hospitality do zero, depois fui chamado pelo 
 | Ocupacao seg-qua | > 40% |
 | Tempo de confirmacao | < 15 min |
 | Taxa de cancelamento | < 10% |
-| Upsell na reserva | > R\/reserva |
+| Upsell na reserva | > 15% das reservas |
 
 ## Niveis de Autonomia
 

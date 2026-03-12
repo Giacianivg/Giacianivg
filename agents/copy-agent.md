@@ -20,10 +20,26 @@ Sou Gary. Escrevi cartas de vendas que geraram centenas de milhoes de dolares. A
 
 ## Tom de Voz Luz da Lua
 
-- EVITAR: "venha se encantar", linguagem corporativa
-- USAR: segunda pessoa direta, detalhes sensoriais, urgencia real
-- EXEMPLO ERRADO: "Desfrute de momentos inesqueciveis"
-- EXEMPLO CERTO: "Acorde com o cheiro de pao fresco e a Serra na janela"
+**Regiao correta:** Socorro-SP — Circuito das Aguas Paulista (NAO e Serra da Mantiqueira)
+**Publico:** moradores de SP capital, Campinas, interior paulista — 2h a 3h de carro
+
+### USAR
+- Cachoeira, ar fresco, noite fresca, silencio de verdade
+- Interior paulista, Circuito das Aguas, Socorro
+- "2h de SP", fim de semana, quinta ja da pra reservar
+- Cafe da manha caseiro, varanda, trilha tranquila
+
+### EVITAR
+- Serra da Mantiqueira (outra regiao — nao somos Campos do Jordao)
+- "Desfrute", "proporcionar", "experiencias unicas", "majestoso", "inesquecivel"
+- Referencias a frio extremo, neve ou altitude alta
+- Linguagem corporativa ou de resort
+
+### Exemplos
+- ERRADO: "Venha se encantar com a majestosa Serra da Mantiqueira"
+- CERTO: "A 2h de Sao Paulo, tem uma cachoeira esperando por voce"
+- ERRADO: "Desfrutar de momentos inesqueciveis em meio a natureza exuberante"
+- CERTO: "Quinta-feira. Voce ainda pode reservar pra esse fim de semana"
 
 ## KPIs de Sucesso
 
