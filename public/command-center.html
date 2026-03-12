@@ -196,6 +196,34 @@
     .psh-title { font-size: .875rem; font-weight: 600; }
     .psh-badge { font-size: .75rem; color: var(--tx3, var(--t-3)); }
 
+    /* ── Revenue Intelligence (Maxwell) ── */
+    .revenue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--sp-3);
+      padding: var(--sp-3);
+    }
+    .rev-alert {
+      display: flex; gap: var(--sp-2); align-items: flex-start;
+      padding: var(--sp-3);
+      border-radius: var(--r-md);
+      border: 1px solid var(--bdr0);
+      background: var(--sur2);
+      position: relative;
+    }
+    .rev-alert.urgency-high   { border-left: 3px solid #f87171; }
+    .rev-alert.urgency-medium { border-left: 3px solid #facc15; }
+    .rev-alert.urgency-low    { border-left: 3px solid var(--tx3); }
+    .rev-alert.urgency-info   { border-left: 3px solid var(--royal-l); }
+    .rev-emoji  { font-size: 1.25rem; line-height: 1; flex-shrink: 0; padding-top: 1px; }
+    .rev-body   { flex: 1; min-width: 0; }
+    .rev-msg    { font-size: .8125rem; font-weight: 500; color: var(--tx1); line-height: 1.4; }
+    .rev-meta   { font-size: .7rem; color: var(--tx3); margin-top: 3px; font-family: var(--mono); }
+    .rev-link   { font-size: .72rem; color: var(--royal-l); font-weight: 600; text-decoration: none; display: inline-block; margin-top: 4px; }
+    .rev-link:hover { text-decoration: underline; }
+    .rev-dismiss { position: absolute; top: 6px; right: 8px; background: none; border: none; cursor: pointer; color: var(--tx3); font-size: .75rem; padding: 2px 5px; line-height: 1; }
+    .rev-dismiss:hover { color: var(--tx1); }
+
     /* ── Pulse badge ── */
     .badge-pulse {
       display: inline-flex; align-items: center; gap: var(--sp-1);
@@ -429,6 +457,20 @@
 
       </div><!-- /cc-grid -->
 
+      <!-- ── Revenue Intelligence — Maxwell ── -->
+      <div class="panel">
+        <div class="psh">
+          <span class="psh-title">💹 Revenue Intelligence — Maxwell</span>
+          <span class="psh-badge" id="rev-count-badge">—</span>
+        </div>
+        <div id="rev-container">
+          <div class="revenue-grid">
+            <div class="skel" style="height:72px;border-radius:var(--r-md)"></div>
+            <div class="skel" style="height:72px;border-radius:var(--r-md)"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Event Stream (full width) ── -->
       <div class="panel">
         <div class="psh">
@@ -542,7 +584,7 @@ function roomLabel(code) {
 
 /* ─── Load all ─────────────────────────────────────── */
 async function loadAll() {
-  await Promise.all([loadKpis(), loadOps(), loadAlertsPanel(), loadChart(), loadStream()]);
+  await Promise.all([loadKpis(), loadOps(), loadAlertsPanel(), loadChart(), loadStream(), loadRevenueAlerts()]);
 }
 
 /* ─── 1. KPI Strip ─────────────────────────────────── */
@@ -881,6 +923,62 @@ async function triggerFollowups() {
   } catch(e) {
     DS.toast('Erro ao verificar follow-ups', 'error');
   } finally { btn.classList.remove('loading'); }
+}
+
+/* ─── Revenue Intelligence (Maxwell) ─────────────────── */
+const REV_URGENCY_EMOJI = {
+  you_expensive:          '⚠️',
+  you_cheap_opportunity:  '💡',
+  competitor_price_drop:  '📉',
+  competitor_price_surge: '📈',
+  high_demand_signal:     '🔥',
+  low_season_warning:     '🌙',
+};
+
+async function loadRevenueAlerts() {
+  const cont  = document.getElementById('rev-container');
+  const badge = document.getElementById('rev-count-badge');
+  try {
+    const data   = await apiFetch('/api/alerts/revenue?limit=12').catch(() => null);
+    const alerts = data?.alerts || [];
+    badge.textContent = alerts.length ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''}` : 'sem alertas';
+
+    if (!alerts.length) {
+      cont.innerHTML = '<div class="empty-cc"><div class="empty-cc-icon">📊</div>Nenhum alerta de revenue — Maxwell monitorando.</div>';
+      return;
+    }
+
+    const html = `<div class="revenue-grid">${alerts.map(a => {
+      const emoji   = REV_URGENCY_EMOJI[a.alert_type] || '📊';
+      const dateStr = a.date_ref ? `<a class="rev-link" href="calendar.html">Ver calendário ${fmtDate(a.date_ref)}</a>` : '';
+      const ts      = new Date(a.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<div class="rev-alert urgency-${esc(a.urgency)}">
+        <span class="rev-emoji">${emoji}</span>
+        <div class="rev-body">
+          <div class="rev-msg">${esc(a.message)}</div>
+          <div class="rev-meta">${ts}${a.room_type ? ' · ' + esc(a.room_type) : ''}</div>
+          ${dateStr}
+        </div>
+        <button class="rev-dismiss" onclick="dismissRevAlert('${esc(a.id)}',this)" title="Dispensar">✕</button>
+      </div>`;
+    }).join('')}</div>`;
+    cont.innerHTML = html;
+  } catch(e) {
+    cont.innerHTML = '<div class="empty-cc"><div class="empty-cc-icon">⚠️</div>Erro ao carregar alertas de revenue.</div>';
+    console.error('loadRevenueAlerts:', e);
+  }
+}
+
+async function dismissRevAlert(id, btn) {
+  try {
+    btn.disabled = true;
+    await apiFetch(`/api/alerts/revenue/${id}/dismiss`);
+    btn.closest('.rev-alert').style.opacity = '0.3';
+    setTimeout(() => { btn.closest('.rev-alert')?.remove(); }, 400);
+  } catch(e) {
+    btn.disabled = false;
+    DS.toast('Erro ao dispensar alerta', 'error');
+  }
 }
 
 /* ─── Boot ──────────────────────────────────────────── */

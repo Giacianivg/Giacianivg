@@ -200,9 +200,11 @@ app.use('/auth',                           require('./routes/auth'));
 // ─── Cron: scraping diário de concorrentes (Vercel Cron → 03h UTC) ──────────
 app.get('/api/cron/competitor-prices', async (req, res) => {
   const { runDailyScrape } = require('./services/competitor/scraper');
+  const { generateDailyReport } = require('./services/revenue-intelligence/revenue-agent');
   try {
-    const report = await runDailyScrape();
-    return res.json({ success: true, ...report });
+    const scrapeReport   = await runDailyScrape();
+    const revenueReport  = await generateDailyReport();
+    return res.json({ success: true, scrape: scrapeReport, revenue: revenueReport });
   } catch (err) {
     console.error('[cron/competitor-prices]', err.message);
     return res.status(500).json({ success: false, error: err.message });

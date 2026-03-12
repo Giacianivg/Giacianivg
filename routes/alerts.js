@@ -85,4 +85,30 @@ router.post('/:leadId/dismiss', async (req, res) => {
   }
 });
 
+// ─── Revenue Intelligence alerts (Maxwell) ─────────────────────────────────
+
+// GET /api/alerts/revenue?limit=20
+router.get('/revenue', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const { getActiveRevenueAlerts } = require('../services/revenue-intelligence/alert-generator');
+    const alerts = await getActiveRevenueAlerts(limit);
+    return ok(res, { alerts, count: alerts.length });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// PATCH /api/alerts/revenue/:id/dismiss
+router.patch('/revenue/:id/dismiss', async (req, res) => {
+  try {
+    const { dismissAlert } = require('../services/revenue-intelligence/alert-generator');
+    const ok2 = await dismissAlert(req.params.id);
+    if (!ok2) return fail(res, 'not_found', 'Alert not found or already dismissed', 404);
+    return ok(res, { success: true });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
 module.exports = router;
