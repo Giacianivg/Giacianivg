@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Criativo Páscoa — Stories 1080x1920</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    background: #050d1a;
+  }
+
+  .canvas {
+    width: 1080px;
+    height: 1920px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Fundo */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(20,60,20,0.7) 0%, transparent 50%),
+      radial-gradient(ellipse at 15% 30%, rgba(10,40,10,0.5) 0%, transparent 40%),
+      radial-gradient(ellipse at 85% 25%, rgba(15,50,15,0.4) 0%, transparent 35%),
+      radial-gradient(ellipse at 50% 60%, rgba(5,13,26,0.95) 0%, 60%, transparent),
+      linear-gradient(180deg, #0d2010 0%, #091a0d 25%, #05100a 45%, #050d1a 60%, #030812 100%);
+  }
+
+  /* Flores de Páscoa decorativas */
+  .floral-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 680px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 200px;
+    opacity: 0.06;
+    letter-spacing: -20px;
+    filter: blur(2px);
+    user-select: none;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(5,13,26,0.2) 0%,
+      rgba(5,13,26,0.1) 30%,
+      rgba(5,13,26,0.6) 52%,
+      rgba(5,13,26,0.94) 65%,
+      rgba(3,8,18,0.99) 80%,
+      rgba(3,8,18,1) 100%
+    );
+  }
+
+  /* Lua */
+  .moon {
+    position: absolute;
+    top: 140px;
+    right: 140px;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: -24px 6px 0 0 #E6B800;
+    opacity: 0.85;
+  }
+
+  /* Stars */
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+  }
+
+  /* Cantos */
+  .frame-corner {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    border-color: rgba(230, 184, 0, 0.5);
+    border-style: solid;
+  }
+  .frame-corner.tl { top: 32px; left: 32px; border-width: 1.5px 0 0 1.5px; }
+  .frame-corner.tr { top: 32px; right: 32px; border-width: 1.5px 1.5px 0 0; }
+  .frame-corner.bl { bottom: 32px; left: 32px; border-width: 0 0 1.5px 1.5px; }
+  .frame-corner.br { bottom: 32px; right: 32px; border-width: 0 1.5px 1.5px 0; }
+
+  /* Safe zone indicator (stories) */
+  /* Top 250px e Bottom 340px são cobertas pelo UI do Instagram */
+
+  /* Logo topo */
+  .logo-area {
+    position: relative;
+    z-index: 10;
+    margin-top: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 64px;
+    height: 64px;
+    border: 1.5px solid rgba(230, 184, 0, 0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+  }
+
+  .logo-name {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  /* Centro visual — imagem/ícone grande */
+  .visual-center {
+    position: relative;
+    z-index: 10;
+    margin-top: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .big-emoji {
+    font-size: 180px;
+    line-height: 1;
+    filter: drop-shadow(0 0 40px rgba(230,184,0,0.3));
+  }
+
+  .season-badge {
+    margin-top: 32px;
+    background: rgba(230, 184, 0, 0.12);
+    border: 1px solid rgba(230, 184, 0, 0.35);
+    border-radius: 2px;
+    padding: 8px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #E6B800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Conteúdo inferior */
+  .content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 0 80px 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0;
+  }
+
+  .headline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 88px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.02;
+    letter-spacing: -1.5px;
+    margin-bottom: 12px;
+  }
+
+  .headline em {
+    font-style: italic;
+    color: #E6B800;
+    display: block;
+  }
+
+  .subline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 28px;
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 48px;
+    line-height: 1.4;
+  }
+
+  .divider {
+    width: 48px;
+    height: 1px;
+    background: #E6B800;
+    margin: 0 auto 44px;
+    opacity: 0.6;
+  }
+
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 56px;
+    width: 100%;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.82);
+    letter-spacing: 0.3px;
+  }
+
+  .feature-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #E6B800;
+    flex-shrink: 0;
+  }
+
+  .price-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 48px;
+  }
+
+  .price-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .price {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 72px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+  }
+
+  .price-detail {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.5px;
+  }
+
+  .cta-button {
+    background: #E6B800;
+    color: #050d1a;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 20px 48px;
+    border-radius: 2px;
+    margin-bottom: 20px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .swipe-hint {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swipe-hint::before,
+  .swipe-hint::after {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <div class="bg"></div>
+
+  <!-- Florais abstratos -->
+  <div class="floral-top">🌸🌿🌸</div>
+
+  <div class="overlay"></div>
+
+  <!-- Lua -->
+  <div class="moon"></div>
+
+  <!-- Estrelas -->
+  <div class="star" style="width:2px;height:2px;top:8%;left:20%;opacity:0.8"></div>
+  <div class="star" style="width:1.5px;height:1.5px;top:5%;left:55%;opacity:0.6"></div>
+  <div class="star" style="width:2.5px;height:2.5px;top:10%;left:35%;opacity:0.7"></div>
+  <div class="star" style="width:1px;height:1px;top:14%;left:70%;opacity:0.5"></div>
+  <div class="star" style="width:2px;height:2px;top:7%;left:80%;opacity:0.4"></div>
+  <div class="star" style="width:1.5px;height:1.5px;top:18%;left:12%;opacity:0.6"></div>
+
+  <!-- Cantos -->
+  <div class="frame-corner tl"></div>
+  <div class="frame-corner tr"></div>
+  <div class="frame-corner bl"></div>
+  <div class="frame-corner br"></div>
+
+  <!-- Logo topo (safe zone Instagram: abaixo de ~250px) -->
+  <div class="logo-area">
+    <div class="logo-icon">🌙</div>
+    <div class="logo-name">Pousada Luz da Lua</div>
+  </div>
+
+  <!-- Visual central -->
+  <div class="visual-center">
+    <div class="big-emoji">🌸</div>
+    <div class="season-badge">Páscoa 2026</div>
+  </div>
+
+  <!-- Conteúdo inferior -->
+  <div class="content">
+    <div class="headline">
+      Escapada<br><em>Romântica</em>
+    </div>
+    <div class="subline">Serra de Socorro, SP</div>
+
+    <div class="divider"></div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-dot"></div>
+        2 noites na serra
+      </div>
+      <div class="feature">
+        <div class="feature-dot"></div>
+        Café da manhã incluso
+      </div>
+      <div class="feature">
+        <div class="feature-dot"></div>
+        28/mar – 06/abr · Para casais
+      </div>
+    </div>
+
+    <div class="price-area">
+      <div class="price-label">Pacote especial</div>
+      <div class="price">R$ 900</div>
+      <div class="price-detail">2 noites · 2 pessoas · café incluso</div>
+    </div>
+
+    <div class="cta-button">Fale pelo WhatsApp</div>
+
+    <div class="swipe-hint">Deslize para cima e fale com a gente</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -451,4 +451,27 @@ COPY DE URGÊNCIA (use com naturalidade, não abuse):
 "As vagas para a Páscoa são limitadas — é um dos períodos mais disputados do ano!"
 `;
 
-module.exports = SYSTEM_PROMPT + PASCOA_SCRIPT;
+// ─── VOUCHERS — Comprovante de Hospedagem ─────────────────────────────────────
+// DEC-016 aprovado 2026-03-12 | Append only — zero alteração nas regras existentes
+// Não altera sinais de controle [COTAR], [CONFIRMAR], [ESCALAR]
+
+const VOUCHER_SCRIPT = `
+
+════════════════════════════════════════
+VOUCHERS — COMPROVANTE DE HOSPEDAGEM
+════════════════════════════════════════
+
+Quando hóspede pedir voucher, comprovante ou confirmação de reserva:
+
+OPÇÃO 1 — Se você tiver o link do voucher disponível no contexto:
+Compartilhe diretamente: "Aqui está seu comprovante: [URL_DO_VOUCHER]"
+Formato da URL: https://webhook-six-topaz.vercel.app/api/vouchers/{id}/download?token={token}
+
+OPÇÃO 2 — Se não tiver o link:
+Diga: "Vou solicitar à equipe que prepare seu voucher e envie aqui em breve. Normalmente leva alguns minutinhos!"
+
+NÃO prometa voucher automático se não houver reserva confirmada no sistema.
+NÃO invente IDs ou links.
+`;
+
+module.exports = SYSTEM_PROMPT + PASCOA_SCRIPT + VOUCHER_SCRIPT;

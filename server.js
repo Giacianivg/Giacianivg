@@ -193,6 +193,7 @@ app.use('/api/blackboard',                 require('./routes/blackboard'));
 app.use('/api/luna-config',                require('./routes/luna-config'));
 app.use('/api/rooms',                      require('./routes/rooms'));
 app.use('/api/financial',                  require('./routes/financial'));
+app.use('/api/vouchers',                   require('./routes/vouchers'));
 app.use('/auth',                           require('./routes/auth'));
 
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Criativo Páscoa — Feed Facebook 1200x628</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1200px;
+    height: 628px;
+    overflow: hidden;
+    background: #050d1a;
+  }
+
+  .canvas {
+    width: 1200px;
+    height: 628px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+  }
+
+  /* Lado esquerdo — visual */
+  .left {
+    width: 560px;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 40% 30%, rgba(20,60,20,0.7) 0%, transparent 60%),
+      radial-gradient(ellipse at 60% 70%, rgba(10,35,10,0.5) 0%, transparent 50%),
+      linear-gradient(135deg, #0d2010 0%, #081508 40%, #050d1a 100%);
+  }
+
+  .left-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      transparent 75%,
+      rgba(5,13,26,0.8) 100%
+    );
+  }
+
+  .left-content {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .big-visual {
+    font-size: 140px;
+    line-height: 1;
+    filter: drop-shadow(0 0 30px rgba(230,184,0,0.25));
+  }
+
+  .season-badge {
+    background: rgba(230, 184, 0, 0.12);
+    border: 1px solid rgba(230, 184, 0, 0.4);
+    border-radius: 2px;
+    padding: 7px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #E6B800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Lua */
+  .moon {
+    position: absolute;
+    top: 40px;
+    right: 80px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: -12px 3px 0 0 #E6B800;
+    opacity: 0.8;
+  }
+
+  /* Cantos esquerda */
+  .corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: rgba(230,184,0,0.45);
+    border-style: solid;
+  }
+  .corner.tl { top: 20px; left: 20px; border-width: 1.5px 0 0 1.5px; }
+  .corner.bl { bottom: 20px; left: 20px; border-width: 0 0 1.5px 1.5px; }
+
+  /* Lado direito — texto */
+  .right {
+    flex: 1;
+    background: linear-gradient(135deg, #050d1a 0%, #030812 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 44px 56px 40px 52px;
+    position: relative;
+  }
+
+  .right::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10%;
+    bottom: 10%;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(230,184,0,0.2), transparent);
+  }
+
+  .right-corners .corner { position: absolute; }
+  .right-corners .tr { top: 20px; right: 20px; border-width: 1.5px 1.5px 0 0; }
+  .right-corners .br { bottom: 20px; right: 20px; border-width: 0 1.5px 1.5px 0; }
+
+  /* Logo */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(230,184,0,0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .logo-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* Texto principal */
+  .main-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .tag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #E6B800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tag::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: #E6B800;
+  }
+
+  .headline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 52px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .headline em {
+    font-style: italic;
+    color: #E6B800;
+  }
+
+  .subline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 20px;
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 24px;
+  }
+
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    margin-bottom: 28px;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .feature-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #E6B800;
+    flex-shrink: 0;
+  }
+
+  /* Bottom */
+  .bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .price-block {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .price {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 40px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+  }
+
+  .price-detail {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.4);
+    line-height: 1.4;
+  }
+
+  .cta-button {
+    background: #E6B800;
+    color: #050d1a;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 13px 24px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Lado esquerdo -->
+  <div class="left">
+    <div class="left-overlay"></div>
+    <div class="moon"></div>
+
+    <div class="corner tl"></div>
+    <div class="corner bl"></div>
+
+    <div class="left-content">
+      <div class="big-visual">🌸</div>
+      <div class="season-badge">Páscoa 2026</div>
+    </div>
+  </div>
+
+  <!-- Lado direito -->
+  <div class="right">
+    <div class="right-corners">
+      <div class="corner tr" style="position:absolute;top:20px;right:20px;border-width:1.5px 1.5px 0 0;"></div>
+      <div class="corner br" style="position:absolute;bottom:20px;right:20px;border-width:0 1.5px 1.5px 0;"></div>
+    </div>
+
+    <div class="logo">
+      <div class="logo-icon">🌙</div>
+      <div class="logo-text">Pousada<br>Luz da Lua</div>
+    </div>
+
+    <div class="main-text">
+      <div class="tag">Escapada especial</div>
+      <div class="headline">Romântica<br><em>na Serra</em></div>
+      <div class="subline">Socorro, SP — Circuito das Águas</div>
+
+      <div class="features">
+        <div class="feature"><div class="feature-dot"></div>2 noites · 28/mar a 06/abr</div>
+        <div class="feature"><div class="feature-dot"></div>Café da manhã incluso</div>
+        <div class="feature"><div class="feature-dot"></div>Para casais</div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="price-block">
+        <div class="price">R$ 900</div>
+        <div class="price-detail">pacote completo<br>2 noites · 2 pessoas</div>
+      </div>
+      <div class="cta-button">Fale pelo WhatsApp</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

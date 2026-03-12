@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Criativo Páscoa — Feed 1080x1080</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1080px;
+    height: 1080px;
+    overflow: hidden;
+    background: #0a1628;
+  }
+
+  .canvas {
+    width: 1080px;
+    height: 1080px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  /* Fundo — gradiente evocando natureza/noite de serra */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(34,85,34,0.55) 0%, transparent 55%),
+      radial-gradient(ellipse at 70% 10%, rgba(20,60,20,0.45) 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 80%, rgba(10,22,40,0.9) 0%, transparent 60%),
+      linear-gradient(165deg, #1a3a1a 0%, #0d2010 30%, #0a1628 65%, #050d1a 100%);
+  }
+
+  /* Textura de folhagem abstrata */
+  .leaves {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    background-image:
+      radial-gradient(ellipse 3px 12px at 15% 12%, #4a9a4a 0%, transparent 100%),
+      radial-gradient(ellipse 2px 8px at 22% 8%, #3a8a3a 0%, transparent 100%),
+      radial-gradient(ellipse 4px 16px at 8% 22%, #5aaa5a 0%, transparent 100%),
+      radial-gradient(ellipse 2px 10px at 85% 15%, #4a9a4a 0%, transparent 100%),
+      radial-gradient(ellipse 3px 14px at 90% 8%, #3a8a3a 0%, transparent 100%),
+      radial-gradient(ellipse 5px 18px at 78% 25%, #5aaa5a 0%, transparent 100%),
+      radial-gradient(ellipse 2px 9px at 92% 30%, #4a9a4a 0%, transparent 100%),
+      radial-gradient(ellipse 3px 11px at 5% 35%, #3a8a3a 0%, transparent 100%);
+  }
+
+  /* Overlay escuro na parte inferior para texto */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 35%,
+      rgba(5, 13, 26, 0.6) 55%,
+      rgba(5, 13, 26, 0.92) 75%,
+      rgba(5, 13, 26, 0.98) 100%
+    );
+  }
+
+  /* Estrelas / partículas */
+  .stars {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.6;
+  }
+
+  /* Lua crescente decorativa */
+  .moon {
+    position: absolute;
+    top: 72px;
+    right: 108px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: transparent;
+    box-shadow: -18px 4px 0 0 #E6B800;
+    opacity: 0.9;
+  }
+
+  /* Linha dourada decorativa */
+  .gold-line {
+    position: absolute;
+    top: 50%;
+    left: 72px;
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #E6B800, transparent);
+    transform: translateY(-50%);
+  }
+
+  /* Ícone de lua/logo área */
+  .logo-area {
+    position: absolute;
+    top: 64px;
+    left: 72px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    border: 1.5px solid rgba(230, 184, 0, 0.6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .logo-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* Conteúdo principal */
+  .content {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    padding: 0 72px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .season-tag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #E6B800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .season-tag::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: #E6B800;
+  }
+
+  .headline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 78px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .headline em {
+    font-style: italic;
+    color: #E6B800;
+  }
+
+  .subheadline {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 32px;
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 40px;
+    line-height: 1.3;
+  }
+
+  .divider {
+    width: 64px;
+    height: 1px;
+    background: linear-gradient(to right, #E6B800, transparent);
+    margin-bottom: 36px;
+  }
+
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 44px;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.3px;
+  }
+
+  .feature-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #E6B800;
+    flex-shrink: 0;
+  }
+
+  .bottom-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .price-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .price-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .price {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 52px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1;
+  }
+
+  .price-detail {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .cta-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .cta-button {
+    background: #E6B800;
+    color: #0a1628;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 16px 32px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .cta-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.5px;
+  }
+
+  /* Borda sutil dourada */
+  .frame {
+    position: absolute;
+    inset: 24px;
+    border: 1px solid rgba(230, 184, 0, 0.12);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .frame-corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-color: rgba(230, 184, 0, 0.45);
+    border-style: solid;
+  }
+  .frame-corner.tl { top: 24px; left: 24px; border-width: 1.5px 0 0 1.5px; }
+  .frame-corner.tr { top: 24px; right: 24px; border-width: 1.5px 1.5px 0 0; }
+  .frame-corner.bl { bottom: 24px; left: 24px; border-width: 0 0 1.5px 1.5px; }
+  .frame-corner.br { bottom: 24px; right: 24px; border-width: 0 1.5px 1.5px 0; }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Fundo -->
+  <div class="bg"></div>
+  <div class="leaves"></div>
+  <div class="overlay"></div>
+
+  <!-- Estrelas -->
+  <div class="stars">
+    <div class="star" style="width:2px;height:2px;top:8%;left:25%;opacity:0.8"></div>
+    <div class="star" style="width:1.5px;height:1.5px;top:12%;left:42%;opacity:0.6"></div>
+    <div class="star" style="width:2.5px;height:2.5px;top:6%;left:58%;opacity:0.7"></div>
+    <div class="star" style="width:1px;height:1px;top:18%;left:33%;opacity:0.5"></div>
+    <div class="star" style="width:2px;height:2px;top:9%;left:72%;opacity:0.9"></div>
+    <div class="star" style="width:1.5px;height:1.5px;top:15%;left:18%;opacity:0.6"></div>
+    <div class="star" style="width:1px;height:1px;top:22%;left:65%;opacity:0.4"></div>
+    <div class="star" style="width:3px;height:3px;top:5%;left:48%;opacity:0.5"></div>
+  </div>
+
+  <!-- Lua crescente -->
+  <div class="moon"></div>
+
+  <!-- Cantos dourados -->
+  <div class="frame-corner tl"></div>
+  <div class="frame-corner tr"></div>
+  <div class="frame-corner bl"></div>
+  <div class="frame-corner br"></div>
+
+  <!-- Logo -->
+  <div class="logo-area">
+    <div class="logo-icon">🌙</div>
+    <div class="logo-text">Pousada<br>Luz da Lua</div>
+  </div>
+
+  <!-- Conteúdo -->
+  <div class="content">
+
+    <div class="season-tag">Páscoa 2026</div>
+
+    <div class="headline">
+      Escapada<br><em>Romântica</em>
+    </div>
+    <div class="subheadline">na Serra de Socorro</div>
+
+    <div class="divider"></div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-dot"></div>
+        2 noites na serra — 28/mar a 06/abr
+      </div>
+      <div class="feature">
+        <div class="feature-dot"></div>
+        Café da manhã incluso
+      </div>
+      <div class="feature">
+        <div class="feature-dot"></div>
+        Para casais — Circuito das Águas Paulista
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="price-block">
+        <div class="price-label">Pacote especial</div>
+        <div class="price">R$ 900</div>
+        <div class="price-detail">2 noites · 2 pessoas · café incluso</div>
+      </div>
+      <div class="cta-block">
+        <div class="cta-button">Fale pelo WhatsApp</div>
+        <div class="cta-sub">Socorro, SP · Reservas sujeitas a confirmação</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>
