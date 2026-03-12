@@ -155,61 +155,67 @@
     .action-btn.maint:hover   { background: rgba(234,179,8,.1);  color: var(--gold);    border-color: rgba(234,179,8,.3); }
     .action-btn.delete:hover  { background: rgba(239,68,68,.1);  color: var(--err);     border-color: rgba(239,68,68,.3); }
 
-    /* ── Grid view ──────────────────────────────────────────── */
-    .rooms-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: var(--sp-4);
-    }
-    .room-card {
-      background: var(--sur1);
-      border: 1px solid var(--bdr1);
-      border-radius: var(--r-lg);
-      overflow: hidden;
-      display: flex; flex-direction: column;
-      transition: border-color .2s;
-    }
-    .room-card:hover { border-color: var(--bdr2); }
-    .room-card-header {
-      padding: var(--sp-4);
-      border-bottom: 1px solid var(--bdr1);
-      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3);
-    }
-    .room-card-name { font-size: 1rem; font-weight: 700; color: var(--tx1); }
-    .room-card-code { font-size: .75rem; color: var(--tx3); margin-top: 2px; }
-    .room-card-body { padding: var(--sp-4); flex: 1; }
-    .room-desc      { font-size: .8125rem; color: var(--tx2); line-height: 1.5; margin-bottom: var(--sp-3); }
-    .price-row {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-3);
-    }
-    .price-box {
-      background: var(--sur2); border: 1px solid var(--bdr0); border-radius: var(--r-sm);
-      padding: var(--sp-2); text-align: center;
-    }
-    .price-season { font-size: .65rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
-    .price-val    { font-size: .9rem; font-weight: 700; color: var(--tx1); }
-    .price-val.alta { color: var(--gold); }
-    .guest-info {
-      display: flex; align-items: center; gap: var(--sp-2);
-      background: var(--sur2); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3);
-      margin-bottom: var(--sp-3);
-    }
-    .guest-info-name  { font-size: .8125rem; font-weight: 600; color: var(--tx1); }
-    .guest-info-dates { font-size: .75rem; color: var(--tx3); }
-    .amenities-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
-    .amenity-tag {
-      font-size: .7rem; padding: 2px 7px;
-      background: var(--sur2); border: 1px solid var(--bdr0); border-radius: 9999px; color: var(--tx2);
-    }
-    .room-card-footer {
+    /* ── Ala groups ─────────────────────────────────────────── */
+    .ala-group { margin-bottom: var(--sp-5); }
+    .ala-hdr {
+      display: flex; align-items: center; gap: var(--sp-3);
       padding: var(--sp-3) var(--sp-4);
-      border-top: 1px solid var(--bdr1);
-      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+      background: var(--sur1); border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg); cursor: pointer; user-select: none;
+      transition: background .15s; margin-bottom: var(--sp-3);
     }
-    .cap-badge {
-      font-size: .75rem; color: var(--tx3);
-      display: flex; align-items: center; gap: 4px;
+    .ala-hdr:hover { background: var(--sur2); }
+    .ala-label { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .ala-meta  { font-size: .8125rem; color: var(--tx3); }
+    .ala-pills { display: flex; gap: var(--sp-2); margin-left: auto; align-items: center; }
+    .ala-pill  { display: flex; align-items: center; gap: 4px; font-size: .75rem; color: var(--tx3); }
+    .ala-dot   { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ala-dot.ok   { background: var(--ok); }
+    .ala-dot.err  { background: var(--err); }
+    .ala-dot.gold { background: var(--gold); }
+    .ala-chv   { color: var(--tx3); transition: transform .2s; margin-left: var(--sp-1); flex-shrink: 0; }
+    .ala-hdr.closed .ala-chv { transform: rotate(-90deg); }
+    .ala-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: var(--sp-3);
     }
+    .ala-cards.hidden { display: none; }
+
+    /* ── Room mini card ─────────────────────────────────────── */
+    .room-mc {
+      background: var(--sur1); border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg); overflow: hidden;
+      cursor: pointer; transition: border-color .18s, box-shadow .18s;
+      display: flex; flex-direction: column;
+    }
+    .room-mc:hover { border-color: var(--royal-l); box-shadow: 0 4px 16px rgba(99,102,241,.15); }
+    .room-mc-name {
+      padding: var(--sp-2) var(--sp-3) var(--sp-1);
+      font-size: .8125rem; font-weight: 700; color: var(--tx1);
+    }
+    .room-mc-svg { display: block; background: var(--sur2); }
+    .room-mc-foot {
+      padding: var(--sp-1) var(--sp-3) var(--sp-2);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .room-mc-st { font-size: .65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .room-mc-st.available   { color: var(--ok); }
+    .room-mc-st.blocked     { color: var(--err); }
+    .room-mc-st.maintenance { color: var(--gold); }
+    .room-mc-st.on_request  { color: var(--royal-l); }
+    .room-mc-st.unknown     { color: var(--tx3); }
+
+    /* ── Detail modal ───────────────────────────────────────── */
+    .det-sect { margin-bottom: var(--sp-4); }
+    .det-sect-title { font-size: .75rem; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: var(--sp-2); }
+    .det-guest {
+      background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-md);
+      padding: var(--sp-3); display: flex; align-items: center; gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+    .det-price-row { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-2); }
+    .det-price-box { background: var(--sur2); border: 1px solid var(--bdr0); border-radius: var(--r-sm); padding: var(--sp-2); text-align: center; }
 
     /* ── Avail strip ────────────────────────────────────────── */
     .avail-strip { display: flex; gap: 2px; margin-bottom: var(--sp-3); }
@@ -263,6 +269,9 @@
     .field-hint   { font-size: .75rem; color: var(--tx3); margin-top: var(--sp-1); }
     .price-grid   { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-3); }
     .price-grid-label { font-size: .75rem; color: var(--tx3); margin-bottom: 4px; font-weight: 500; }
+    .price-season { font-size: .65rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+    .price-val    { font-size: .9rem; font-weight: 700; color: var(--tx1); }
+    .price-val.alta { color: var(--gold); }
     .toggle-row   {
       display: flex; align-items: center; justify-content: space-between;
       padding: var(--sp-3); background: var(--sur2); border-radius: var(--r-md); border: 1px solid var(--bdr1);
@@ -299,6 +308,13 @@
     .delete-confirm-box svg { color: var(--err); margin-bottom: var(--sp-2); }
     .delete-confirm-text  { font-size: .9375rem; font-weight: 600; color: var(--tx1); margin-bottom: var(--sp-1); }
     .delete-confirm-sub   { font-size: .8125rem; color: var(--tx3); }
+
+    /* ── Amenities ──────────────────────────────────────────── */
+    .amenities-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+    .amenity-tag {
+      font-size: .7rem; padding: 2px 7px;
+      background: var(--sur2); border: 1px solid var(--bdr0); border-radius: 9999px; color: var(--tx2);
+    }
 
     /* ── Toast ──────────────────────────────────────────────── */
     .toast {
@@ -358,7 +374,7 @@
         Leads
       </a>
       <a class="nav-link active" href="rooms.html">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/><rect x="5" y="7" width="5" height="5" rx="1"/></svg>
         Quartos
       </a>
       <a class="nav-link" href="bookings.html">
@@ -435,7 +451,10 @@
       <!-- Stats -->
       <div class="stats-row" id="stats-row">
         <div class="stat-card">
-          <div class="stat-icon total"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div class="stat-icon total">
+            <!-- bed icon -->
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/><rect x="5" y="7" width="5" height="5" rx="1"/></svg>
+          </div>
           <div><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total de quartos</div></div>
         </div>
         <div class="stat-card">
@@ -466,26 +485,25 @@
           <option value="on_request">Sob consulta</option>
         </select>
         <select class="input" id="filter-type" style="width:auto;min-width:130px">
-          <option value="">Todos os tipos</option>
+          <option value="">Todas as alas</option>
           <option value="ALA_A">Ala A</option>
           <option value="ALA_B">Ala B</option>
-          <option value="ALA_C_CASAL">Ala C Casal</option>
-          <option value="ALA_C_GRUPO">Ala C Grupo</option>
+          <option value="ALA_C">Ala C</option>
         </select>
         <div class="view-toggle">
-          <button class="view-toggle-btn active" id="btn-view-table" title="Tabela">
+          <button class="view-toggle-btn" id="btn-view-table" title="Tabela">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
             Tabela
           </button>
-          <button class="view-toggle-btn" id="btn-view-grid" title="Grid">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            Grid
+          <button class="view-toggle-btn active" id="btn-view-grid" title="Alas">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/></svg>
+            Alas
           </button>
         </div>
       </div>
 
-      <!-- Table view -->
-      <div id="view-table">
+      <!-- Table view (hidden by default) -->
+      <div id="view-table" style="display:none">
         <div class="rooms-table-wrap">
           <table class="rooms-table">
             <thead>
@@ -507,14 +525,81 @@
         </div>
       </div>
 
-      <!-- Grid view -->
-      <div id="view-grid" style="display:none">
-        <div class="rooms-grid" id="rooms-grid">
-          <div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando...</div>
+      <!-- Grid / Ala groups view (default) -->
+      <div id="view-grid">
+        <div id="rooms-grid">
+          <div style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando quartos...</div>
         </div>
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- ── Modal: Detalhe do Quarto ───────────────────────────────── -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:2px">
+          <div class="modal-title" id="det-title">Quarto</div>
+          <span class="badge" id="det-badge">—</span>
+        </div>
+        <div class="modal-sub" id="det-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-detail">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- SVG mini layout -->
+      <div id="det-svg" style="border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--sp-4)"></div>
+
+      <!-- Guest info (shows only when occupied) -->
+      <div class="det-guest" id="det-guest" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--royal-l)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <div>
+          <div style="font-size:.875rem;font-weight:600;color:var(--tx1)" id="det-guest-name">—</div>
+          <div style="font-size:.75rem;color:var(--tx3)" id="det-guest-check">—</div>
+        </div>
+      </div>
+
+      <!-- Preços -->
+      <div class="det-sect">
+        <div class="det-sect-title">Preços por temporada</div>
+        <div class="det-price-row">
+          <div class="det-price-box">
+            <div class="price-season">Baixa</div>
+            <div class="price-val" id="det-price-baixa">—</div>
+          </div>
+          <div class="det-price-box">
+            <div class="price-season">Média</div>
+            <div class="price-val" id="det-price-media">—</div>
+          </div>
+          <div class="det-price-box">
+            <div class="price-season">Alta</div>
+            <div class="price-val alta" id="det-price-alta">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comodidades -->
+      <div class="det-sect">
+        <div class="det-sect-title">Comodidades</div>
+        <div class="amenities-list" id="det-amenities"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-detail">Fechar</button>
+      <button class="btn btn-secondary" id="det-btn-maint" data-code="" data-name="">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        Manutenção
+      </button>
+      <button class="btn btn-primary" id="det-btn-edit" data-code="">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
+        Editar
+      </button>
+    </div>
   </div>
 </div>
 
@@ -534,7 +619,7 @@
       <input type="hidden" id="edit-code">
       <div class="field-group">
         <label class="field-label" for="edit-name">Nome do quarto</label>
-        <input class="input" type="text" id="edit-name" placeholder="Ex: Ala A — Chalé">
+        <input class="input" type="text" id="edit-name" placeholder="Ex: A1">
       </div>
       <div class="field-group">
         <label class="field-label" for="edit-desc">Descrição</label>
@@ -627,8 +712,6 @@
         <label class="field-label" for="maint-estimated">Previsão de conclusão</label>
         <input class="input" type="date" id="maint-estimated">
       </div>
-
-      <!-- Histórico -->
       <div style="margin-top:var(--sp-5)">
         <div style="font-size:.875rem;font-weight:600;color:var(--tx2);margin-bottom:var(--sp-3);display:flex;align-items:center;gap:var(--sp-2)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -726,9 +809,9 @@
 
   // ── State ────────────────────────────────────────────────────
   let roomsCache  = [];
-  let currentView = 'table';
+  let currentView = 'grid';
   let pendingDeleteCode = null;
-  let maintHistory = {};  // code → [{type, note, priority, date, status}]
+  let maintHistory = {};
 
   // ── Date label ───────────────────────────────────────────────
   const today = new Date();
@@ -763,7 +846,7 @@
       document.getElementById('rooms-tbody').innerHTML =
         '<tr><td colspan="8" style="text-align:center;padding:var(--sp-8);color:var(--tx3)">Carregando quartos...</td></tr>';
       document.getElementById('rooms-grid').innerHTML =
-        '<div class="card" style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando...</div>';
+        '<div style="padding:var(--sp-8);text-align:center;color:var(--tx3)">Carregando...</div>';
     }
   }
 
@@ -795,7 +878,8 @@
     const filtered = roomsCache.filter(r => {
       const matchQ    = !q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q);
       const matchSt   = !status || r.today_status === status;
-      const matchType = !type || r.code === type;
+      const matchType = !type || r.code === type ||
+        (type === 'ALA_C' && (r.code === 'ALA_C_CASAL' || r.code === 'ALA_C_GRUPO'));
       return matchQ && matchSt && matchType;
     });
 
@@ -821,7 +905,7 @@
   function renderTable(rooms) {
     const tbody = document.getElementById('rooms-tbody');
     if (!rooms.length) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><p>Nenhum quarto encontrado.</p></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/></svg><p>Nenhum quarto encontrado.</p></div></td></tr>`;
       return;
     }
 
@@ -859,81 +943,160 @@
       </tr>`;
     }).join('');
 
-    // bind actions
     tbody.querySelectorAll('[data-action]').forEach(btn => bindAction(btn));
-
-    // load availability strips async
     rooms.forEach(r => loadGuestInfo(r.code));
   }
 
-  // ── Grid render ──────────────────────────────────────────────
+  // ── SVG room plan ────────────────────────────────────────────
+  function roomSVG(status, height) {
+    const h = height || 80;
+    const c = {
+      available:   '#22c55e',
+      blocked:     '#ef4444',
+      maintenance: '#eab308',
+      on_request:  '#6366f1',
+      partial:     '#eab308',
+    }[status] || '#6b7280';
+
+    return `<svg viewBox="0 0 120 88" width="100%" style="display:block;height:${h}px">
+      <rect x="0" y="0" width="120" height="88" fill="rgba(0,0,0,.18)"/>
+      <rect x="3" y="3" width="114" height="82" rx="4" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+      <!-- bed frame -->
+      <rect x="13" y="22" width="82" height="52" rx="4" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.14)" stroke-width="1"/>
+      <!-- headboard -->
+      <rect x="13" y="17" width="82" height="10" rx="3" fill="rgba(255,255,255,.12)"/>
+      <!-- pillow L -->
+      <rect x="18" y="27" width="32" height="19" rx="3" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.1)" stroke-width=".75"/>
+      <!-- pillow R -->
+      <rect x="57" y="27" width="32" height="19" rx="3" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.1)" stroke-width=".75"/>
+      <!-- blanket -->
+      <rect x="13" y="49" width="82" height="23" rx="2" fill="rgba(99,102,241,.28)"/>
+      <!-- comoda -->
+      <rect x="100" y="26" width="16" height="36" rx="2" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.1)" stroke-width=".75"/>
+      <line x1="100" y1="44" x2="116" y2="44" stroke="rgba(255,255,255,.08)" stroke-width=".75"/>
+      <!-- lamp glow -->
+      <circle cx="108" cy="21" r="10" fill="${c}" opacity=".14"/>
+      <!-- lamp bulb -->
+      <circle cx="108" cy="21" r="4.5" fill="${c}" opacity=".92"/>
+    </svg>`;
+  }
+
+  // ── Ala groups render (grid view) ────────────────────────────
   function renderGrid(rooms) {
-    const grid = document.getElementById('rooms-grid');
+    const container = document.getElementById('rooms-grid');
+    container.style.display = 'block';
+
     if (!rooms.length) {
-      grid.innerHTML = `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h5l2 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><p>Nenhum quarto encontrado.</p></div>`;
+      container.innerHTML = `<div class="empty-state"><p>Nenhum quarto encontrado.</p></div>`;
       return;
     }
 
-    grid.innerHTML = rooms.map(r => {
-      const s = r.today_status || 'unknown';
-      const isGrupo = r.code === 'ALA_C_GRUPO';
-      const amenities = (r.amenities || []).slice(0, 5);
-      const inactive = r.active === false ? ' style="opacity:.55"' : '';
+    const alas = [
+      { id: 'A', label: 'Ala A', rooms: rooms.filter(r => r.code === 'ALA_A') },
+      { id: 'B', label: 'Ala B', rooms: rooms.filter(r => r.code === 'ALA_B') },
+      { id: 'C', label: 'Ala C', rooms: rooms.filter(r => r.code === 'ALA_C_CASAL' || r.code === 'ALA_C_GRUPO') },
+    ].filter(a => a.rooms.length > 0);
 
-      return `<div class="room-card"${inactive}>
-        <div class="room-card-header">
-          <div>
-            <div class="room-card-name">${esc(r.name)}</div>
-            <div class="room-card-code">${esc(r.code)} · ${typeLabel(r.code)}</div>
+    if (!alas.length) {
+      container.innerHTML = `<div class="empty-state"><p>Nenhum quarto encontrado.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = alas.map(ala => {
+      const avail = ala.rooms.filter(r => r.today_status === 'available').length;
+      const occ   = ala.rooms.filter(r => r.today_status === 'blocked').length;
+      const maint = ala.rooms.filter(r => r.today_status === 'maintenance').length;
+
+      return `<div class="ala-group">
+        <div class="ala-hdr" data-toggle="ala-cards-${ala.id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--royal-l)" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/><rect x="5" y="7" width="5" height="5" rx="1"/></svg>
+          <span class="ala-label">${ala.label}</span>
+          <span class="ala-meta">${ala.rooms.length} quarto${ala.rooms.length > 1 ? 's' : ''}</span>
+          <div class="ala-pills">
+            ${avail ? `<span class="ala-pill"><span class="ala-dot ok"></span>${avail} livre${avail > 1 ? 's' : ''}</span>` : ''}
+            ${occ   ? `<span class="ala-pill"><span class="ala-dot err"></span>${occ} ocupado${occ > 1 ? 's' : ''}</span>` : ''}
+            ${maint ? `<span class="ala-pill"><span class="ala-dot gold"></span>${maint} manutenção</span>` : ''}
           </div>
-          <span class="badge ${s}">${statusLabel(s)}</span>
+          <svg class="ala-chv" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div class="room-card-body">
-          <p class="room-desc">${esc(r.description)}</p>
-          ${isGrupo
-            ? `<div style="font-size:.8125rem;color:var(--royal-l);margin-bottom:var(--sp-3)">Cotação sob consulta — atendimento pela equipe</div>`
-            : `<div class="price-row">
-                <div class="price-box"><div class="price-season">Baixa</div><div class="price-val">${fmtBRL(r.base_price_baixa)}</div></div>
-                <div class="price-box"><div class="price-season">Média</div><div class="price-val">${fmtBRL(r.base_price_media)}</div></div>
-                <div class="price-box"><div class="price-season">Alta</div><div class="price-val alta">${fmtBRL(r.base_price_alta)}</div></div>
-              </div>`}
-          <div class="avail-strip" id="strip-${r.code}">
-            ${Array(14).fill('<div class="avail-cell"></div>').join('')}
-          </div>
-          <div class="guest-info" id="grid-guest-${r.code}" style="display:none">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--royal-l)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            <div>
-              <div class="guest-info-name" id="grid-guest-name-${r.code}"></div>
-              <div class="guest-info-dates" id="grid-guest-dates-${r.code}"></div>
-            </div>
-          </div>
-          <div class="amenities-list">
-            ${amenities.map(a => `<span class="amenity-tag">${esc(a)}</span>`).join('')}
-            ${r.amenities && r.amenities.length > 5 ? `<span class="amenity-tag">+${r.amenities.length - 5}</span>` : ''}
-          </div>
-        </div>
-        <div class="room-card-footer">
-          <span class="cap-badge">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            ${isGrupo ? 'Grupos grandes' : `Máx. ${r.max_guests} hóspedes`}
-          </span>
-          <div style="display:flex;gap:var(--sp-1)">
-            <button class="action-btn edit" data-action="edit" data-code="${esc(r.code)}" title="Editar">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>
-            </button>
-            <button class="action-btn maint" data-action="maint" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Manutenção">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
-            </button>
-            <button class="action-btn delete" data-action="delete" data-code="${esc(r.code)}" data-name="${esc(r.name)}" title="Excluir">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-            </button>
-          </div>
+        <div class="ala-cards" id="ala-cards-${ala.id}">
+          ${ala.rooms.map(r => {
+            const s = r.today_status || 'unknown';
+            const inactive = r.active === false ? ' style="opacity:.55"' : '';
+            return `<div class="room-mc" data-code="${esc(r.code)}" data-name="${esc(r.name)}"${inactive}>
+              <div class="room-mc-name">${esc(r.name)}</div>
+              <div class="room-mc-svg">${roomSVG(s)}</div>
+              <div class="room-mc-foot">
+                <span class="room-mc-st ${s}">${statusLabel(s)}</span>
+                <span style="font-size:.65rem;color:var(--tx3)">${r.max_guests ? r.max_guests + 'px' : ''}</span>
+              </div>
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
     }).join('');
 
-    grid.querySelectorAll('[data-action]').forEach(btn => bindAction(btn));
-    rooms.forEach(r => loadStripAndGuest(r.code));
+    // Toggle ala sections
+    container.querySelectorAll('[data-toggle]').forEach(hdr => {
+      hdr.addEventListener('click', () => {
+        const targetId = hdr.dataset.toggle;
+        const cards = document.getElementById(targetId);
+        hdr.classList.toggle('closed');
+        cards.classList.toggle('hidden');
+      });
+    });
+
+    // Click card → detail modal
+    container.querySelectorAll('.room-mc').forEach(card => {
+      card.addEventListener('click', () => openDetailModal(card.dataset.code));
+    });
+  }
+
+  // ── Detail modal ─────────────────────────────────────────────
+  function openDetailModal(code) {
+    const room = roomsCache.find(r => r.code === code);
+    if (!room) return;
+    const s = room.today_status || 'unknown';
+    const isGrupo = room.code === 'ALA_C_GRUPO';
+
+    document.getElementById('det-title').textContent = room.name;
+    document.getElementById('det-sub').textContent   = `${room.code} · ${typeLabel(room.code)}`;
+
+    const badge = document.getElementById('det-badge');
+    badge.className   = `badge ${s}`;
+    badge.textContent = statusLabel(s);
+
+    document.getElementById('det-svg').innerHTML = roomSVG(s, 120);
+
+    // Prices
+    document.getElementById('det-price-baixa').textContent = isGrupo ? '—' : fmtBRL(room.base_price_baixa);
+    document.getElementById('det-price-media').textContent = isGrupo ? '—' : fmtBRL(room.base_price_media);
+    document.getElementById('det-price-alta').textContent  = isGrupo ? '—' : fmtBRL(room.base_price_alta);
+
+    // Guest info
+    const guestEl   = document.getElementById('det-guest');
+    const guestCell = document.getElementById(`guest-${code}`);
+    const checkCell = document.getElementById(`checkout-${code}`);
+    if (s === 'blocked' || s === 'partial') {
+      guestEl.style.display = '';
+      document.getElementById('det-guest-name').textContent  = guestCell ? (guestCell.textContent || '—') : '—';
+      document.getElementById('det-guest-check').textContent = `Checkout: ${checkCell ? (checkCell.textContent || '—') : '—'}`;
+    } else {
+      guestEl.style.display = 'none';
+    }
+
+    // Amenities
+    const ams = room.amenities || [];
+    document.getElementById('det-amenities').innerHTML = ams.length
+      ? ams.map(a => `<span class="amenity-tag">${esc(a)}</span>`).join('')
+      : `<span style="color:var(--tx3);font-size:.8125rem">Nenhuma cadastrada</span>`;
+
+    // Wire action buttons
+    document.getElementById('det-btn-edit').dataset.code  = code;
+    document.getElementById('det-btn-maint').dataset.code = code;
+    document.getElementById('det-btn-maint').dataset.name = room.name;
+
+    openModal('modal-detail');
   }
 
   // ── Action binder ────────────────────────────────────────────
@@ -946,29 +1109,8 @@
     });
   }
 
-  // ── Load availability strip ───────────────────────────────────
-  async function loadStripAndGuest(code) {
-    const res = await apiFetch(`/api/rooms/${code}`);
-    if (!res || !res.success) return;
-
-    // Strip
-    const dates = res.availability_30d || {};
-    const stripEl = document.getElementById(`strip-${code}`);
-    if (stripEl) {
-      const d = new Date();
-      const cells = [];
-      for (let i = 0; i < 14; i++) {
-        const key = d.toISOString().slice(0, 10);
-        cells.push(dates[key] || 'unknown');
-        d.setDate(d.getDate() + 1);
-      }
-      stripEl.innerHTML = cells.map(s => `<div class="avail-cell ${s}" title="${s}"></div>`).join('');
-    }
-  }
-
-  // Load guest from reservations API (graceful — shows — if unavailable)
+  // ── Load guest info (table view) ─────────────────────────────
   async function loadGuestInfo(code) {
-    // Attempt to fetch current reservation for this room
     try {
       const res = await apiFetch(`/api/reservations?room_code=${encodeURIComponent(code)}&status=confirmed&limit=1`);
       if (!res || !res.success || !res.reservations || !res.reservations.length) return;
@@ -976,21 +1118,10 @@
       const guestName = r.guest_name || r.lead_name || '—';
       const checkout  = r.checkout_date ? fmtDate(r.checkout_date) : '—';
 
-      // Table cells
       const guestCell    = document.getElementById(`guest-${code}`);
       const checkoutCell = document.getElementById(`checkout-${code}`);
       if (guestCell)    guestCell.innerHTML    = `<span style="color:var(--tx1);font-weight:500">${esc(guestName)}</span>`;
       if (checkoutCell) checkoutCell.textContent = checkout;
-
-      // Grid card guest info
-      const gridGuest = document.getElementById(`grid-guest-${code}`);
-      const gridName  = document.getElementById(`grid-guest-name-${code}`);
-      const gridDates = document.getElementById(`grid-guest-dates-${code}`);
-      if (gridGuest && gridName) {
-        gridName.textContent  = guestName;
-        if (gridDates) gridDates.textContent = `Checkout: ${checkout}`;
-        gridGuest.style.display = '';
-      }
     } catch (_) {}
   }
 
@@ -1096,7 +1227,6 @@
     if (!maintHistory[code]) maintHistory[code] = [];
     maintHistory[code].push(entry);
 
-    // If critical, mark room as blocked
     if (priority === 'critical') {
       const idx = roomsCache.findIndex(r => r.code === code);
       if (idx >= 0) roomsCache[idx].today_status = 'maintenance';
@@ -1147,6 +1277,17 @@
   }
   function setupModalActions() {
     document.getElementById('btn-refresh').addEventListener('click', loadRooms);
+
+    document.getElementById('det-btn-edit').addEventListener('click', () => {
+      const code = document.getElementById('det-btn-edit').dataset.code;
+      closeModal('modal-detail');
+      openEditModal(code);
+    });
+    document.getElementById('det-btn-maint').addEventListener('click', () => {
+      const btn = document.getElementById('det-btn-maint');
+      closeModal('modal-detail');
+      openMaintModal(btn.dataset.code, btn.dataset.name);
+    });
   }
 
   // ── Toast ────────────────────────────────────────────────────
