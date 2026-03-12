@@ -194,7 +194,20 @@ app.use('/api/luna-config',                require('./routes/luna-config'));
 app.use('/api/rooms',                      require('./routes/rooms'));
 app.use('/api/financial',                  require('./routes/financial'));
 app.use('/api/vouchers',                   require('./routes/vouchers'));
+app.use('/api/competitor-prices',          require('./routes/competitor-prices'));
 app.use('/auth',                           require('./routes/auth'));
+
+// ─── Cron: scraping diário de concorrentes (Vercel Cron → 03h UTC) ──────────
+app.get('/api/cron/competitor-prices', async (req, res) => {
+  const { runDailyScrape } = require('./services/competitor/scraper');
+  try {
+    const report = await runDailyScrape();
+    return res.json({ success: true, ...report });
+  } catch (err) {
+    console.error('[cron/competitor-prices]', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ─── WhatsApp Webhook (escuta mensagens do Meta) ────────────────────────────────
 app.use('/webhook', require('./services/whatsapp/webhook'));

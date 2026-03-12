@@ -10,6 +10,9 @@
     { "src": "/api/(.*)", "dest": "/api/crm.js" },
     { "src": "/(.*)",     "dest": "/api/index.js" }
   ],
+  "crons": [
+    { "path": "/api/cron/competitor-prices", "schedule": "0 3 * * *" }
+  ],
   "env": {
     "NODE_ENV": "production"
   }

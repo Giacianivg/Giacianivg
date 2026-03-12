@@ -177,6 +177,11 @@
     .price-cell.p-media { color: var(--royal-l); }
     .price-cell.p-baixa { color: var(--tx3); }
 
+    /* Competitor overlay cells */
+    .price-cell.p-expensive { color: #f87171; font-weight: 700; }
+    .price-cell.p-cheap     { color: #4ade80; font-weight: 700; }
+    .price-cell.p-neutral   { color: var(--tx3); }
+
     /* ══════════════════════════════
        WEEKLY DETAIL VIEW
     ══════════════════════════════ */
@@ -313,6 +318,7 @@
         <div class="view-toggle">
           <button class="view-btn active" id="btn-month">Mês</button>
           <button class="view-btn" id="btn-week">Semana</button>
+          <button class="view-btn" id="btn-competitors">💰 Concorrentes</button>
         </div>
       </div>
     </header>
@@ -398,11 +404,13 @@
 
   /* ── State ───────────────────────────────────────────────────────────── */
   const TODAY = new Date().toISOString().slice(0, 10);
-  let viewMode   = 'month';
-  let curYear    = new Date().getFullYear();
-  let curMonth   = new Date().getMonth();
-  let curWeekStart = getMonday(TODAY);
-  let resvCache  = {};  // key → reservations array
+  let viewMode        = 'month';
+  let curYear         = new Date().getFullYear();
+  let curMonth        = new Date().getMonth();
+  let curWeekStart    = getMonday(TODAY);
+  let resvCache       = {};  // key → reservations array
+  let competitorMode  = false;
+  let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
 
   /* ── Constants ───────────────────────────────────────────────────────── */
   const ROOMS = [
@@ -483,6 +491,31 @@
     return data;
   }
 
+  /* ── Competitor data ─────────────────────────────────────────────────── */
+  async function fetchCompetitorMonthData(from, to) {
+    const cacheKey = `${from}_${to}`;
+    if (competitorCache[cacheKey]) return competitorCache[cacheKey];
+    const resp = await apiFetch(`/api/competitor-prices?from=${from}&to=${to}&room_type=casal`);
+    if (!resp?.prices) return {};
+    const byDate = {};
+    resp.prices.forEach(p => {
+      if (!p.availability || !p.price) return;
+      if (!byDate[p.date]) byDate[p.date] = [];
+      byDate[p.date].push(p.price);
+    });
+    const result = {};
+    Object.entries(byDate).forEach(([date, prices]) => {
+      result[date] = {
+        avg:   Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+        min:   Math.min(...prices),
+        max:   Math.max(...prices),
+        count: prices.length,
+      };
+    });
+    competitorCache[cacheKey] = result;
+    return result;
+  }
+
   /* ── Navigation ──────────────────────────────────────────────────────── */
   function render() {
     closePopover();
@@ -501,6 +534,12 @@
     document.getElementById('btn-week').classList.add('active');
     document.getElementById('btn-month').classList.remove('active');
     render();
+  });
+  document.getElementById('btn-competitors').addEventListener('click', () => {
+    competitorMode = !competitorMode;
+    const btn = document.getElementById('btn-competitors');
+    btn.classList.toggle('active', competitorMode);
+    if (viewMode === 'month') renderMonth();
   });
   document.getElementById('btn-prev').addEventListener('click', () => {
     if (viewMode === 'month') {
@@ -535,6 +574,9 @@
 
     const reservations = await fetchReservations(from, to);
     if (!reservations) return;
+
+    let compData = null;
+    if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
 
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const minW = 88 + daysInMonth * 34;
@@ -633,6 +675,41 @@
       });
       html += '</div></div>';
     });
+
+    /* Competitor pricing section (visible only when competitorMode=true) */
+    if (competitorMode && compData) {
+      html += '<div class="month-section">Concorrentes — Média regional (quarto casal)</div>';
+      html += '<div class="month-price-label">Média concorrentes</div>';
+      html += '<div class="month-price-canvas" style="min-height:28px"><div class="price-cells">';
+      days.forEach(d => {
+        const ds   = isoDate(curYear, curMonth, d);
+        const comp = compData[ds];
+        const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
+        if (!comp) {
+          html += '<div class="price-cell p-neutral" title="Sem dados">—</div>';
+          return;
+        }
+        const diff = own && comp.avg ? Math.round((own - comp.avg) / comp.avg * 100) : 0;
+        const cls  = diff > 15 ? 'p-expensive' : diff < -15 ? 'p-cheap' : 'p-neutral';
+        const sign = diff > 0 ? '+' : '';
+        html += `<div class="price-cell ${cls}" title="Nossa: R$${own} · Concorr: R$${comp.avg} · ${sign}${diff}%">R$${comp.avg}</div>`;
+      });
+      html += '</div></div>';
+      /* Diff % row */
+      html += '<div class="month-price-label" style="font-size:.6rem;color:var(--tx3)">vs. nosso preço</div>';
+      html += '<div class="month-price-canvas" style="min-height:24px"><div class="price-cells">';
+      days.forEach(d => {
+        const ds   = isoDate(curYear, curMonth, d);
+        const comp = compData[ds];
+        const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
+        if (!comp || !comp.avg || !own) { html += '<div class="price-cell p-neutral"></div>'; return; }
+        const diff = Math.round((own - comp.avg) / comp.avg * 100);
+        const cls  = diff > 15 ? 'p-expensive' : diff < -15 ? 'p-cheap' : 'p-neutral';
+        const sign = diff > 0 ? '+' : '';
+        html += `<div class="price-cell ${cls}" style="font-size:.6rem">${sign}${diff}%</div>`;
+      });
+      html += '</div></div>';
+    }
 
     html += '</div>'; /* month-grid */
     cont.innerHTML = html;
