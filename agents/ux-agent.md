@@ -1,4 +1,4 @@
-﻿# Don — UX Agent
+# Don — UX Agent
 **Squad:** Product Squad (CPO)
 **Ativacao:** @ux
 **Referencia:** Don Norman
