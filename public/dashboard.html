@@ -181,19 +181,22 @@
   ]);
 
   // KPI row
-  const pipeline = pipelineRes.status === 'fulfilled' ? pipelineRes.value : null;
-  const leads    = leadsRes.status === 'fulfilled' ? leadsRes.value : null;
-  const funnel   = funnelRes.status === 'fulfilled' ? funnelRes.value : null;
+  // API shapes: funnel → { funnel: {...} }  |  pipeline → { revenue: {...} }
+  const pipelineRaw = pipelineRes.status === 'fulfilled' ? pipelineRes.value : null;
+  const pipeline    = pipelineRaw?.revenue ?? pipelineRaw;
+  const leads       = leadsRes.status === 'fulfilled' ? leadsRes.value : null;
+  const funnelRaw   = funnelRes.status === 'fulfilled' ? funnelRes.value : null;
+  const funnel      = funnelRaw?.funnel ?? funnelRaw;
 
-  const totalLeads    = leads?.total ?? leads?.leads?.length ?? '—';
-  const pipelineVal   = pipeline?.total_pipeline ?? pipeline?.pipeline ?? '—';
-  const convRate      = funnel?.conversion_rate ?? funnel?.conversionRate ?? '—';
-  const confirmedRes  = pipeline?.confirmed_count ?? pipeline?.confirmed ?? '—';
+  const totalLeads  = leads?.total ?? leads?.leads?.length ?? '—';
+  const pipelineVal = pipeline?.total_pipeline ?? '—';
+  const convRate    = funnel?.conversion_rate ?? '—';
+  const leadsCount  = pipeline?.leads_count ?? '—';
 
   document.getElementById('kpi-row').innerHTML = `
     <div class="metric-card">
       <div class="metric-label">Leads Ativos</div>
-      <div class="metric-value">${typeof totalLeads === 'number' ? totalLeads : totalLeads}</div>
+      <div class="metric-value">${totalLeads}</div>
       <div class="metric-sub">Total no funil</div>
     </div>
     <div class="metric-card">
@@ -203,18 +206,18 @@
     </div>
     <div class="metric-card">
       <div class="metric-label">Taxa de Conversão</div>
-      <div class="metric-value">${typeof convRate === 'number' ? convRate.toFixed(1) + '%' : '—'}</div>
+      <div class="metric-value">${typeof convRate === 'number' ? (convRate * 100).toFixed(1) + '%' : '—'}</div>
       <div class="metric-sub">Lead → Reserva</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">Reservas Confirmadas</div>
-      <div class="metric-value t-ok">${confirmedRes}</div>
-      <div class="metric-sub">Este mês</div>
+      <div class="metric-label">Leads em Pipeline</div>
+      <div class="metric-value t-ok">${leadsCount}</div>
+      <div class="metric-sub">Conversas ativas</div>
     </div>`;
 
   // Funnel
   const funnelPanel = document.getElementById('funnel-panel');
-  const stages = funnel?.stages ?? funnel?.funnel ?? [];
+  const stages = funnel?.stages ?? [];
   if (stages.length) {
     const maxCount = Math.max(...stages.map(s => s.count || 0), 1);
     funnelPanel.innerHTML = stages.map(s => {
@@ -239,9 +242,9 @@
     document.getElementById('alert-count').style.display = '';
     document.getElementById('alert-count').textContent = alertList.length;
     alertsPanel.innerHTML = alertList.slice(0,5).map(a => `
-      <div class="alert-strip ${a.severity || 'medium'}" style="margin:var(--sp-2) var(--sp-4);border-radius:var(--r-md)">
-        <span>${DS.alertIcon(a.severity)}</span>
-        <span>${DS.esc(a.message || a.title || '')}</span>
+      <div class="alert-strip ${a.alert_type || a.severity || 'medium'}" style="margin:var(--sp-2) var(--sp-4);border-radius:var(--r-md)">
+        <span>${DS.alertIcon(a.alert_type || a.severity)}</span>
+        <span>${DS.esc(a.alert_message || a.message || a.title || '')}</span>
       </div>`).join('');
   } else {
     DS.emptyState(alertsPanel, 'Sem alertas', 'Tudo certo por enquanto.', '');

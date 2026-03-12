@@ -82,6 +82,63 @@ router.get('/', async (req, res) => {
   return ok(res, { follow_ups: data || [], count: (data || []).length });
 });
 
+// POST /api/follow-ups/reactivation
+// Schedules the full D+1/D+7/D+30/D+60/D+90 reactivation sequence for a guest
+// Body: { lead_id, phone, checkout_date (ISO or DD/MM/YYYY) }
+router.post('/reactivation', async (req, res) => {
+  const { lead_id, phone, checkout_date } = req.body || {};
+
+  if (!lead_id || !phone) {
+    return fail(res, 'missing_fields', 'lead_id and phone are required', 400);
+  }
+
+  // Parse checkout_date — accepts ISO string or DD/MM/YYYY
+  let base;
+  if (checkout_date) {
+    const dmy = String(checkout_date).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dmy) {
+      base = new Date(Date.UTC(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1])));
+    } else {
+      base = new Date(checkout_date);
+    }
+  } else {
+    base = new Date();
+  }
+
+  if (isNaN(base.getTime())) {
+    return fail(res, 'invalid_date', 'checkout_date is invalid', 400);
+  }
+
+  const addDays = (d, n) => new Date(d.getTime() + n * 24 * 60 * 60 * 1000);
+
+  const sequence = [
+    { days: 1,  template: 'reactivation_d1',  type: 'reactivation' },
+    { days: 7,  template: 'reactivation_d7',  type: 'reactivation' },
+    { days: 30, template: 'reactivation_d30', type: 'reactivation' },
+    { days: 60, template: 'reactivation_d60', type: 'reactivation' },
+    { days: 90, template: 'reactivation_d90', type: 'reactivation' },
+  ];
+
+  const rows = sequence.map(({ days, template, type }) => ({
+    lead_id,
+    phone,
+    follow_up_type: type,
+    template_name: template,
+    scheduled_for: addDays(base, days).toISOString(),
+    status: 'pending',
+    metadata: { checkout_date: base.toISOString(), day_offset: days },
+  }));
+
+  const { data, error } = await supabaseAdmin
+    .from('scheduled_follow_ups')
+    .insert(rows)
+    .select('id, template_name, scheduled_for');
+
+  if (error) return serverError(res, error);
+
+  return ok(res, { follow_ups: data, count: data.length });
+});
+
 // DELETE /api/follow-ups/:id/cancel
 // Cancels a single pending follow-up
 router.delete('/:id/cancel', async (req, res) => {

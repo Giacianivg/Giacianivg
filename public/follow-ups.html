@@ -64,15 +64,66 @@
 <div id="toast-container"></div>
 <script src="design-system/u.js"></script>
 <script>
+// Labels PT-BR por tipo de follow-up
 const FU_LABELS = {
-  quote_followup: 'Follow-up de cotação',
-  no_response:    'Sem resposta',
-  post_stay:      'Pós-estadia',
-  reengagement:   'Reengajamento',
-  manual:         'Manual',
+  quote_followup:    'Cotação',
+  no_response:       'Sem resposta',
+  post_stay:         'Pós-estadia',
+  reengagement:      'Reengajamento',
+  reactivation:      'Reativação',
+  reactivation_d1:   'Reativação D+1',
+  reactivation_d7:   'Reativação D+7',
+  reactivation_d30:  'Reativação D+30',
+  reactivation_d60:  'Reativação D+60',
+  reactivation_d90:  'Reativação D+90',
+  manual:            'Manual',
 };
 
-function renderGroup(title, list, badgeClass) {
+// Mapeia status para badge CSS
+const STATUS_BADGE = {
+  pending:   'badge-pending',
+  sent:      'badge-sent',
+  responded: 'badge-ok',
+  converted: 'badge-hot',
+  cancelled: 'badge-muted',
+  failed:    'badge-err',
+};
+
+// Extrai nome do hóspede respeitando a shape real da API
+function guestName(f) {
+  return f.lead_name || f.leads?.name || f.guest_name || f.guestName || null;
+}
+
+function renderTable(list, showCancel) {
+  return `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th>Hóspede</th><th>Tipo</th><th>Agendado para</th><th>Status</th><th>Criado em</th>
+      ${showCancel ? '<th></th>' : ''}
+    </tr></thead>
+    <tbody>${list.map(f => {
+      const name = guestName(f);
+      const fuType = f.follow_up_type || f.type || '';
+      return `<tr>
+        <td><div class="row" style="gap:var(--sp-2)">
+          <div class="avatar avatar-sm">${DS.initials(name)}</div>
+          <div>
+            <div>${DS.esc(name || f.phone || '—')}</div>
+            <div class="t-3" style="font-size:.75rem">${DS.esc(f.phone || '')}</div>
+          </div>
+        </div></td>
+        <td><span class="badge badge-sent">${DS.esc(FU_LABELS[fuType] || fuType || '—')}</span></td>
+        <td class="td-mono">${DS.datetime(f.scheduled_for || f.scheduled_at)}</td>
+        <td><span class="badge ${STATUS_BADGE[f.status] || 'badge-muted'}">${DS.esc(f.status || '—')}</span></td>
+        <td class="td-muted">${DS.rel(f.created_at)}</td>
+        ${showCancel ? `<td class="td-action">
+          <button class="btn btn-danger btn-sm" onclick="cancelFU('${DS.esc(f.id)}', this)">Cancelar</button>
+        </td>` : ''}
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderGroup(title, list, badgeClass, showCancel) {
   if (!list.length) return '';
   return `<div style="margin-bottom:var(--sp-6)">
     <div class="row-between" style="margin-bottom:var(--sp-3)">
@@ -80,26 +131,7 @@ function renderGroup(title, list, badgeClass) {
       <span class="badge ${badgeClass}">${list.length}</span>
     </div>
     <div class="panel">
-      <div class="panel-body-flush">
-        <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Hóspede</th><th>Tipo</th><th>Agendado para</th><th>Criado em</th><th></th></tr></thead>
-          <tbody>${list.map(f => `<tr>
-            <td><div class="row" style="gap:var(--sp-2)">
-              <div class="avatar avatar-sm">${DS.initials(f.guest_name || f.guestName)}</div>
-              <div>
-                <div>${DS.esc(f.guest_name || f.guestName || f.phone || '—')}</div>
-                <div class="t-3" style="font-size:.75rem">${DS.esc(f.phone || '')}</div>
-              </div>
-            </div></td>
-            <td><span class="badge badge-sent">${DS.esc(FU_LABELS[f.type || f.follow_up_type] || f.type || '—')}</span></td>
-            <td class="td-mono">${DS.datetime(f.scheduled_at || f.scheduledAt)}</td>
-            <td class="td-muted">${DS.rel(f.created_at)}</td>
-            <td class="td-action">
-              <button class="btn btn-danger btn-sm" onclick="cancelFU('${DS.esc(f.id)}', this)">Cancelar</button>
-            </td>
-          </tr>`).join('')}</tbody>
-        </table></div>
-      </div>
+      <div class="panel-body-flush">${renderTable(list, showCancel)}</div>
     </div>
   </div>`;
 }
@@ -117,6 +149,54 @@ async function cancelFU(id, btn) {
   }
 }
 
+// Renderiza abas de status
+function renderTabs(all) {
+  const groups = {
+    pending:   all.filter(f => f.status === 'pending'),
+    sent:      all.filter(f => f.status === 'sent'),
+    responded: all.filter(f => f.status === 'responded'),
+    converted: all.filter(f => f.status === 'converted'),
+  };
+
+  const tabs = [
+    { key: 'pending',   label: 'Pendentes',   badge: 'badge-pending' },
+    { key: 'sent',      label: 'Enviados',    badge: 'badge-sent' },
+    { key: 'responded', label: 'Respondidos', badge: 'badge-ok' },
+    { key: 'converted', label: 'Convertidos', badge: 'badge-hot' },
+  ].filter(t => groups[t.key].length > 0);
+
+  if (!tabs.length) return '';
+
+  const tabBar = `<div class="row" style="gap:var(--sp-2);margin-bottom:var(--sp-5);flex-wrap:wrap">
+    ${tabs.map((t, i) => `
+      <button class="btn ${i === 0 ? 'btn-primary' : 'btn-ghost'} btn-sm fu-tab" data-tab="${t.key}">
+        ${t.label} <span class="badge ${t.badge}" style="margin-left:4px">${groups[t.key].length}</span>
+      </button>`).join('')}
+  </div>`;
+
+  const panels = tabs.map((t, i) => {
+    const now = Date.now();
+    const overdue  = groups[t.key].filter(f => t.key === 'pending' && new Date(f.scheduled_for || f.scheduled_at).getTime() < now);
+    const upcoming = groups[t.key].filter(f => !(t.key === 'pending' && new Date(f.scheduled_for || f.scheduled_at).getTime() < now));
+    const showCancel = t.key === 'pending';
+
+    let content = '';
+    if (t.key === 'pending') {
+      content = renderGroup('Vencidos', overdue, 'badge-hot', true) +
+                renderGroup('Próximos', upcoming, 'badge-pending', true);
+      if (!overdue.length && !upcoming.length) content = `<p class="t-3" style="padding:var(--sp-4)">Nenhum follow-up pendente.</p>`;
+    } else {
+      content = groups[t.key].length
+        ? `<div class="panel"><div class="panel-body-flush">${renderTable(groups[t.key], false)}</div></div>`
+        : `<p class="t-3" style="padding:var(--sp-4)">Nenhum registro.</p>`;
+    }
+
+    return `<div class="fu-panel" data-panel="${t.key}" style="${i !== 0 ? 'display:none' : ''}">${content}</div>`;
+  }).join('');
+
+  return tabBar + panels;
+}
+
 (async () => {
   const session = await DS.requireAuth();
   if (!session) return;
@@ -126,18 +206,28 @@ async function cancelFU(id, btn) {
 
   const el = document.getElementById('fu-content');
   try {
-    const res = await DS.api('/api/follow-ups/pending');
+    // Busca todos os follow-ups (não só pending) para mostrar abas de status
+    const res = await DS.api('/api/follow-ups?limit=200');
     const all = res?.follow_ups || res?.followUps || res?.data || (Array.isArray(res) ? res : []);
 
-    if (!all.length) { DS.emptyState(el, 'Nenhum follow-up pendente', 'Luna gerencia os follow-ups automaticamente.', ''); return; }
+    if (!all.length) {
+      DS.emptyState(el, 'Nenhum follow-up', 'Luna gerencia os follow-ups automaticamente. Assim que houver atividade, aparecerá aqui.', '');
+      return;
+    }
 
-    const now = Date.now();
-    const overdue  = all.filter(f => new Date(f.scheduled_at || f.scheduledAt).getTime() < now);
-    const upcoming = all.filter(f => new Date(f.scheduled_at || f.scheduledAt).getTime() >= now);
+    el.innerHTML = renderTabs(all);
 
-    el.innerHTML =
-      renderGroup('Vencidos', overdue, 'badge-hot') +
-      renderGroup('Próximos', upcoming, 'badge-pending');
+    // Tab switching
+    el.querySelectorAll('.fu-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        el.querySelectorAll('.fu-tab').forEach(b => b.className = b.className.replace('btn-primary', 'btn-ghost'));
+        el.querySelectorAll('.fu-panel').forEach(p => p.style.display = 'none');
+        btn.className = btn.className.replace('btn-ghost', 'btn-primary');
+        const panel = el.querySelector(`.fu-panel[data-panel="${btn.dataset.tab}"]`);
+        if (panel) panel.style.display = '';
+      });
+    });
+
   } catch (err) {
     DS.errorState(el, err.message);
   }
