@@ -14,7 +14,7 @@
     if (_sb) return _sb;
     const meta = document.querySelector('meta[name="sb-anon"]');
     const anonKey = meta ? meta.content.replace('sb_publishable_', '') : '';
-    const url = 'https://vwgqhonbbiqubuahkyij.supabase.co';
+    const url = 'https://nqxesjxbqupmhnivkfyk.supabase.co';
     if (global.supabase && anonKey) {
       _sb = global.supabase.createClient(url, anonKey);
     }
