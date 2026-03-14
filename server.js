@@ -105,8 +105,13 @@ function statusColor(s) {
 }
 
 // ─── Request logger ────────────────────────────────────────────────────────────
+function mkReqId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
 app.use((req, res, next) => {
   const start = Date.now();
+  req.reqId = mkReqId();
   const mc = methodColor(req.method);
   res.on('finish', () => {
     const ms = Date.now() - start;
@@ -117,8 +122,21 @@ app.use((req, res, next) => {
       `${mc}${C.bold}${req.method.padEnd(6)}${C.reset}  ` +
       `${C.bold}${req.path}${C.reset}` +
       (Object.keys(req.query).length ? C.dim + '?' + new URLSearchParams(req.query).toString() + C.reset : '') +
-      `  ${sc}${res.statusCode}${C.reset}  ${C.gray}${ms}ms${C.reset}`
+      `  ${sc}${res.statusCode}${C.reset}  ${C.gray}${ms}ms${C.reset}  ${C.dim}[${req.reqId}]${C.reset}`
     );
+    if (process.env.NODE_ENV === 'production') {
+      console.log(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: res.statusCode < 400 ? 'info' : 'error',
+        svc: 'crm',
+        event: 'http_request',
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: ms,
+        reqId: req.reqId,
+      }));
+    }
   });
   next();
 });

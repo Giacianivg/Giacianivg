@@ -13,6 +13,13 @@ const { supabaseAdmin } = require('../supabase/client');
 
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
 
+// ─── Structured logging ────────────────────────────────────────────────────────
+function log(level, event, data) {
+  const entry = { ts: new Date().toISOString(), level, svc: 'webhook', event, ...data };
+  const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+  fn(JSON.stringify(entry));
+}
+
 const app = express();
 
 // ─── X-Hub-Signature-256 Validation Middleware (QA-01) ─────────────────────────
@@ -30,12 +37,12 @@ app.use((req, res, next) => {
   const appSecret = process.env.WHATSAPP_APP_SECRET;
 
   if (!appSecret) {
-    console.warn('[security] WHATSAPP_APP_SECRET not configured — skipping signature validation');
+    log('warn', 'security_no_secret', { msg: 'WHATSAPP_APP_SECRET not configured — skipping validation' });
     return next();
   }
 
   if (!signature) {
-    console.error('[security] Missing X-Hub-Signature-256 header');
+    log('warn', 'security_missing_signature', { ip: req.ip });
     return res.status(403).json({ error: 'missing_signature' });
   }
 
@@ -51,8 +58,7 @@ app.use((req, res, next) => {
   }
 
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
-    console.error('[security] Invalid X-Hub-Signature-256');
-    console.error('[security] Got:', signature);
+    log('warn', 'security_invalid_signature', { ip: req.ip, sig_prefix: signature.slice(0, 16) });
     return res.status(403).json({ error: 'invalid_signature' });
   }
 
@@ -345,6 +351,7 @@ async function handleCotar(params, from, contactName, leadId) {
   }
 
   await sendWhatsApp(from, formatWhatsAppMessage(q));
+  log('info', 'quotation_sent', { phone: from, roomType: params.tipo, total: q.totalFinal, nights: q.nights });
 }
 
 async function handleEscalar(userMsg, from, rawSignal, contactName, leadId) {
@@ -353,6 +360,7 @@ async function handleEscalar(userMsg, from, rawSignal, contactName, leadId) {
   const escalParams = parseEscalarParams(rawSignal);
   const motivo = escalParams.motivo || 'Dúvida ou solicitação especial';
   const nomeHospede = escalParams.nome || contactName;
+  log('warn', 'escalation_triggered', { phone: from, motivo, leadId });
   const interesse = escalParams.interesse;
 
   // Update lead status to negotiation when escalated
@@ -455,6 +463,7 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
       if (!reservation.success) {
         // Race condition: dates were taken
         if (reservation.error === 'no_availability') {
+          log('warn', 'booking_conflict', { phone: from, roomType: p.tipo, checkin: p.entrada, checkout: p.saida });
           await sendWhatsApp(from,
             'Que pena! As datas escolhidas acabaram de ser reservadas por outro hóspede. ' +
             'Vou chamar nossa equipe para encontrar uma solução! 🌙'
@@ -473,6 +482,7 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
       }
 
       crmService.updateLeadStatus(leadId, 'confirmed').catch(() => {});
+      log('info', 'booking_confirmed', { phone: from, reservationNumber: reservation.reservation_number, roomType: p.tipo });
 
       // 2. Register pending payment in DB (PIX manual — guest pays to fixed key)
       try {
@@ -606,7 +616,6 @@ app.get('/webhook', (req, res) => {
 // processMessage — processamento assíncrono após 200 já enviado ao Meta
 // ---------------------------------------------------------------------------
 async function processMessage(from, contactName, text, messageId, timestamp) {
-  console.log(`[process] iniciando para ${from}`);
   try {
     const sheetsTimeout = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -752,7 +761,7 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     }
 
     const displayName = nomeCapturado || knownName || contactName;
-    console.log(`[webhook] Luna → ${from} (${displayName}): ${cleanResponse.substring(0, 80)}`);
+    log('info', 'luna_response', { phone: from, name: displayName, reqId: messageId, preview: cleanResponse.substring(0, 80) });
 
     const updatedHistory = [...fullHistory, { role: 'user', content: text }, { role: 'assistant', content: cleanResponse }];
     memorySet(from, updatedHistory);
@@ -803,7 +812,7 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     }
   } catch (err) {
     const cause = err.cause?.message || err.cause?.code || '';
-    console.error(`[webhook] Erro ao processar mensagem: ${err.message}${cause ? ` (causa: ${cause})` : ''}`);
+    log('error', 'process_error', { phone: from, reqId: messageId, error: err.message, cause: cause || undefined });
     try {
       await sendWhatsApp(from, 'Estamos com uma instabilidade momentânea. Nossa equipe entrará em contato em breve! 🌙');
     } catch (e) {
@@ -867,24 +876,23 @@ app.post('/webhook', async (req, res) => {
 
   const text = message.text.body;
   const timestamp = message.timestamp; // Timestamp real da mensagem do WhatsApp (Unix)
-  console.log(`[webhook] ${from} (${contactName}): ${text.substring(0, 60)}`);
-  console.log(`[webhook] message.timestamp: ${timestamp} (type: ${typeof timestamp})`);
+  const reqId = message.id;
+  log('info', 'message_received', { phone: from, name: contactName, reqId, preview: text.substring(0, 60) });
 
   // Processa ANTES de enviar 200 — Vercel mata o Lambda após res.sendStatus()
   // Claude responde em ~600ms, bem dentro do limite de 5s da Meta
   // Safety timeout de 4.5s garante que Meta sempre recebe o 200
+  const _procStart = Date.now();
   try {
-    console.log(`[webhook] iniciando processMessage para ${from}`);
     await Promise.race([
-      processMessage(from, contactName, text, message.id, timestamp),
+      processMessage(from, contactName, text, reqId, timestamp),
       new Promise(resolve => setTimeout(resolve, 4500)),
     ]);
-    console.log(`[webhook] processMessage completado para ${from}`);
+    log('info', 'message_processed', { phone: from, reqId, durationMs: Date.now() - _procStart });
   } catch (err) {
-    console.error('[webhook] Erro no processamento:', err.message);
+    log('error', 'message_process_failed', { phone: from, reqId, error: err.message });
   }
 
-  console.log(`[webhook] enviando 200 para ${from}`);
   res.sendStatus(200);
 });
 
