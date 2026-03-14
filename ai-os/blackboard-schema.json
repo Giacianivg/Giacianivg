@@ -1,0 +1,57 @@
+{
+  "goal": "",
+  "created_at": "",
+  "updated_at": "",
+
+  "planner": {
+    "agent": "@aios-master Orion",
+    "tasks": [
+      {
+        "id": "TASK-001",
+        "description": "",
+        "squad": "CTO|CMO|CPO|CEO|CFO",
+        "executor": "@dev|@copy|@creative",
+        "dependencies": [],
+        "status": "pending|in_progress|done|failed",
+        "priority": "P1|P2|P3",
+        "file": "caminho/exato/arquivo.js"
+      }
+    ]
+  },
+
+  "blackboard": {
+    "context": "resumo do problema em 3 linhas",
+    "research": {},
+    "decisions": [],
+    "constraints": [
+      "179/179 testes antes de deploy",
+      "Nao tocar webhook.js sem N2",
+      "Token economia: minimo necessario"
+    ]
+  },
+
+  "execution_results": {
+    "TASK-001": {
+      "executor": "@dev",
+      "output": "",
+      "files_changed": [],
+      "commit": ""
+    }
+  },
+
+  "review_notes": [
+    {
+      "task_id": "TASK-001",
+      "iteration": 1,
+      "critic": "@critic Ray",
+      "decision": "LGTM|REPROVAR",
+      "note": ""
+    }
+  ],
+
+  "result": {
+    "status": "pending|approved|delivered",
+    "delivered_to": "Vitor",
+    "summary": ""
+  }
+}
