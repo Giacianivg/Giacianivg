@@ -535,9 +535,20 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
       return;
 
     } catch (err) {
-      console.error('[confirmar] CRM flow failed:', err.message);
+      log('error', 'confirmar_crm_failed', { phone: from, error: err.message, roomType: p.tipo, checkin: p.entrada, checkout: p.saida });
       // Fall through to legacy flow
     }
+  }
+
+  // Log guard bypass (missing required params) to aid debugging
+  if (process.env.SUPABASE_URL && (!leadId || !p.entrada || !p.saida || !p.tipo || !totalAmount)) {
+    const missing = [];
+    if (!leadId)      missing.push('leadId');
+    if (!p.entrada)   missing.push('entrada');
+    if (!p.saida)     missing.push('saida');
+    if (!p.tipo)      missing.push('tipo');
+    if (!totalAmount) missing.push('totalAmount');
+    log('warn', 'confirmar_guard_bypass', { phone: from, missing: missing.join(',') });
   }
 
   // Legacy flow — Supabase not configured or error: notify team manually
