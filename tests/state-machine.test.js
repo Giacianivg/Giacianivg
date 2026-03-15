@@ -182,9 +182,9 @@ describe('ConversationStateMachine', () => {
       await fsm.load();
     });
 
-    it('should contain current state', async () => {
+    it('should contain context header', async () => {
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /Estado atual: GREETING/);
+      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
     });
 
     it('should contain collected data if exists', async () => {
@@ -197,17 +197,17 @@ describe('ConversationStateMachine', () => {
     it('should not repeat questions about collected fields', async () => {
       await fsm.updateContext({ nome: 'João Silva' });
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /NÃO REPITA perguntas sobre/);
+      assert.match(injection, /NÃO PERGUNTE novamente sobre/);
       assert.match(injection, /Nome/);
     });
 
-    it('should show current funnel step (X/8)', async () => {
+    it('should include CONTEXTO DO HÓSPEDE header in injection', async () => {
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /Etapa do funil: 1\/8/);
+      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
 
       await fsm.transition('COLLECT_NAME');
       const injectionAfter = fsm.getPromptInjection();
-      assert.match(injectionAfter, /Etapa do funil: 2\/8/);
+      assert.match(injectionAfter, /CONTEXTO DO HÓSPEDE/);
     });
   });
 
@@ -398,23 +398,21 @@ describe('ConversationStateMachine', () => {
 
       // At GREETING
       let inj = fsm.getPromptInjection();
-      assert.match(inj, /CONVERSATION STATE CONTEXT/);
-      assert.match(inj, /Estado atual: GREETING/);
+      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /Nenhum dado coletado/);
 
       // At COLLECT_NAME
       await fsm.transition('COLLECT_NAME');
       await fsm.updateContext({ nome: 'João Silva' });
       inj = fsm.getPromptInjection();
-      assert.match(inj, /Estado atual: COLLECT_NAME/);
-      assert.match(inj, /Etapa do funil: 2\/8/);
-      assert.match(inj, /ETAPA ATUAL: Coletar nome/);
+      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /João Silva/);
 
       // At ASK_DATES
       await fsm.transition('ASK_DATES');
       inj = fsm.getPromptInjection();
-      assert.match(inj, /Estado atual: ASK_DATES/);
-      assert.match(inj, /Etapa do funil: 3\/8/);
-      assert.match(inj, /NÃO REPITA perguntas sobre/);
+      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /NÃO PERGUNTE novamente/);
       assert.match(inj, /João Silva/);
     });
   });
@@ -441,7 +439,7 @@ describe('ConversationStateMachine', () => {
     it('should handle empty data gracefully', async () => {
       await fsm.load();
       const inj = fsm.getPromptInjection();
-      assert.match(inj, /CONVERSATION STATE CONTEXT/);
+      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
       assert.match(inj, /(Nenhum dado coletado|empty)/i);
     });
 
@@ -542,16 +540,15 @@ describe('ConversationStateMachine', () => {
       await fsm.load();
       let injection = fsm.getPromptInjection();
 
-      // GREETING state should reference 8 total states
-      assert.match(injection, /Etapa do funil: 1\/8/);
+      // GREETING state injection should have context header
+      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
 
       // Transition to COLLECT_NAME
       await fsm.transition('COLLECT_NAME');
       injection = fsm.getPromptInjection();
 
-      assert.match(injection, /Etapa do funil: 2\/8/);
-      assert.match(injection, /ETAPA ATUAL: Coletar nome/);
-      assert.match(injection, /Se receber nome.*NOME: NomeCapturado/);
+      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
+      assert.match(injection, /Se nome capturado.*NOME: NomeCapturado/);
     });
 
     it('should not allow COLLECT_NAME → non-adjacent states', async () => {

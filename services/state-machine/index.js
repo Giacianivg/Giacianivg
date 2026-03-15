@@ -265,23 +265,13 @@ class ConversationStateMachine {
 
     const noRepeatFields = collectedItems.map(item => item.split(':')[0].trim()).join(', ');
 
-    // Add state-specific instructions for COLLECT_NAME
-    const stateSpecificInstructions = this._state === 'COLLECT_NAME'
-      ? '\n📝 ETAPA ATUAL: Coletar nome do hóspede\n✅ Se receber nome → [NOME: NomeCapturado]\n⚠️ Se usuário não responder nome → após 2 tentativas, passe para próxima etapa'
-      : '';
-
     return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONVERSATION STATE CONTEXT
+CONTEXTO DO HÓSPEDE (não repita o que já foi coletado)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Estado atual: ${this._state}
-Etapa do funil: ${stateNumber}/${totalStates}
-
 ${collectedSection}
-${stateSpecificInstructions}
 
-❌ NÃO REPITA perguntas sobre: ${noRepeatFields || '(nenhum dado coletado)'}
-✅ Mantenha fluxo linear através dos 8 estados (GREETING → COLLECT_NAME → ASK_DATES → ...)
-✅ Se usuário insistir em voltar, explique a progressão natural
+❌ NÃO PERGUNTE novamente sobre: ${noRepeatFields || '(nenhum dado coletado ainda)'}
+✅ Se nome capturado → [NOME: NomeCapturado]
 ⚠️ Em 3 tentativas sem resposta → [ESCALAR: motivo=Não respondeu]
 ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄`;
   }
