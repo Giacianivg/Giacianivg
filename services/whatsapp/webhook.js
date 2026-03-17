@@ -675,14 +675,15 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     const stateContext = fsm
       ? fsm.getPromptInjection()
       : '';
-    const systemPrompt = stateContext
-      ? `${stateContext}\n\n${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`
-      : `${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`;
+    // callClaude já appenda LUNA_SYSTEM_PROMPT internamente — passar só o contexto adicional
+    const contextForClaude = stateContext
+      ? `${stateContext}\n\n${clientContext}`
+      : clientContext;
 
     const history = fullHistory.slice(-10);
     history.push({ role: 'user', content: text });
 
-    const response = await callClaude(history, systemPrompt);
+    const response = await callClaude(history, contextForClaude);
 
     const nomeCapturado = parseNomeSignal(response);
     const cleanResponse = response.replace(/\[NOME:\s*[^\]]+\]/, '').trim();
