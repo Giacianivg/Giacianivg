@@ -10,6 +10,8 @@ const crmService = require('../crm/index');
 const { parseCurrency, formatCurrency } = require('../utils/currency');
 const ConversationStateMachine = require('../state-machine/index');
 const { supabaseAdmin } = require('../supabase/client');
+const { getTrainingContext } = require('../luna/config-loader');
+const { saveMessages, getRecentHistory } = require('../conversations/history');
 
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
 
@@ -635,8 +637,8 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
       ? crmService.upsertLead(from, looksLikeRealName(contactName) ? contactName : null)
       : Promise.resolve(null);
 
-    // Load history from Sheets + client profile in parallel
-    const [sheetsHistory, clientProfile, leadId] = await Promise.all([
+    // Load history from Sheets + client profile + Supabase history in parallel
+    const [sheetsHistory, clientProfile, leadId, supabaseHistory] = await Promise.all([
       SHEETS_ENABLED
         ? Promise.race([getConversationHistory(from), sheetsTimeout(5000).then(() => [])])
         : Promise.resolve([]),
@@ -644,6 +646,10 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
         ? Promise.race([getClientProfile(from), sheetsTimeout(5000).then(() => ({ nome: null, isNew: true }))])
         : Promise.resolve({ nome: null, isNew: true }),
       leadIdPromise,
+      // Supabase: histórico persistente (sobrevive cold starts — lead volta e Luna lembra)
+      process.env.SUPABASE_URL
+        ? Promise.race([getRecentHistory(supabaseAdmin, from), sheetsTimeout(3000).then(() => [])])
+        : Promise.resolve([]),
     ]);
 
     // Load or initialize Conversation State Machine (for 7-state funnel control)
@@ -659,8 +665,12 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
       }
     }
 
-    // Usa histórico do Sheets se disponível, senão usa memória RAM
-    const fullHistory = sheetsHistory.length > 0 ? sheetsHistory : memoryGet(from);
+    // Prioridade: Supabase (persistente) > Sheets (legado) > RAM (fallback)
+    const fullHistory = supabaseHistory.length > 0
+      ? supabaseHistory
+      : sheetsHistory.length > 0
+        ? sheetsHistory
+        : memoryGet(from);
 
     let knownName = clientProfile.nome;
     if (!knownName && looksLikeRealName(contactName)) {
@@ -675,10 +685,15 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     const stateContext = fsm
       ? fsm.getPromptInjection()
       : '';
+    // Treinamento dinâmico (luna-training.html → luna_config → contexto)
+    const trainingCtx = process.env.SUPABASE_URL
+      ? await getTrainingContext(supabaseAdmin).catch(() => '')
+      : '';
+
     // callClaude já appenda LUNA_SYSTEM_PROMPT internamente — passar só o contexto adicional
-    const contextForClaude = stateContext
-      ? `${stateContext}\n\n${clientContext}`
-      : clientContext;
+    const contextForClaude = [stateContext, clientContext, trainingCtx]
+      .filter(Boolean)
+      .join('\n\n');
 
     const history = fullHistory.slice(-10);
     history.push({ role: 'user', content: text });
