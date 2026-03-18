@@ -12,8 +12,12 @@ const ConversationStateMachine = require('../state-machine/index');
 const { supabaseAdmin } = require('../supabase/client');
 const { getTrainingContext } = require('../luna/config-loader');
 const { saveMessages, getRecentHistory } = require('../conversations/history');
+const { callLuna } = require('../luna/deepseek-client');
 
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
+
+// Palavras que reiniciam a conversa (qualquer saudação após silêncio ou comando explícito)
+const RESET_PATTERN = /^(oi|ola|olá|hey|hi|menu|reiniciar|recomeçar|recomecar|inicio|início|começar|comecar|start)[\s!?.]*$/iu;
 
 // ─── Structured logging ────────────────────────────────────────────────────────
 function log(level, event, data) {
@@ -27,7 +31,12 @@ const app = express();
 // ─── X-Hub-Signature-256 Validation Middleware (QA-01) ─────────────────────────
 // Meta sends X-Hub-Signature header: sha256=<hex>
 // We validate against WHATSAPP_ACCESS_TOKEN as the secret
-app.use(express.json());
+// Captura o raw body antes do parse — necessário para validar HMAC-SHA256 da Meta
+// JSON.stringify(req.body) não é confiável: pode reordenar chaves ou diferir em whitespace
+app.use(express.json({
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
+
 app.use((req, res, next) => {
   // Skip validation for GET requests (challenge verification)
   if (req.method === 'GET') return next();
@@ -48,8 +57,8 @@ app.use((req, res, next) => {
     return res.status(403).json({ error: 'missing_signature' });
   }
 
-  // Body is already parsed by express.json(), reconstruct for HMAC
-  const rawBody = JSON.stringify(req.body);
+  // Usa rawBody (bytes originais da Meta) — nunca JSON.stringify(req.body)
+  const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
   const expectedSignature = 'sha256=' + crypto
     .createHmac('sha256', appSecret)
     .update(rawBody)
@@ -73,7 +82,9 @@ const {
   WHATSAPP_ACCESS_TOKEN,
   WHATSAPP_APP_SECRET,
   ANTHROPIC_API_KEY,
+  DEEPSEEK_API_KEY,
   EQUIPE_WHATSAPP_NUMBER,
+  OPENAI_API_KEY,
   PORT = 3000,
 } = process.env;
 
@@ -128,49 +139,230 @@ async function sendWhatsApp(to, text) {
 }
 
 // ---------------------------------------------------------------------------
-// Anthropic — chamar Claude com histórico de conversa
+// Meta Media API — baixar imagem/áudio pelo mediaId
 // ---------------------------------------------------------------------------
-async function callClaude(messages, clientContext = '', attempt = 0) {
+async function downloadMediaFromMeta(mediaId) {
+  // Passo 1: buscar URL temporária da mídia
+  const urlRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+    headers: { 'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+  });
+  if (!urlRes.ok) throw new Error(`Meta media URL fetch failed: ${urlRes.status}`);
+  const { url, mime_type: mimeType } = await urlRes.json();
+
+  // Passo 2: baixar bytes da mídia
+  const mediaRes = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+  });
+  if (!mediaRes.ok) throw new Error(`Meta media download failed: ${mediaRes.status}`);
+  const buffer = Buffer.from(await mediaRes.arrayBuffer());
+  return { buffer, mimeType };
+}
+
+// ---------------------------------------------------------------------------
+// Claude Vision — extrai valor PIX do comprovante
+// Retorna o valor numérico em centavos (ex: 168.00) ou 0 se não identificado
+// ---------------------------------------------------------------------------
+async function extractPixValueWithVision(imageBuffer, mimeType) {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY não configurada');
 
-  const system = clientContext
-    ? `${clientContext}\n\n${LUNA_SYSTEM_PROMPT}`
-    : LUNA_SYSTEM_PROMPT;
+  const base64 = imageBuffer.toString('base64');
+  const safeMime = (mimeType && mimeType.startsWith('image/')) ? mimeType : 'image/jpeg';
 
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 50,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: safeMime, data: base64 } },
+          {
+            type: 'text',
+            text: 'Este é um comprovante de pagamento PIX. Extraia APENAS o valor pago em reais. Responda SOMENTE com o número sem "R$" e sem texto — apenas o valor numérico (exemplo: 168.00 ou 168). Se não conseguir identificar, responda 0.',
+          },
+        ],
+      }],
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!res.ok) throw new Error(`Vision API failed: ${res.status}`);
+  const data = await res.json();
+  const raw = data.content[0].text.trim().replace(',', '.');
+  return parseFloat(raw) || 0;
+}
+
+// ---------------------------------------------------------------------------
+// Supabase — busca o sinal esperado para o hóspede (reserva pending mais recente)
+// ---------------------------------------------------------------------------
+async function getExpectedDepositForGuest(phone) {
+  if (!process.env.SUPABASE_URL) return null;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 600,
-        system,
-        messages,
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
+    const { data: lead } = await supabaseAdmin
+      .from('leads')
+      .select('id')
+      .eq('whatsapp_number', phone)
+      .maybeSingle();
+    if (!lead) return null;
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Anthropic ${res.status}: ${body}`);
-    }
+    const { data: reservation } = await supabaseAdmin
+      .from('reservations')
+      .select('id, deposit_amount')
+      .eq('lead_id', lead.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!reservation) return null;
 
-    const data = await res.json();
-    return data.content[0].text;
-  } catch (err) {
-    // Retry once on transient network errors (TLS disconnect, socket drop)
-    const isTransient = err.message?.includes('fetch failed') || err.name === 'TimeoutError';
-    if (attempt === 0 && isTransient) {
-      console.warn('[claude] Erro de rede, tentando novamente:', err.message);
-      await new Promise(r => setTimeout(r, 1000));
-      return callClaude(messages, clientContext, 1);
-    }
-    throw err;
+    return reservation.deposit_amount;
+  } catch {
+    return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// OpenAI Whisper — transcreve áudio ogg/mp4 para texto
+// ---------------------------------------------------------------------------
+async function transcribeAudioWithWhisper(audioBuffer, mimeType) {
+  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY não configurada');
+
+  const ext = mimeType?.includes('mp4') ? 'mp4' : mimeType?.includes('mpeg') ? 'mp3' : 'ogg';
+  const audioMime = mimeType || 'audio/ogg';
+
+  // Node 18+ tem FormData nativo
+  const formData = new FormData();
+  const blob = new Blob([audioBuffer], { type: audioMime });
+  formData.append('file', blob, `audio.${ext}`);
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'pt');
+
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+    body: formData,
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Whisper API failed: ${res.status} — ${body.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return data.text || '';
+}
+
+// ---------------------------------------------------------------------------
+// handlePixComprovante — valida comprovante PIX recebido como imagem
+// ---------------------------------------------------------------------------
+async function handlePixComprovante(from, contactName, mediaId, messageId, timestamp) {
+  log('info', 'pix_comprovante_received', { phone: from, mediaId, reqId: messageId });
+
+  if (!mediaId) {
+    await sendWhatsApp(from, 'Não consegui ler a imagem. Pode tentar enviar novamente? 🌙');
+    return;
+  }
+
+  // Busca sinal esperado em paralelo ao download
+  const [mediaResult, expectedAmount] = await Promise.all([
+    downloadMediaFromMeta(mediaId).catch(err => { throw err; }),
+    getExpectedDepositForGuest(from),
+  ]);
+
+  let extractedValue;
+  try {
+    extractedValue = await extractPixValueWithVision(mediaResult.buffer, mediaResult.mimeType);
+  } catch (err) {
+    log('error', 'pix_vision_failed', { phone: from, error: err.message });
+    await sendWhatsApp(from, 'Não consegui ler o comprovante. Você pode confirmar o valor pago por mensagem de texto? 🌙');
+    return;
+  }
+
+  if (!extractedValue || extractedValue <= 0) {
+    await sendWhatsApp(from, 'Não identifiquei o valor no comprovante. Pode confirmar o valor pago por mensagem de texto? 🌙');
+    return;
+  }
+
+  // Compara com sinal esperado (tolerância R$1)
+  if (expectedAmount && Math.abs(extractedValue - expectedAmount) > 1) {
+    log('warn', 'pix_amount_mismatch', { phone: from, expected: expectedAmount, received: extractedValue });
+    await sendWhatsApp(
+      from,
+      `Opa! O comprovante mostra ${formatCurrency(extractedValue)} mas o sinal é ${formatCurrency(expectedAmount)}. Pode verificar e enviar o comprovante correto? 😊`
+    );
+    return;
+  }
+
+  // Valor correto — confirma ao hóspede e notifica equipe
+  const confirmMsg = expectedAmount
+    ? `Comprovante recebido! ✅ Valor de ${formatCurrency(extractedValue)} confirmado. Nossa equipe vai verificar e finalizar sua reserva em breve! 🌙`
+    : `Comprovante recebido! ✅ Nossa equipe vai verificar e confirmar sua reserva em breve! 🌙`;
+  await sendWhatsApp(from, confirmMsg);
+
+  if (EQUIPE_WHATSAPP_NUMBER) {
+    const teamLines = [
+      `💳 *Comprovante PIX recebido*`,
+      `👤 ${contactName} | wa.me/${from}`,
+      expectedAmount
+        ? `💰 Esperado: ${formatCurrency(expectedAmount)} | Recebido: ${formatCurrency(extractedValue)} ✅`
+        : `💰 Valor: ${formatCurrency(extractedValue)}`,
+      `→ Confirmar manualmente e atualizar reserva`,
+    ];
+    await sendWhatsApp(EQUIPE_WHATSAPP_NUMBER, teamLines.join('\n'));
+  }
+
+  log('info', 'pix_validated', { phone: from, expected: expectedAmount, received: extractedValue });
+}
+
+// ---------------------------------------------------------------------------
+// handleAudioMessage — transcreve áudio via Whisper e processa como texto
+// ---------------------------------------------------------------------------
+async function handleAudioMessage(from, contactName, mediaId, messageId, timestamp) {
+  if (!OPENAI_API_KEY) {
+    log('warn', 'audio_no_openai_key', { phone: from });
+    await sendWhatsApp(from, 'Recebi seu áudio! Por favor, envie como mensagem de texto também para que eu possa responder. 🌙');
+    return;
+  }
+
+  if (!mediaId) {
+    await sendWhatsApp(from, 'Não consegui processar o áudio. Pode enviar como mensagem de texto? 🌙');
+    return;
+  }
+
+  log('info', 'audio_received', { phone: from, mediaId, reqId: messageId });
+
+  let transcription;
+  try {
+    const { buffer, mimeType } = await downloadMediaFromMeta(mediaId);
+    transcription = await transcribeAudioWithWhisper(buffer, mimeType);
+  } catch (err) {
+    log('error', 'audio_transcription_failed', { phone: from, error: err.message });
+    await sendWhatsApp(from, 'Não consegui transcrever o áudio. Pode enviar como mensagem de texto? 🌙');
+    return;
+  }
+
+  if (!transcription || !transcription.trim()) {
+    await sendWhatsApp(from, 'Não entendi o áudio. Pode enviar como mensagem de texto? 🌙');
+    return;
+  }
+
+  log('info', 'audio_transcribed', { phone: from, preview: transcription.substring(0, 80) });
+
+  // Processa transcrição como mensagem de texto normal — hóspede não percebe diferença
+  await processMessage(from, contactName, transcription.trim(), messageId, timestamp);
+}
+
+// ---------------------------------------------------------------------------
+// Luna — delega para deepseek-client (DeepSeek R1 + fallback Haiku)
+// ---------------------------------------------------------------------------
+async function callClaude(messages, clientContext = '', attempt = 0) {
+  return callLuna(messages, clientContext, attempt);
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +467,9 @@ function parseConfirmarParams(signal) {
   const match = signal.match(/\[CONFIRMAR:\s*([^\]]+)\]/);
   if (!match) return null;
   const params = {};
-  match[1].split(',').forEach(part => {
+  // Smart split: divide apenas na vírgula seguida de "chave=" — preserva formato
+  // monetário brasileiro (ex: total=R$1.800,00 não é cortado no ponto decimal)
+  match[1].split(/,\s*(?=\w+=)/).forEach(part => {
     const eqIdx = part.indexOf('=');
     if (eqIdx > 0) {
       const k = part.slice(0, eqIdx).trim();
@@ -435,13 +629,31 @@ async function handleTeamReply(teamMessage) {
   console.log(`[team] Respondeu ${latestPhone} (${latestEntry.nome}): ${cleanResponse.substring(0, 80)}`);
 }
 
-async function handleConfirmar(userMsg, from, params, contactName, leadId) {
+async function handleConfirmar(userMsg, from, params, contactName, leadId, quotedTotal) {
   if (userMsg) await sendWhatsApp(from, userMsg);
 
   const p = params || {};
   if (SHEETS_ENABLED) await recordEvent(from, contactName, 'CONFIRMAR', p);
 
-  const totalAmount   = parseCurrency(p.total);
+  // Usa quotedTotal salvo na FSM no momento do [COTAR] — fonte autoritativa.
+  // Evita que Luna recalcule com preço base quando pede nome após a cotação.
+  let totalAmount = quotedTotal || parseCurrency(p.total);
+  if (!quotedTotal && p.entrada && p.saida && p.tipo && p.pessoas) {
+    const recalc = calculateQuotation({
+      data_entrada: p.entrada,
+      data_saida:   p.saida,
+      tipo:         p.tipo,
+      pessoas:      p.pessoas,
+    });
+    if (!recalc.error) {
+      if (totalAmount && Math.abs(totalAmount - recalc.totalFinal) > 1) {
+        log('warn', 'confirmar_total_mismatch', {
+          phone: from, llmTotal: totalAmount, engineTotal: recalc.totalFinal,
+        });
+      }
+      totalAmount = recalc.totalFinal;
+    }
+  }
   const depositAmount = p.sinal ? parseCurrency(p.sinal) : Math.round(totalAmount * 0.30);
   const guestName     = p.nome || contactName;
 
@@ -570,7 +782,7 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId) {
 }
 
 // Detecta sinais na resposta e despacha para os handlers corretos
-async function processResponse(response, from, contactName, leadId) {
+async function processResponse(response, from, contactName, leadId, quotedTotal) {
   // [COTAR: ...]
   const cotarMatch = response.match(/\[COTAR:[^\]]+\]/);
   if (cotarMatch) {
@@ -600,7 +812,7 @@ async function processResponse(response, from, contactName, leadId) {
   if (confirmarMatch) {
     const userMsg = response.replace(/\[CONFIRMAR:[^\]]+\]/, '').trim();
     const params = parseConfirmarParams(confirmarMatch[0]);
-    await handleConfirmar(userMsg, from, params, contactName, leadId);
+    await handleConfirmar(userMsg, from, params, contactName, leadId, quotedTotal);
     return;
   }
 
@@ -659,6 +871,13 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
         fsm = new ConversationStateMachine(leadId, from, supabaseAdmin);
         await fsm.load();
         console.log(`[fsm] Loaded state for ${from}: ${fsm.currentState}`);
+
+        // Reset keywords — saudação após silêncio ou comando explícito reinicia a conversa
+        if (RESET_PATTERN.test(text.trim())) {
+          const prevState = fsm.currentState;
+          await fsm.reset();
+          log('info', 'fsm_reset', { phone: from, trigger: text.trim(), prevState });
+        }
       } catch (err) {
         console.warn(`[fsm] Failed to load state machine: ${err.message}`);
         fsm = null; // Fallback: continue without FSM
@@ -689,6 +908,13 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
     const trainingCtx = process.env.SUPABASE_URL
       ? await getTrainingContext(supabaseAdmin).catch(() => '')
       : '';
+
+    // LOG TEMPORÁRIO — diagnóstico de treinamento (remover após confirmar)
+    log('info', 'training_ctx_debug', {
+      phone: from,
+      trainingCtx_len: trainingCtx.length,
+      trainingCtx_preview: trainingCtx.slice(0, 200) || '(vazio)',
+    });
 
     // callClaude já appenda LUNA_SYSTEM_PROMPT internamente — passar só o contexto adicional
     const contextForClaude = [stateContext, clientContext, trainingCtx]
@@ -744,12 +970,24 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
         const cotarSignal = parseCotarParams(cleanResponse);
         if (cotarSignal) {
           console.log(`[fsm] COTAR signal: ${JSON.stringify(cotarSignal)}`);
-          await fsm.updateContext({
+          // Calcular e persistir quotedTotal — fonte autoritativa para o [CONFIRMAR]
+          const fsmQuote = calculateQuotation({
+            data_entrada: cotarSignal.data_entrada,
+            data_saida:   cotarSignal.data_saida,
+            tipo:         cotarSignal.tipo,
+            pessoas:      cotarSignal.pessoas,
+          });
+          const ctxUpdate = {
             data_entrada: cotarSignal.data_entrada,
             data_saida: cotarSignal.data_saida,
             pessoas: parseInt(cotarSignal.pessoas) || null,
             tipo_quarto: cotarSignal.tipo,
-          });
+          };
+          if (!fsmQuote.error) {
+            ctxUpdate.quotedTotal = fsmQuote.totalFinal;
+            console.log(`[fsm] quotedTotal saved: ${fsmQuote.totalFinal}`);
+          }
+          await fsm.updateContext(ctxUpdate);
           // Transition to SEND_QUOTE only if currently in valid state
           if (ConversationStateMachine.isValidTransition(fsm.currentState, 'SEND_QUOTE')) {
             await fsm.transition('SEND_QUOTE');
@@ -829,7 +1067,8 @@ async function processMessage(from, contactName, text, messageId, timestamp) {
           })(),
 
       // Signal dispatch (COTAR / ESCALAR / CONFIRMAR / plain text)
-      processResponse(cleanResponse, from, displayName, leadId),
+      // Passa quotedTotal da FSM para que handleConfirmar use o valor cotado original
+      processResponse(cleanResponse, from, displayName, leadId, fsm?.collectedData?.quotedTotal),
     ]);
 
     // Auto-qualify lead after first Luna response (if no special signals)
@@ -892,10 +1131,26 @@ app.post('/webhook', async (req, res) => {
     return res.sendStatus(200);
   }
 
-  // Mensagem não-texto
+  // Imagem — verificação de comprovante PIX
+  if (message.type === 'image') {
+    res.sendStatus(200);
+    handlePixComprovante(from, contactName, message.image?.id, message.id, message.timestamp)
+      .catch(err => log('error', 'pix_handler_failed', { phone: from, error: err.message }));
+    return;
+  }
+
+  // Áudio — transcrever com Whisper e processar como texto
+  if (message.type === 'audio') {
+    res.sendStatus(200);
+    handleAudioMessage(from, contactName, message.audio?.id, message.id, message.timestamp)
+      .catch(err => log('error', 'audio_handler_failed', { phone: from, error: err.message }));
+    return;
+  }
+
+  // Outros tipos não suportados (video, document, sticker, etc.)
   if (message.type !== 'text') {
     res.sendStatus(200);
-    sendWhatsApp(from, 'Por favor, envie uma mensagem de texto 🌙').catch(
+    sendWhatsApp(from, 'Por favor, envie uma mensagem de texto ou áudio 🌙').catch(
       err => console.error('[webhook] Falha mensagem não-texto:', err.message)
     );
     return;
@@ -998,7 +1253,7 @@ app.get('/privacy', (_req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`[webhook] Servidor na porta ${PORT}`);
-    console.log(`[webhook] Anthropic API: ${ANTHROPIC_API_KEY ? 'configurada' : 'NAO CONFIGURADA'}`);
+    console.log(`[webhook] Luna AI: ${DEEPSEEK_API_KEY ? 'DeepSeek R1 (+ fallback Haiku)' : ANTHROPIC_API_KEY ? 'Claude Haiku' : 'NAO CONFIGURADA'}`);
     console.log(`[webhook] WhatsApp: ${WHATSAPP_ACCESS_TOKEN ? 'configurado' : 'NAO CONFIGURADO'}`);
   });
 }
