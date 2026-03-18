@@ -184,7 +184,7 @@ describe('ConversationStateMachine', () => {
 
     it('should contain context header', async () => {
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
+      assert.match(injection, /CONTROLE DO FUNIL/);
     });
 
     it('should contain collected data if exists', async () => {
@@ -197,17 +197,17 @@ describe('ConversationStateMachine', () => {
     it('should not repeat questions about collected fields', async () => {
       await fsm.updateContext({ nome: 'João Silva' });
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /NÃO PERGUNTE novamente sobre/);
+      assert.match(injection, /não peça informações já coletadas/i);
       assert.match(injection, /Nome/);
     });
 
-    it('should include CONTEXTO DO HÓSPEDE header in injection', async () => {
+    it('should include CONTROLE DO FUNIL header in injection', async () => {
       const injection = fsm.getPromptInjection();
-      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
+      assert.match(injection, /CONTROLE DO FUNIL/);
 
       await fsm.transition('COLLECT_NAME');
       const injectionAfter = fsm.getPromptInjection();
-      assert.match(injectionAfter, /CONTEXTO DO HÓSPEDE/);
+      assert.match(injectionAfter, /CONTROLE DO FUNIL/);
     });
   });
 
@@ -398,21 +398,21 @@ describe('ConversationStateMachine', () => {
 
       // At GREETING
       let inj = fsm.getPromptInjection();
-      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /CONTROLE DO FUNIL/);
       assert.match(inj, /Nenhum dado coletado/);
 
       // At COLLECT_NAME
       await fsm.transition('COLLECT_NAME');
       await fsm.updateContext({ nome: 'João Silva' });
       inj = fsm.getPromptInjection();
-      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /CONTROLE DO FUNIL/);
       assert.match(inj, /João Silva/);
 
       // At ASK_DATES
       await fsm.transition('ASK_DATES');
       inj = fsm.getPromptInjection();
-      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
-      assert.match(inj, /NÃO PERGUNTE novamente/);
+      assert.match(inj, /CONTROLE DO FUNIL/);
+      assert.match(inj, /não peça informações já coletadas/i);
       assert.match(inj, /João Silva/);
     });
   });
@@ -439,7 +439,7 @@ describe('ConversationStateMachine', () => {
     it('should handle empty data gracefully', async () => {
       await fsm.load();
       const inj = fsm.getPromptInjection();
-      assert.match(inj, /CONTEXTO DO HÓSPEDE/);
+      assert.match(inj, /CONTROLE DO FUNIL/);
       assert.match(inj, /(Nenhum dado coletado|empty)/i);
     });
 
@@ -468,6 +468,77 @@ describe('ConversationStateMachine', () => {
   // ─────────────────────────────────────────────────────────────────
   // COLLECT_NAME Specific Tests
   // ─────────────────────────────────────────────────────────────────
+
+  describe('reset()', () => {
+    beforeEach(async () => {
+      await fsm.load();
+    });
+
+    it('should reset state to GREETING from mid-flow state', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.transition('ASK_DATES');
+      assert.strictEqual(fsm.currentState, 'ASK_DATES');
+
+      await fsm.reset();
+      assert.strictEqual(fsm.currentState, 'GREETING');
+    });
+
+    it('should clear collected data on reset', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.updateContext({ nome: 'João Silva', data_entrada: '15/03/2026' });
+      assert.strictEqual(fsm.collectedData.nome, 'João Silva');
+
+      await fsm.reset();
+      assert.deepStrictEqual(fsm.collectedData, {});
+    });
+
+    it('should clear metadata on reset', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.trackAttempt('attempts_collect_name');
+      assert.strictEqual(fsm.metadata.attempts_collect_name, 1);
+
+      await fsm.reset();
+      assert.deepStrictEqual(fsm.metadata, {});
+    });
+
+    it('should reset from terminal HANDOFF_HUMAN state', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.transition('ASK_DATES');
+      await fsm.transition('HANDOFF_HUMAN');
+      assert.strictEqual(fsm.isTerminal, true);
+
+      await fsm.reset();
+      assert.strictEqual(fsm.currentState, 'GREETING');
+      assert.strictEqual(fsm.isTerminal, false);
+    });
+
+    it('should allow normal transitions after reset', async () => {
+      await fsm.transition('COLLECT_NAME');
+      await fsm.transition('ASK_DATES');
+      await fsm.transition('HANDOFF_HUMAN');
+
+      await fsm.reset();
+
+      // Deve poder transicionar normalmente após reset
+      await fsm.transition('COLLECT_NAME');
+      assert.strictEqual(fsm.currentState, 'COLLECT_NAME');
+    });
+
+    it('should throw if called before load()', async () => {
+      const freshFsm = new ConversationStateMachine(testLeadId, testPhone, mockDb);
+      assert.rejects(
+        () => freshFsm.reset(),
+        /State not loaded/
+      );
+    });
+
+    it('should reset from GREETING state (no-op for state, clears data)', async () => {
+      await fsm.updateContext({ nome: 'Parcial' });
+      await fsm.reset();
+      assert.strictEqual(fsm.currentState, 'GREETING');
+      assert.deepStrictEqual(fsm.collectedData, {});
+    });
+  });
 
   describe('COLLECT_NAME State (New)', () => {
     it('should capture name and transition to ASK_DATES', async () => {
@@ -541,14 +612,14 @@ describe('ConversationStateMachine', () => {
       let injection = fsm.getPromptInjection();
 
       // GREETING state injection should have context header
-      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
+      assert.match(injection, /CONTROLE DO FUNIL/);
 
       // Transition to COLLECT_NAME
       await fsm.transition('COLLECT_NAME');
       injection = fsm.getPromptInjection();
 
-      assert.match(injection, /CONTEXTO DO HÓSPEDE/);
-      assert.match(injection, /Se nome capturado.*NOME: NomeCapturado/);
+      assert.match(injection, /CONTROLE DO FUNIL/);
+      assert.match(injection, /NomeCapturado/);
     });
 
     it('should not allow COLLECT_NAME → non-adjacent states', async () => {

@@ -239,8 +239,9 @@ class ConversationStateMachine {
   }
 
   /**
-   * Generate prompt injection for Claude.
-   * Injects state context into system prompt to prevent repetition.
+   * Generate prescriptive prompt injection for Claude.
+   * Tells Luna WHAT TO DO in this message, not just what to avoid.
+   * Sistema decide → IA executa.
    *
    * @returns {string} Formatted context block for Claude
    */
@@ -249,31 +250,137 @@ class ConversationStateMachine {
       throw new Error('State not loaded. Call load() first.');
     }
 
-    const stateNumber = Object.values(ConversationStateMachine.STATES).indexOf(this._state) + 1;
-    const totalStates = Object.keys(ConversationStateMachine.STATES).length;
+    const data = this._data;
 
-    let collectedItems = [];
-    if (this._data.nome) collectedItems.push(`• Nome: ${this._data.nome}`);
-    if (this._data.data_entrada) collectedItems.push(`• Data entrada: ${this._data.data_entrada}`);
-    if (this._data.data_saida) collectedItems.push(`• Data saída: ${this._data.data_saida}`);
-    if (this._data.pessoas) collectedItems.push(`• Hóspedes: ${this._data.pessoas}`);
-    if (this._data.tipo_quarto) collectedItems.push(`• Tipo quarto: ${this._data.tipo_quarto}`);
+    // Build collected data section
+    const collected = [];
+    if (data.nome)         collected.push(`• Nome: ${data.nome}`);
+    if (data.data_entrada) collected.push(`• Checkin: ${data.data_entrada}`);
+    if (data.data_saida)   collected.push(`• Checkout: ${data.data_saida}`);
+    if (data.pessoas)      collected.push(`• Hóspedes: ${data.pessoas}`);
+    if (data.tipo_quarto)  collected.push(`• Quarto: ${data.tipo_quarto}`);
+    if (data.quotedTotal)  collected.push(`• Valor cotado: R$ ${Number(data.quotedTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
 
-    const collectedSection = collectedItems.length > 0
-      ? `✅ Já coletado:\n${collectedItems.join('\n')}`
+    const collectedSection = collected.length > 0
+      ? `✅ JÁ COLETADO (não pergunte de novo):\n${collected.join('\n')}`
       : '(Nenhum dado coletado ainda)';
 
-    const noRepeatFields = collectedItems.map(item => item.split(':')[0].trim()).join(', ');
+    const directive = this._getStateDirective(data);
 
     return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONTEXTO DO HÓSPEDE (não repita o que já foi coletado)
+CONTROLE DO FUNIL — Estado: ${this._state}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${collectedSection}
 
-❌ NÃO PERGUNTE novamente sobre: ${noRepeatFields || '(nenhum dado coletado ainda)'}
-✅ Se nome capturado → [NOME: NomeCapturado]
-⚠️ Em 3 tentativas sem resposta → [ESCALAR: motivo=Não respondeu]
-┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄`;
+🎯 OBJETIVO DESTA MENSAGEM:
+${directive}
+
+⚠️ Regras: não peça informações já coletadas. Em 3 tentativas sem resposta → [ESCALAR: motivo=Sem resposta].
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  /**
+   * Returns a prescriptive directive for each FSM state.
+   * Tells Luna exactly what to do in this turn.
+   *
+   * @private
+   * @param {object} data - Collected conversation data
+   * @returns {string} One-paragraph directive
+   */
+  _getStateDirective(data) {
+    switch (this._state) {
+      case ConversationStateMachine.STATES.GREETING:
+        return data.nome
+          ? `Dê boas-vindas usando o nome do hóspede. Pergunte as datas de checkin e checkout.`
+          : `Dê boas-vindas calorosas e pergunte o nome do hóspede de forma casual. Quando responder, inclua [NOME: NomeCapturado].`;
+
+      case ConversationStateMachine.STATES.COLLECT_NAME:
+        return `Pergunte o nome do hóspede de forma natural. Quando obtiver, inclua [NOME: NomeCapturado] na resposta.`;
+
+      case ConversationStateMachine.STATES.ASK_DATES:
+        return `Pergunte a data de checkin E checkout em uma única mensagem. Não pergunte número de hóspedes ainda. Aguarde as datas antes de qualquer cotação.`;
+
+      case ConversationStateMachine.STATES.ASK_GUESTS: {
+        const periodo = (data.data_entrada && data.data_saida)
+          ? ` (${data.data_entrada} → ${data.data_saida})`
+          : '';
+        return `Datas coletadas${periodo}. Pergunte quantos hóspedes vão se hospedar. Não apresente quartos ainda.`;
+      }
+
+      case ConversationStateMachine.STATES.SHOW_ROOMS: {
+        const pessoas = parseInt(data.pessoas) || 0;
+        let sugestao = '';
+        if (pessoas <= 3)      sugestao = 'Sugerir ALA_A (acomoda até 3 pessoas).';
+        else if (pessoas <= 5) sugestao = 'Sugerir ALA_B (acomoda até 5 pessoas).';
+        else if (pessoas <= 8) sugestao = 'Sugerir ALA_C_CASAL (acomoda até 8 pessoas).';
+        else                   sugestao = 'Grupo grande — use [ESCALAR: motivo=Grupo acima de 8 pessoas].';
+        return `Apresente as opções de quarto disponíveis. ${sugestao} Pergunte qual o hóspede prefere para gerar a cotação.`;
+      }
+
+      case ConversationStateMachine.STATES.SEND_QUOTE: {
+        if (data.quotedTotal) {
+          const total = Number(data.quotedTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+          return `Apresente a cotação já calculada: R$ ${total} para ${data.pessoas} hóspede(s), ${data.data_entrada} → ${data.data_saida}, quarto ${data.tipo_quarto}. NÃO recalcule. Use este valor fixo no [CONFIRMAR:total=...]. Convide o hóspede a confirmar a reserva.`;
+        }
+        return `Calcule a cotação emitindo o sinal [COTAR:tipo=${data.tipo_quarto || 'TIPO'},data_entrada=${data.data_entrada || 'DD/MM/YYYY'},data_saida=${data.data_saida || 'DD/MM/YYYY'},pessoas=${data.pessoas || 'N'}]. Apresente o valor e convide para confirmar.`;
+      }
+
+      case ConversationStateMachine.STATES.CONFIRM_BOOKING: {
+        const total = data.quotedTotal
+          ? `R$ ${Number(data.quotedTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+          : 'valor a confirmar';
+        return `O hóspede quer reservar. Confirme os detalhes: ${data.data_entrada} → ${data.data_saida}, ${data.pessoas} hóspedes, ${total}. Emita [CONFIRMAR:nome=${data.nome || 'NOME'},entrada=${data.data_entrada || ''},saida=${data.data_saida || ''},tipo=${data.tipo_quarto || ''},pessoas=${data.pessoas || ''},total=${data.quotedTotal || ''}] para notificar a equipe.`;
+      }
+
+      case ConversationStateMachine.STATES.HANDOFF_HUMAN:
+        return `A equipe já foi notificada. Informe o hóspede que um atendente entrará em contato em breve. Seja cordial e tranquilizador. Não colete mais dados.`;
+
+      default:
+        return `Continue a conversa coletando as informações necessárias para a reserva (nome, datas, número de hóspedes).`;
+    }
+  }
+
+  /**
+   * Reset conversation to GREETING, clearing all collected data.
+   * Bypasses VALID_TRANSITIONS — works from any state including terminal HANDOFF_HUMAN.
+   *
+   * @returns {Promise<void>}
+   * @throws {Error} If Supabase query fails
+   */
+  async reset() {
+    if (!this._isLoaded) {
+      throw new Error('State not loaded. Call load() first.');
+    }
+
+    const newExpiresAt = new Date(Date.now() + ConversationStateMachine.TTL_HOURS * 60 * 60 * 1000);
+
+    try {
+      const { error } = await this.supabaseClient
+        .from('conversation_states')
+        .upsert({
+          lead_id: this.leadId,
+          phone: this.phone,
+          state: ConversationStateMachine.STATES.GREETING,
+          data: {},
+          metadata: {},
+          created_at: this._createdAt,
+          updated_at: new Date(),
+          expires_at: newExpiresAt,
+        }, { onConflict: 'lead_id' });
+
+      if (error) {
+        throw new Error(`Reset failed: ${error.message}`);
+      }
+
+      this._state = ConversationStateMachine.STATES.GREETING;
+      this._data = {};
+      this._metadata = {};
+      this._updatedAt = new Date();
+      this._expiresAt = newExpiresAt;
+    } catch (err) {
+      console.error('[state-machine] Reset error:', err.message);
+      throw err;
+    }
   }
 
   /**
