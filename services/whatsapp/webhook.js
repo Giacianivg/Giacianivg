@@ -12,7 +12,7 @@ const ConversationStateMachine = require('../state-machine/index');
 const { supabaseAdmin } = require('../supabase/client');
 const { getTrainingContext } = require('../luna/config-loader');
 const { saveMessages, getRecentHistory } = require('../conversations/history');
-const { callLuna } = require('../luna/deepseek-client');
+
 
 const SHEETS_ENABLED = process.env.SHEETS_ENABLED !== 'false';
 
@@ -82,7 +82,6 @@ const {
   WHATSAPP_ACCESS_TOKEN,
   WHATSAPP_APP_SECRET,
   ANTHROPIC_API_KEY,
-  DEEPSEEK_API_KEY,
   EQUIPE_WHATSAPP_NUMBER,
   OPENAI_API_KEY,
   PORT = 3000,
@@ -359,10 +358,48 @@ async function handleAudioMessage(from, contactName, mediaId, messageId, timesta
 }
 
 // ---------------------------------------------------------------------------
-// Luna — delega para deepseek-client (DeepSeek R1 + fallback Haiku)
+// Anthropic — chamar Claude com histórico de conversa
 // ---------------------------------------------------------------------------
 async function callClaude(messages, clientContext = '', attempt = 0) {
-  return callLuna(messages, clientContext, attempt);
+  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY não configurada');
+
+  const system = clientContext
+    ? `${LUNA_SYSTEM_PROMPT}\n\n${clientContext}`
+    : LUNA_SYSTEM_PROMPT;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system,
+        messages,
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Anthropic ${res.status}: ${body}`);
+    }
+
+    const data = await res.json();
+    return data.content[0].text;
+  } catch (err) {
+    const isTransient = err.message?.includes('fetch failed') || err.name === 'TimeoutError';
+    if (attempt === 0 && isTransient) {
+      console.warn('[claude] Erro de rede, tentando novamente:', err.message);
+      await new Promise(r => setTimeout(r, 1000));
+      return callClaude(messages, clientContext, 1);
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1253,7 +1290,7 @@ app.get('/privacy', (_req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`[webhook] Servidor na porta ${PORT}`);
-    console.log(`[webhook] Luna AI: ${DEEPSEEK_API_KEY ? 'DeepSeek R1 (+ fallback Haiku)' : ANTHROPIC_API_KEY ? 'Claude Haiku' : 'NAO CONFIGURADA'}`);
+    console.log(`[webhook] Anthropic API: ${ANTHROPIC_API_KEY ? 'configurada (claude-sonnet-4-20250514)' : 'NAO CONFIGURADA'}`);
     console.log(`[webhook] WhatsApp: ${WHATSAPP_ACCESS_TOKEN ? 'configurado' : 'NAO CONFIGURADO'}`);
   });
 }
