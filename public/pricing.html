@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xeGVzanhicXVwbWhuaXZrZnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MjAzODgsImV4cCI6MjA4OTA5NjM4OH0.MHAGQTNBNrDAPR3jCsPz8wftXriNrwCR6eyYbVemYDk">
+  <title>Precificação — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+      <div><div class="sidebar-brand-name">Luz da Lua</div><div class="sidebar-brand-sub">Operações</div></div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
+      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
+      <a class="nav-link" href="pricing.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Precificação</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa da Pousada</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+            <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle"><span>Tema claro</span><button class="theme-toggle-btn" id="theme-toggle-btn"></button></div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info"><div class="sidebar-user-email" data-user-email></div></div>
+        <button class="btn btn-ghost btn-icon" data-action="logout"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <h1 class="page-title">Precificação Dinâmica</h1>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div id="pr-content">
+        <div class="skel skel-card" style="height:200px"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="design-system/u.js"></script>
+<script>
+const WEEKDAY = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+let state = { settings: null, days: [], rooms: [] };
+
+function fmtDateBR(iso) {
+  const [y, m, d] = iso.split('-');
+  const wd = WEEKDAY[new Date(`${iso}T00:00:00`).getDay()];
+  return `${d}/${m} <span class="t-3" style="font-size:.7rem">${wd}</span>`;
+}
+
+function multBadge(d) {
+  if (d.locked) return `<span class="badge badge-hot">🔒 ${fmtMult(d.multiplier)}</span>`;
+  if (d.multiplier < 1) return `<span class="badge badge-ok">${fmtMult(d.multiplier)}</span>`;
+  if (d.multiplier > 1) return `<span class="badge badge-pending">${fmtMult(d.multiplier)}</span>`;
+  return `<span class="badge badge-muted">base</span>`;
+}
+
+function fmtMult(m) {
+  const pct = Math.round((m - 1) * 100);
+  return pct === 0 ? '0%' : (pct > 0 ? `+${pct}%` : `${pct}%`);
+}
+
+function renderSettings() {
+  const s = state.settings;
+  const isAuto = s.pricing_mode === 'auto';
+  return `<div class="panel" style="margin-bottom:var(--sp-6)">
+    <div class="panel-body">
+      <div class="row-between" style="flex-wrap:wrap;gap:var(--sp-4)">
+        <div class="row" style="gap:var(--sp-4);flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <label class="t-3" style="display:block;font-size:.75rem;margin-bottom:4px">Piso por noite (R$)</label>
+            <input class="input" id="set-floor" type="number" min="1" value="${s.price_floor}" style="width:110px">
+          </div>
+          <div>
+            <label class="t-3" style="display:block;font-size:.75rem;margin-bottom:4px">Teto por noite (R$)</label>
+            <input class="input" id="set-ceiling" type="number" min="1" value="${s.price_ceiling}" style="width:110px">
+          </div>
+          <div>
+            <label class="t-3" style="display:block;font-size:.75rem;margin-bottom:4px">Meta ocupação (%)</label>
+            <input class="input" id="set-target" type="number" min="1" max="100" value="${s.target_occupancy}" style="width:110px">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSettings(this)">Salvar</button>
+        </div>
+        <div class="row" style="gap:var(--sp-3);align-items:center">
+          <span class="badge ${isAuto ? 'badge-ok' : 'badge-muted'}">${isAuto ? 'Motor ATIVO' : 'Motor desligado'}</span>
+          <button class="btn ${isAuto ? 'btn-danger' : 'btn-primary'} btn-sm" onclick="toggleMode(this)">
+            ${isAuto ? 'Desativar motor' : 'Ativar motor'}
+          </button>
+        </div>
+      </div>
+      <p class="t-3" style="font-size:.75rem;margin-top:var(--sp-3)">
+        Com o motor desligado, a Luna cota pela tabela normal. Ativado, cada noite recebe um ajuste
+        automático por ritmo de vendas, antecedência e concorrência — sempre entre o piso e o teto.
+        Clique em uma data do calendário para travar um multiplicador manual (sempre vence o automático).
+      </p>
+    </div>
+  </div>`;
+}
+
+function renderCalendar() {
+  if (!state.days.length) return '<p class="t-3">Calendário indisponível.</p>';
+  return `<div class="panel" style="margin-bottom:var(--sp-6)">
+    <div class="panel-body-flush"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Data</th><th>Ocupação</th><th>Ajuste</th><th>Faixa de preço</th><th>Por quê</th><th></th></tr></thead>
+      <tbody>${state.days.map(d => `<tr>
+        <td class="td-mono">${fmtDateBR(d.date)}</td>
+        <td class="td-mono">${d.locked ? '—' : Math.round(d.factors.occupancyPct ?? 0) + '%'}</td>
+        <td>${multBadge(d)}</td>
+        <td class="td-mono">${d.price_example ? `R$ ${d.price_example.min}${d.price_example.max !== d.price_example.min ? ' – ' + d.price_example.max : ''}` : '—'}</td>
+        <td class="t-3" style="font-size:.75rem;max-width:420px">${DS.esc(d.explanation || '')}</td>
+        <td class="td-action">${d.locked
+          ? `<button class="btn btn-ghost btn-sm" onclick="removeOverride('${d.date}', this)">Destravar</button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="setOverride('${d.date}')">Travar</button>`}</td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>
+  </div>`;
+}
+
+async function load() {
+  const el = document.getElementById('pr-content');
+  try {
+    const res = await DS.api('/api/pricing/calendar?days=90');
+    state.settings = res.settings;
+    state.days = res.days || [];
+    state.rooms = res.rooms || [];
+    el.innerHTML = renderSettings() + renderCalendar();
+  } catch (err) {
+    DS.errorState(el, err.message);
+  }
+}
+
+async function saveSettings(btn) {
+  btn.disabled = true;
+  try {
+    await DS.api('/api/pricing/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        price_floor: Number(document.getElementById('set-floor').value),
+        price_ceiling: Number(document.getElementById('set-ceiling').value),
+        target_occupancy: Number(document.getElementById('set-target').value),
+      }),
+    });
+    DS.toast('Configurações salvas.', 'ok');
+    await load();
+  } catch (err) {
+    DS.toast(err.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+async function toggleMode(btn) {
+  const next = state.settings.pricing_mode === 'auto' ? 'off' : 'auto';
+  const msg = next === 'auto'
+    ? 'Ativar o motor? A Luna passa a aplicar os ajustes automáticos nas cotações.'
+    : 'Desativar o motor? A Luna volta a cotar pela tabela normal.';
+  if (!confirm(msg)) return;
+  btn.disabled = true;
+  try {
+    await DS.api('/api/pricing/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ pricing_mode: next }),
+    });
+    DS.toast(next === 'auto' ? 'Motor ativado.' : 'Motor desativado.', 'ok');
+    await load();
+  } catch (err) {
+    DS.toast(err.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+async function setOverride(date) {
+  const raw = prompt(`Travar ${date} com qual ajuste? (% sobre o preço base, ex.: 20 para +20%, -10 para desconto)`);
+  if (raw === null) return;
+  const pct = Number(String(raw).replace(',', '.'));
+  if (!Number.isFinite(pct) || pct <= -100 || pct > 200) {
+    DS.toast('Valor inválido. Use um percentual entre -99 e 200.', 'err');
+    return;
+  }
+  const note = prompt('Motivo (opcional):') || null;
+  try {
+    await DS.api(`/api/pricing/overrides/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ multiplier: 1 + pct / 100, note }),
+    });
+    DS.toast(`Data ${date} travada.`, 'ok');
+    await load();
+  } catch (err) {
+    DS.toast(err.message, 'err');
+  }
+}
+
+async function removeOverride(date, btn) {
+  if (!confirm(`Remover a trava manual de ${date}? A data volta ao cálculo automático.`)) return;
+  btn.disabled = true;
+  try {
+    await DS.api(`/api/pricing/overrides/${date}`, { method: 'DELETE' });
+    DS.toast('Trava removida.', 'ok');
+    await load();
+  } catch (err) {
+    DS.toast(err.message, 'err');
+    btn.disabled = false;
+  }
+}
+
+(async () => {
+  const session = await DS.requireAuth();
+  if (!session) return;
+  DS.initNav();
+  const avEl = document.getElementById('user-avatar');
+  if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
+  await load();
+})();
+</script>
+</body>
+</html>

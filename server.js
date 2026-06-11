@@ -213,6 +213,7 @@ app.use('/api/rooms',                      require('./routes/rooms'));
 app.use('/api/financial',                  require('./routes/financial'));
 app.use('/api/vouchers',                   require('./routes/vouchers'));
 app.use('/api/competitor-prices',          require('./routes/competitor-prices'));
+app.use('/api/pricing',                    require('./routes/pricing'));
 app.use('/auth',                           require('./routes/auth'));
 
 // ─── Cron: scraping diário de concorrentes (Vercel Cron → 03h UTC) ──────────

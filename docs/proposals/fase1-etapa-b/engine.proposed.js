@@ -1,26 +1,25 @@
 'use strict';
 
 /**
- * Modulo de calculo de cotacao — config-driven (Fase 1/Etapa B).
- * Usado pelo endpoint POST /quote do webhook handler.
+ * PROPOSTA Fase 1 / Etapa B — NÃO APLICADO
+ * Substitui services/quotation/engine.js após aprovação CTO.
  *
+ * Modulo de calculo de cotacao — config-driven.
  * Preços/labels vêm de rooms + settings + special_periods + packages (Supabase),
- * com cache de 5 min e fallback nos valores hardcoded (DEFAULT_CONFIG) —
- * que são idênticos aos seeds da migration 018, então o comportamento é
- * byte-idêntico para a Pousada Luz da Lua (verificado em 26 cenários).
+ * com cache de 5 min e fallback nos valores hardcoded atuais (DEFAULT_CONFIG).
  *
- * API pública inalterada (síncrona): calculateQuotation, formatWhatsAppMessage,
- * getPascoaPackage, PASCOA_PACKAGE.
+ * API pública INALTERADA (síncrona): calculateQuotation, formatWhatsAppMessage,
+ * getPascoaPackage, PASCOA_PACKAGE. Nenhum call site muda.
  *
  * Padrão de refresh: getConfig() retorna o cache imediatamente e dispara
  * refresh em background quando expira (mesmo padrão de settings/branding.js).
- * Primeira cotação após cold start usa os defaults.
+ * Primeira cotação após cold start usa os defaults — como os seeds do banco
+ * são idênticos aos defaults, o resultado é byte-idêntico para a Luz da Lua.
  */
 
 const { getBranding } = require('../settings/branding');
-const { getQuoteAdjustment, logPriceCalc } = require('../pricing/dynamic-pricing');
 
-// ─── DEFAULT_CONFIG — valores hardcoded (fallback permanente) ────────────────
+// ─── DEFAULT_CONFIG — valores hardcoded atuais (fallback permanente) ─────────
 
 const DEFAULT_CONFIG = {
   // Precos por tipo de quarto em temporadas baixa e media.
@@ -165,7 +164,7 @@ function invalidatePricingCache() {
   _cfgTs = 0;
 }
 
-// ─── Helpers de data ─────────────────────────────────────────────────────────
+// ─── Helpers de data (inalterados) ──────────────────────────────────────────
 
 function parseDate(ddmmyyyy) {
   const [d, m, y] = ddmmyyyy.split('/');
@@ -179,13 +178,6 @@ function formatDateStr(date) {
   return `${d}/${m}/${y}`;
 }
 
-function formatIsoStr(date) {
-  const d = String(date.getDate()).padStart(2, '0');
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const y = date.getFullYear();
-  return `${y}-${m}-${d}`;
-}
-
 function addDays(date, n) {
   const result = new Date(date);
   result.setDate(result.getDate() + n);
@@ -196,7 +188,7 @@ function calcNights(entrada, saida) {
   return Math.round((parseDate(saida) - parseDate(entrada)) / (1000 * 60 * 60 * 24));
 }
 
-// ─── Lógica de temporada/preço (lê do config) ───────────────────────────────
+// ─── Lógica de temporada/preço (agora lê do config) ─────────────────────────
 
 function isFeriado(date, cfg) {
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -285,32 +277,11 @@ function calculateQuotation(params) {
   // Prorateio noite a noite
   const breakdown = [];
   let totalBruto = 0;
-  let dynamicApplied = false;
 
   for (let i = 0; i < nights; i++) {
     const nightDate = addDays(entradaDate, i);
     const nightSeason = detectSeason(formatDateStr(nightDate), cfg);
-    let nightPrice = calcNightPrice(tipo, nightSeason, numPessoas, cfg);
-
-    // Precificação dinâmica (Fase 1.5): só age quando pricing_mode='auto' no
-    // banco — caso contrário getQuoteAdjustment retorna null e nada muda.
-    // Resultado sempre clampado em [price_floor, price_ceiling].
-    const adj = getQuoteAdjustment(formatIsoStr(nightDate));
-    if (adj) {
-      const adjusted = Math.min(Math.max(Math.round(nightPrice * adj.multiplier), adj.floor), adj.ceiling);
-      logPriceCalc({
-        date: formatIsoStr(nightDate),
-        room_code: tipo,
-        base_price: nightPrice,
-        multiplier: adj.multiplier,
-        final_price: adjusted,
-        factors: adj.factors,
-        source: 'quote',
-      });
-      nightPrice = adjusted;
-      dynamicApplied = true;
-    }
-
+    const nightPrice = calcNightPrice(tipo, nightSeason, numPessoas, cfg);
     totalBruto += nightPrice;
 
     const last = breakdown[breakdown.length - 1];
@@ -339,7 +310,6 @@ function calculateQuotation(params) {
     breakdown,
     season: breakdown[0].season,       // compat: temporada da primeira noite
     precoPorNoite: breakdown[0].price,  // compat: preco da primeira noite
-    dynamicPricing: dynamicApplied,     // true quando o multiplicador foi aplicado
   };
 }
 
@@ -388,7 +358,7 @@ function toMd(isoDate) {
 
 /**
  * Retorna o pacote ativo cujo período cobre as datas solicitadas, ou null.
- * Shape de retorno idêntico ao PASCOA_PACKAGE original.
+ * Shape de retorno idêntico ao PASCOA_PACKAGE atual.
  * @param {string} data_entrada - DD/MM/YYYY
  * @param {string} data_saida   - DD/MM/YYYY
  * @returns {object|null}
@@ -418,7 +388,7 @@ function getPascoaPackage(data_entrada, data_saida) {
   return null;
 }
 
-// Compat: shape estático do pacote Páscoa (default), igual ao export anterior
+// Compat: shape estático do pacote Páscoa (default), igual ao export atual
 const PASCOA_PACKAGE = {
   nome: 'Escapada Romântica Páscoa',
   periodo: { startMd: '03-28', endMd: '04-06', ano: 2026 },
