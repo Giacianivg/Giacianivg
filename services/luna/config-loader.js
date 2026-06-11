@@ -35,6 +35,11 @@ async function getTrainingContext(supabaseAdmin) {
       .maybeSingle();
 
     if (error || !data) {
+      if (error) {
+        console.warn('[config-loader] luna_config query error:', error.message, '| code:', error.code);
+      } else {
+        console.warn('[config-loader] luna_config: tabela vazia ou sem rows');
+      }
       _cache = '';
       _cacheTs = Date.now();
       return '';
@@ -43,7 +48,8 @@ async function getTrainingContext(supabaseAdmin) {
     _cache = buildContext(data);
     _cacheTs = Date.now();
     return _cache;
-  } catch {
+  } catch (err) {
+    console.warn('[config-loader] luna_config exception:', err.message);
     return '';
   }
 }

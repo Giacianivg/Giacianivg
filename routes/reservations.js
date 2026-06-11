@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
       id, reservation_number, room_type, checkin_date, checkout_date,
       guests, total_amount, deposit_amount, balance_amount,
       status, channel, notes, checkin_at, checkout_at, created_at,
-      leads!inner(id, whatsapp_number, name)
+      leads!fk_res_lead!inner(id, whatsapp_number, name)
     `)
     .order('checkin_date', { ascending: true })
     .range(Number(offset), Number(offset) + Number(limit) - 1);
@@ -56,7 +56,7 @@ router.get('/:id', async (req, res) => {
     .from('reservations')
     .select(`
       *,
-      leads(id, whatsapp_number, name, email),
+      leads!fk_res_lead(id, whatsapp_number, name, email),
       payments(id, amount, status, payment_method, paid_at, created_at)
     `)
     .eq('id', req.params.id)

@@ -4,11 +4,15 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
 // Copy parsers directly from webhook.js for isolated testing
+const { parseCurrency } = require('../services/utils/currency');
+
 function parseConfirmarParams(signal) {
   const match = signal.match(/\[CONFIRMAR:\s*([^\]]+)\]/);
   if (!match) return null;
   const params = {};
-  match[1].split(',').forEach(part => {
+  // Smart split: divide apenas na vírgula seguida de "chave=" — preserva formato
+  // monetário brasileiro (ex: total=R$1.800,00 não é cortado no ponto decimal)
+  match[1].split(/,\s*(?=\w+=)/).forEach(part => {
     const eqIdx = part.indexOf('=');
     if (eqIdx > 0) {
       params[part.slice(0, eqIdx).trim()] = part.slice(eqIdx + 1).trim();
@@ -71,6 +75,43 @@ describe('[CONFIRMAR] parser — new format with sinal field', () => {
 
   test('returns null for non-CONFIRMAR string', () => {
     assert.equal(parseConfirmarParams('[COTAR: tipo=ALA_A]'), null);
+  });
+});
+
+// ── [CONFIRMAR] formato monetário brasileiro ──────────────────────────────────
+describe('[CONFIRMAR] parser — formato monetário brasileiro (vírgula decimal)', () => {
+  test('preserva R$800,00 — não quebra no separador decimal', () => {
+    const sig = '[CONFIRMAR: nome=João, entrada=01/07/2026, saida=03/07/2026, tipo=ALA_A, pessoas=2, total=R$800,00]';
+    const p = parseConfirmarParams(sig);
+    assert.equal(p.total, 'R$800,00');
+    assert.equal(p.nome, 'João');
+    assert.equal(p.entrada, '01/07/2026');
+    assert.equal(parseCurrency(p.total), 800);
+  });
+
+  test('preserva R$1.800,00 — crítico: evita parseCurrency("R$1.800") = 1.8', () => {
+    const sig = '[CONFIRMAR: nome=Ana, entrada=01/07/2026, saida=08/07/2026, tipo=ALA_A, pessoas=2, total=R$1.800,00]';
+    const p = parseConfirmarParams(sig);
+    assert.equal(p.total, 'R$1.800,00');
+    assert.equal(parseCurrency(p.total), 1800); // não 1.8!
+  });
+
+  test('ainda parseia corretamente sem vírgula decimal', () => {
+    const sig = '[CONFIRMAR: nome=João, entrada=01/07/2026, saida=03/07/2026, tipo=ALA_A, pessoas=2, total=R$800]';
+    const p = parseConfirmarParams(sig);
+    assert.equal(p.total, 'R$800');
+    assert.equal(parseCurrency(p.total), 800);
+  });
+
+  test('preserva todos os campos com total=R$900,00', () => {
+    const sig = '[CONFIRMAR: nome=Maria, entrada=10/05/2026, saida=12/05/2026, tipo=ALA_B, pessoas=3, total=R$900,00, sinal=R$270,00]';
+    const p = parseConfirmarParams(sig);
+    assert.equal(p.total, 'R$900,00');
+    assert.equal(p.sinal, 'R$270,00');
+    assert.equal(parseCurrency(p.total), 900);
+    assert.equal(parseCurrency(p.sinal), 270);
+    assert.equal(p.nome, 'Maria');
+    assert.equal(p.tipo, 'ALA_B');
   });
 });
 

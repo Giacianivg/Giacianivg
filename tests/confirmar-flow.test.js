@@ -123,6 +123,64 @@ describe('[CONFIRMAR] depositAmount — sinal calculation logic', () => {
   });
 });
 
+// ── Recalculation: engine totalFinal vs LLM total ────────────────────────────
+describe('[CONFIRMAR] totalAmount — recalculation from engine (bug: sinal sobre preço base)', () => {
+  const { calculateQuotation } = require('../services/quotation/engine');
+
+  test('alta season ALA_A 2 noites → engine R$800, não R$560 (preço base errado)', () => {
+    const recalc = calculateQuotation({
+      data_entrada: '01/07/2026', // julho = alta temporada
+      data_saida:   '03/07/2026',
+      tipo:         'ALA_A',
+      pessoas:      '2',
+    });
+    assert.equal(recalc.error, undefined);
+    assert.equal(recalc.totalFinal, 800); // 2 noites × R$400 (alta, ≤2px)
+    // Sinal correto: 30% de R$800 = R$240 (não 30% de R$560 = R$168)
+    assert.equal(Math.round(recalc.totalFinal * 0.30), 240);
+  });
+
+  test('mismatch detectado: LLM R$560 vs engine R$800 (alta season)', () => {
+    const llmTotal = parseCurrency('R$560'); // valor errado do LLM
+    const recalc = calculateQuotation({
+      data_entrada: '01/07/2026',
+      data_saida:   '03/07/2026',
+      tipo:         'ALA_A',
+      pessoas:      '2',
+    });
+    assert.equal(recalc.error, undefined);
+    assert.equal(recalc.totalFinal, 800);
+    assert.ok(Math.abs(llmTotal - recalc.totalFinal) > 1, 'mismatch deve ser detectado');
+    // Com recalculation, totalAmount = 800, sinal = R$240
+    assert.equal(Math.round(recalc.totalFinal * 0.30), 240);
+  });
+
+  test('baixa season ALA_A 2 noites → engine R$600, sinal R$180', () => {
+    const recalc = calculateQuotation({
+      data_entrada: '14/04/2026', // terça-feira, baixa
+      data_saida:   '16/04/2026',
+      tipo:         'ALA_A',
+      pessoas:      '2',
+    });
+    assert.equal(recalc.error, undefined);
+    assert.equal(recalc.totalFinal, 600); // 2 noites × R$300
+    assert.equal(Math.round(recalc.totalFinal * 0.30), 180);
+  });
+
+  test('recalculation ignora erro do engine e usa fallback parseCurrency', () => {
+    // Se params inválidos, engine retorna erro — usa parseCurrency(p.total)
+    const recalc = calculateQuotation({
+      data_entrada: '16/04/2026', // saida antes de entrada
+      data_saida:   '14/04/2026',
+      tipo:         'ALA_A',
+      pessoas:      '2',
+    });
+    assert.ok(recalc.error, 'engine deve retornar erro para datas inválidas');
+    // Fallback: parseCurrency do p.total original
+    assert.equal(parseCurrency('R$600'), 600);
+  });
+});
+
 // ── formatCurrency (used in guest/team messages) ──────────────────────────────
 
 describe('[CONFIRMAR] formatCurrency — guest/team message formatting', () => {

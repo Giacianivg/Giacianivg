@@ -7,24 +7,33 @@ const { ok, fail, serverError } = require('../services/utils/response');
 const router = Router();
 
 // GET /api/conversations?lead_id=X&limit=100
-// Fetch conversation history for a lead
+// GET /api/conversations?phone=551199...&limit=100
+// Fetch conversation history for a lead (by lead_id or phone/whatsapp_number)
 router.get('/', async (req, res) => {
-  const { lead_id, limit = 100 } = req.query;
+  const { lead_id, phone, limit = 100 } = req.query;
 
-  if (!lead_id) {
-    return fail(res, 'missing_fields', 'lead_id is required');
+  if (!lead_id && !phone) {
+    return fail(res, 'missing_fields', 'lead_id or phone is required');
   }
 
   // Parse limit: default 100, max 10000 (show all conversations)
   const parsedLimit = Math.min(parseInt(limit) || 100, 10000);
 
-  // Fetch LAST N messages (most recent first), then reverse to show oldest first
-  const { data: rawData, error } = await supabaseAdmin
+  // Build query — prefer lead_id, fall back to whatsapp_number
+  let query = supabaseAdmin
     .from('conversations')
     .select('id, lead_id, role, content, created_at')
-    .eq('lead_id', lead_id)
     .order('created_at', { ascending: false })
     .limit(parsedLimit);
+
+  if (lead_id) {
+    query = query.eq('lead_id', lead_id);
+  } else {
+    query = query.eq('whatsapp_number', phone);
+  }
+
+  // Fetch LAST N messages (most recent first), then reverse to show oldest first
+  const { data: rawData, error } = await query;
 
   // Reverse to get chronological order (oldest first)
   const data = rawData ? rawData.reverse() : [];
@@ -34,7 +43,8 @@ router.get('/', async (req, res) => {
     return serverError(res, error);
   }
 
-  console.log(`[conversations] GET returned ${data?.length || 0} messages for lead ${lead_id}`);
+  const identifier = lead_id ? `lead ${lead_id}` : `phone ${phone}`;
+  console.log(`[conversations] GET returned ${data?.length || 0} messages for ${identifier}`);
   if (data && data.length > 0) {
     console.log('[conversations] First message:', JSON.stringify(data[0], null, 2));
     console.log('[conversations] Last message:', JSON.stringify(data[data.length - 1], null, 2));

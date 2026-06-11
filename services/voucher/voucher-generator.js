@@ -9,6 +9,7 @@
  */
 
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { getBranding } = require('../settings/branding');
 
 // ─── Cores da identidade visual ─────────────────────────────────────────────
 const COLOR = {
@@ -113,6 +114,7 @@ function drawLine(page, x1, y, x2, color = COLOR.borderGray, thickness = 0.5) {
  * @returns {Promise<Buffer>} — PDF como Buffer
  */
 async function generateVoucherPDF(voucher) {
+  const branding = getBranding();
   const pdfDoc = await PDFDocument.create();
 
   // A4: 595 x 842 pts
@@ -132,7 +134,7 @@ async function generateVoucherPDF(voucher) {
   fillRect(page, 0, headerY, width, HEADER_H, COLOR.greenDark);
 
   // Nome da pousada
-  page.drawText('POUSADA LUZ DA LUA', {
+  page.drawText(branding.inn_name.toUpperCase(), {
     x: PAD,
     y: headerY + 68,
     size: 22,
@@ -141,7 +143,7 @@ async function generateVoucherPDF(voucher) {
   });
 
   // Tagline
-  page.drawText('Socorro-SP  ·  Natureza e Aconchego', {
+  page.drawText(`${branding.city}  ·  ${branding.tagline}`, {
     x: PAD,
     y: headerY + 46,
     size: 10,
@@ -327,7 +329,7 @@ async function generateVoucherPDF(voucher) {
   const FOOTER_H = 60;
   fillRect(page, 0, 0, width, FOOTER_H, COLOR.greenDark);
 
-  page.drawText('Obrigado por escolher a Pousada Luz da Lua!', {
+  page.drawText(`Obrigado por escolher a ${branding.inn_name}!`, {
     x: PAD,
     y: FOOTER_H - 20,
     size: 10,
@@ -336,7 +338,7 @@ async function generateVoucherPDF(voucher) {
   });
 
   const issuedAt = voucher.created_at ? fmtDate(voucher.created_at) : fmtDate(new Date());
-  page.drawText(`Emitido em ${issuedAt}  ·  pousadaluzdaluasp.com.br  ·  (19) 99840-0306`, {
+  page.drawText(`Emitido em ${issuedAt}  ·  ${branding.site_url}  ·  ${branding.public_phone}`, {
     x: PAD,
     y: FOOTER_H - 38,
     size: 8,

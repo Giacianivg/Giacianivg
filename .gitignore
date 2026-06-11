@@ -37,3 +37,4 @@ database/.temp-deploy/
 # Temporários
 instalar-arquitetura-bpec.ps1
 public/files.zip
+.mcp.json

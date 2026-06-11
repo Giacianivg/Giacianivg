@@ -288,14 +288,18 @@ async function selectLead(lead) {
   // Cancela poll anterior
   if (pollTimer) clearInterval(pollTimer);
 
-  await loadMessages(phone);
-  pollTimer = setInterval(() => loadMessages(phone), 5000);
+  const leadId = lead.id || lead.lead_id || null;
+  await loadMessages(phone, leadId);
+  pollTimer = setInterval(() => loadMessages(phone, leadId), 5000);
 }
 
-async function loadMessages(phone) {
-  if (!phone) return;
+async function loadMessages(phone, leadId) {
+  if (!leadId && !phone) return;
   try {
-    const res = await DS.api(`/api/conversations?phone=${encodeURIComponent(phone)}&limit=50`);
+    const param = leadId
+      ? `lead_id=${encodeURIComponent(leadId)}`
+      : `phone=${encodeURIComponent(phone)}`;
+    const res = await DS.api(`/api/conversations?${param}&limit=50`);
     const msgs = res?.messages || res?.conversations || (Array.isArray(res) ? res : []);
     renderMessages(msgs);
   } catch {}

@@ -181,6 +181,11 @@ app.get('/api/conversations/debug/:lead_id', async (req, res) => {
   });
 });
 
+// ─── Public API Health (sem auth — deve estar antes do middleware de auth) ─────
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'pousada-crm-api', ts: Date.now() });
+});
+
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
