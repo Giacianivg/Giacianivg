@@ -379,11 +379,15 @@
   });
   document.getElementById('btn-refresh').addEventListener('click', loadData);
 
-  async function apiFetch(path) {
+  async function apiFetch(path, opts = {}) {
     if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
     if (!authToken) { window.location.href = '/login.html'; return null; }
     try {
-      const r = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+      const r = await fetch(path, {
+        method: opts.method || 'GET',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+      });
       if (r.status === 401) { window.location.href = '/login.html'; return null; }
       return r.json();
     } catch { return null; }
@@ -404,9 +408,9 @@
     return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 86400000);
   }
 
-  const ROOM_LABELS = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
-  const STATUS_LABELS = { confirmed:'Confirmado', deposit_paid:'Sinal pago', checked_in:'Hospedado', checked_out:'Finalizado', pending:'Pendente' };
-  const STATUS_COLORS = { confirmed:'#3b82f6', deposit_paid:'#a855f7', checked_in:'#22c55e', checked_out:'#94a3b8', pending:'#eab308' };
+  const ROOM_LABELS = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_1:'Ala C', ALA_C_2:'Ala C', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
+  const STATUS_LABELS = { confirmed:'Confirmado', deposit_paid:'Sinal pago', checkedin:'Hospedado', checkedout:'Finalizado', checked_in:'Hospedado', checked_out:'Finalizado', pending:'Pendente', cancelled:'Cancelada' };
+  const STATUS_COLORS = { confirmed:'#3b82f6', deposit_paid:'#a855f7', checkedin:'#22c55e', checkedout:'#94a3b8', checked_in:'#22c55e', checked_out:'#94a3b8', pending:'#eab308', cancelled:'#ef4444' };
 
   const EVENTS = [
     { from:'2026-02-13', to:'2026-02-18', label:'Carnaval' },
@@ -487,14 +491,12 @@
 
   /* ── Stats ───────────────────────────────────────────────────────────── */
   function renderStats(checkins, checkouts, rooms) {
-    const TOTAL_PINS = { ALA_A: 8, ALA_B: 7, ALA_C_CASAL: 5, ALA_C_GRUPO: 1 };
-    const totalPins = Object.values(TOTAL_PINS).reduce((a, b) => a + b, 0);
-
+    // /api/rooms retorna os quartos físicos individuais (A1–C5) desde a migration 012
+    const totalPins = rooms.length;
     let freeCount = 0, occCount = 0;
     rooms.forEach(r => {
-      const pins = TOTAL_PINS[r.code] || 1;
-      if (r.today_status === 'available') freeCount += pins;
-      else occCount += pins;
+      if (r.today_status === 'available') freeCount += 1;
+      else occCount += 1;
     });
     const occPct = totalPins > 0 ? Math.round(occCount / totalPins * 100) : 0;
 
@@ -538,6 +540,25 @@
     const bal    = r.balance_amount || 0;
     const hasDue = bal > 0;
 
+    // Ação direta no card: registrar check-in / check-out no banco
+    let actionBtn = '';
+    if (type === 'checkin' && ['pending','confirmed'].includes(r.status)) {
+      actionBtn = `<button class="btn btn-sm" data-fd-action="checkin" data-id="${r.id}"
+        style="margin-top:6px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.35);font-size:.72rem;padding:3px 10px">
+        ✓ Registrar check-in</button>`;
+    }
+    if (type === 'checkout' && ['checkedin','confirmed'].includes(r.status)) {
+      actionBtn = `<button class="btn btn-sm" data-fd-action="checkout" data-id="${r.id}"
+        style="margin-top:6px;background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.35);font-size:.72rem;padding:3px 10px">
+        ✓ Registrar check-out</button>`;
+    }
+    if (r.status === 'checkedin' && type === 'checkin') {
+      actionBtn = `<span class="badge-sm badge-in" style="margin-top:6px">✓ Hospedado</span>`;
+    }
+    if (r.status === 'checkedout' && type === 'checkout') {
+      actionBtn = `<span class="badge-sm badge-in" style="margin-top:6px">✓ Finalizado</span>`;
+    }
+
     return `<div class="resv-card" onclick="window.location.href='bookings.html?id=${r.id}'">
       <div class="resv-avatar">${escHtml(initials(name))}</div>
       <div style="flex:1;min-width:0">
@@ -545,9 +566,10 @@
         <div class="resv-detail">
           ${fmtDateBR(r.checkin_date)} → ${fmtDateBR(r.checkout_date)} · ${nights} noite${nights!==1?'s':''} · ${r.guests||'—'} px
         </div>
-        <div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">
+        <div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
           <span class="badge-sm ${bdgCls}">${bdgTxt}</span>
           ${hasDue ? `<span class="badge-sm badge-due">Saldo: ${fmtBRL(bal)}</span>` : ''}
+          ${actionBtn}
         </div>
       </div>
       <div class="resv-meta">
@@ -556,6 +578,26 @@
       </div>
     </div>`;
   }
+
+  // Delegated handler: check-in / check-out direto do Front Desk
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-fd-action]');
+    if (!btn) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const { fdAction, id } = btn.dataset;
+    btn.disabled = true;
+    btn.textContent = 'Registrando…';
+    const res = await apiFetch(`/api/reservations/${id}/${fdAction}`, { method: 'PATCH' });
+    if (res?.success) {
+      DS.toast(fdAction === 'checkin' ? 'Check-in registrado' : 'Check-out registrado', 'ok');
+      loadData();
+    } else {
+      DS.toast(res?.message || res?.error || 'Erro ao registrar', 'err');
+      btn.disabled = false;
+      btn.textContent = fdAction === 'checkin' ? '✓ Registrar check-in' : '✓ Registrar check-out';
+    }
+  }, true);
 
   /* ── Rooms list ──────────────────────────────────────────────────────── */
   function renderRooms(rooms) {
