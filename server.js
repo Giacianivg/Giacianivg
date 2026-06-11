@@ -205,6 +205,8 @@ app.use('/api/proposals',                  require('./routes/proposals'));
 app.use('/api/reservations/confirm',       require('./routes/reservations-confirm'));
 app.use('/api/reservations',               require('./routes/reservations'));
 app.use('/api/payments',                   require('./routes/payments'));
+app.use('/api/products',                   require('./routes/products'));
+app.use('/api/room-charges',               require('./routes/room-charges'));
 
 // ─── Intelligence Layer Routes ──────────────────────────────────────────────────
 app.use('/api',                            require('./routes/scoring'));
