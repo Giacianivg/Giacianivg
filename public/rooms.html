@@ -177,7 +177,7 @@
     .ala-hdr.closed .ala-chv { transform: rotate(-90deg); }
     .ala-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
       gap: var(--sp-3);
     }
     .ala-cards.hidden { display: none; }
@@ -340,6 +340,27 @@
     }
     .empty-state svg { margin-bottom: var(--sp-3); opacity: .4; }
     .empty-state p { font-size: .9375rem; }
+
+    /* ── Card: hóspede ocupando ─────────────────────────────── */
+    .room-mc-guest {
+      padding: var(--sp-1) var(--sp-3) var(--sp-2);
+      border-top: 1px dashed var(--bdr0);
+      font-size: .68rem; line-height: 1.5; color: var(--tx3);
+    }
+    .room-mc-guest .g-name { color: var(--tx1); font-weight: 700; font-size: .73rem; }
+    .room-mc-guest .g-money { color: var(--gold); }
+
+    /* ── Comanda ────────────────────────────────────────────── */
+    .cmd-row { display: flex; justify-content: space-between; gap: var(--sp-2); font-size: .8125rem; padding: 4px 0; }
+    .cmd-row .k { color: var(--tx3); }
+    .cmd-row .v { color: var(--tx1); font-weight: 600; text-align: right; }
+    .cmd-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .cmd-table th { text-align: left; padding: 6px 8px; color: var(--tx3); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--bdr1); }
+    .cmd-table td { padding: 6px 8px; border-bottom: 1px solid var(--bdr0); color: var(--tx2); }
+    .cmd-table tr:last-child td { border-bottom: none; }
+    .cmd-totals { background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-md); padding: var(--sp-3); margin-top: var(--sp-3); }
+    .cmd-grand { font-size: 1.05rem; font-weight: 800; color: var(--gold); }
+    .prod-low { color: var(--err); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -439,6 +460,10 @@
       </div>
       <div class="topbar-right">
         <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
+        <button class="btn btn-secondary" id="btn-products">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          Gerenciar produtos
+        </button>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -758,6 +783,135 @@
   </div>
 </div>
 
+<!-- ── Modal: Comanda do hóspede ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-comanda">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="cmd-title">Comanda</div>
+        <div class="modal-sub" id="cmd-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-comanda">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="cmd-body">
+      <div style="text-align:center;color:var(--tx3);padding:var(--sp-5)">Carregando comanda…</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-comanda">Fechar</button>
+      <button class="btn btn-secondary" id="btn-add-charge" style="border-color:rgba(34,197,94,.4);color:var(--ok)">+ Lançar consumo</button>
+      <button class="btn btn-primary" id="btn-do-checkout" style="background:var(--gold);border-color:var(--gold);color:#000">🚪 Fazer checkout</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Lançar consumo ──────────────────────────────────── -->
+<div class="modal-overlay" id="modal-charge">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Lançar consumo</div>
+        <div class="modal-sub" id="charge-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-charge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label" for="charge-product">Produto</label>
+        <select class="input" id="charge-product"></select>
+        <p class="field-hint" id="charge-stock-hint"></p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
+        <div class="field-group">
+          <label class="field-label" for="charge-qty">Quantidade</label>
+          <input class="input" type="number" id="charge-qty" min="1" step="1" value="1">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="charge-price">Preço unit. (R$)</label>
+          <input class="input" type="number" id="charge-price" min="0" step="0.5">
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="charge-note">Observação (opcional)</label>
+        <input class="input" type="text" id="charge-note" placeholder="Ex: frigobar, pedido no bar…">
+      </div>
+      <div style="text-align:right;font-size:.9rem;color:var(--tx2)">Total: <strong id="charge-total" style="color:var(--gold)">R$ 0</strong></div>
+      <div id="charge-error" style="color:var(--err);font-size:.78rem;display:none;margin-top:var(--sp-2)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-charge">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-charge">Lançar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Gerenciar produtos ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-products">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Gerenciar produtos</div>
+        <div class="modal-sub">Frigobar, bar, mercearia e extras</div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-products">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Form criar/editar -->
+      <div style="background:var(--sur2);border:1px solid var(--bdr1);border-radius:var(--r-md);padding:var(--sp-3);margin-bottom:var(--sp-4)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)" id="prod-form-title">Novo produto</div>
+        <input type="hidden" id="prod-id">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--sp-2);margin-bottom:var(--sp-2)">
+          <input class="input" id="prod-name" placeholder="Nome do produto">
+          <select class="input" id="prod-category">
+            <option value="frigobar">Frigobar</option>
+            <option value="bar">Bar</option>
+            <option value="mercearia">Mercearia</option>
+            <option value="extra">Extra</option>
+          </select>
+          <input class="input" id="prod-unit" placeholder="Unidade" value="un">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:var(--sp-2);align-items:center">
+          <input class="input" type="number" id="prod-price" placeholder="Preço R$" min="0" step="0.5">
+          <input class="input" type="number" id="prod-cost" placeholder="Custo R$" min="0" step="0.5">
+          <input class="input" type="number" id="prod-min" placeholder="Estoque mín." min="0" step="1">
+          <button class="btn btn-primary btn-sm" id="btn-save-product">Salvar</button>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-product" title="Limpar formulário">✕</button>
+        </div>
+      </div>
+      <!-- Lista -->
+      <div style="overflow:auto;max-height:330px">
+        <table class="cmd-table" id="products-table">
+          <thead><tr>
+            <th>Produto</th><th>Cat.</th><th style="text-align:right">Preço</th>
+            <th style="text-align:right">Estoque</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="products-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Entrada de estoque -->
+      <div id="stock-entry-box" style="display:none;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:var(--r-md);padding:var(--sp-3);margin-top:var(--sp-3)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--ok);margin-bottom:var(--sp-2)" id="stock-entry-title">Entrada de estoque</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:var(--sp-2);align-items:center">
+          <input class="input" type="number" id="stock-qty" placeholder="Quantidade" min="1" step="1">
+          <input class="input" type="number" id="stock-cost" placeholder="Custo unit. R$" min="0" step="0.5">
+          <input class="input" type="text" id="stock-note" placeholder="Nota (fornecedor, NF…)">
+          <button class="btn btn-primary btn-sm" id="btn-save-stock" style="background:var(--ok);border-color:var(--ok)">Registrar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-products">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="design-system/u.js"></script>
@@ -812,6 +966,11 @@
   let currentView = 'grid';
   let pendingDeleteCode = null;
   let maintHistory = {};
+  let activeResvByRoom = {};   // room code → reserva ativa cobrindo hoje
+  let productsCache = [];
+  let comandaCtx = null;       // { reservation, totals } da comanda aberta
+  let stockProductId = null;   // produto selecionado para entrada de estoque
+  const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
   // ── Date label ───────────────────────────────────────────────
   const today = new Date();
@@ -830,13 +989,25 @@
   // ── Load rooms ───────────────────────────────────────────────
   async function loadRooms() {
     setLoading(true);
-    const res = await apiFetch('/api/rooms');
+    const [res, resvRes] = await Promise.all([
+      apiFetch('/api/rooms'),
+      apiFetch(`/api/reservations?checkin_to=${TODAY_ISO}&limit=500`),
+    ]);
     setLoading(false);
     if (!res || !res.success) {
       showToast('Erro ao carregar quartos.', 'err');
       return;
     }
     roomsCache = res.rooms || [];
+
+    // Indexa reservas ativas (cobrindo hoje) por quarto físico
+    activeResvByRoom = {};
+    for (const r of (resvRes?.reservations || [])) {
+      if (!['pending','confirmed','checkedin'].includes(r.status)) continue;
+      if (!(r.checkin_date <= TODAY_ISO && r.checkout_date > TODAY_ISO)) continue;
+      activeResvByRoom[r.room_type] = r;
+    }
+
     applyFilters();
     updateStats(roomsCache);
   }
@@ -853,8 +1024,8 @@
   // ── Stats ────────────────────────────────────────────────────
   function updateStats(rooms) {
     const total    = rooms.filter(r => r.active !== false).length;
-    const avail    = rooms.filter(r => r.today_status === 'available').length;
-    const occupied = rooms.filter(r => r.today_status === 'blocked').length;
+    const occupied = rooms.filter(r => r.active !== false && (activeResvByRoom[r.code] || r.today_status === 'blocked')).length;
+    const avail    = rooms.filter(r => r.active !== false && !activeResvByRoom[r.code] && r.today_status === 'available').length;
     const maint    = rooms.filter(r => r.today_status === 'maintenance').length;
 
     document.getElementById('stat-total').textContent    = total;
@@ -1023,15 +1194,23 @@
         </div>
         <div class="ala-cards" id="ala-cards-${ala.id}">
           ${ala.rooms.map(r => {
-            const s = r.today_status || 'unknown';
+            const resv = activeResvByRoom[r.code];
+            const s = resv ? 'blocked' : (r.today_status || 'unknown');
             const inactive = r.active === false ? ' style="opacity:.55"' : '';
+            const guestHtml = resv ? `
+              <div class="room-mc-guest">
+                <div class="g-name">${esc(resv.leads?.name || 'Hóspede')}</div>
+                <div>${fmtDate(resv.checkin_date)} → ${fmtDate(resv.checkout_date)}</div>
+                <div><span class="g-money">${fmtBRL(resv.total_amount)}</span> · sinal ${fmtBRL(resv.deposit_amount)}</div>
+              </div>` : '';
             return `<div class="room-mc" data-code="${esc(r.code)}" data-name="${esc(r.name)}"${inactive}>
               <div class="room-mc-name">${esc(r.name)}</div>
               <div class="room-mc-svg">${roomSVG(s)}</div>
               <div class="room-mc-foot">
-                <span class="room-mc-st ${s}">${statusLabel(s)}</span>
+                <span class="room-mc-st ${s}">${resv ? 'Ocupado' : statusLabel(s)}</span>
                 <span style="font-size:.65rem;color:var(--tx3)">${r.max_guests ? r.max_guests + 'px' : ''}</span>
               </div>
+              ${guestHtml}
             </div>`;
           }).join('')}
         </div>
@@ -1048,9 +1227,13 @@
       });
     });
 
-    // Click card → detail modal
+    // Click card → comanda (se ocupado) ou detail modal
     container.querySelectorAll('.room-mc').forEach(card => {
-      card.addEventListener('click', () => openDetailModal(card.dataset.code));
+      card.addEventListener('click', () => {
+        const code = card.dataset.code;
+        if (activeResvByRoom[code]) openComanda(code);
+        else openDetailModal(code);
+      });
     });
   }
 
@@ -1111,20 +1294,14 @@
     });
   }
 
-  // ── Load guest info (table view) ─────────────────────────────
-  async function loadGuestInfo(code) {
-    try {
-      const res = await apiFetch(`/api/reservations?room_code=${encodeURIComponent(code)}&status=confirmed&limit=1`);
-      if (!res || !res.success || !res.reservations || !res.reservations.length) return;
-      const r = res.reservations[0];
-      const guestName = r.guest_name || r.lead_name || '—';
-      const checkout  = r.checkout_date ? fmtDate(r.checkout_date) : '—';
-
-      const guestCell    = document.getElementById(`guest-${code}`);
-      const checkoutCell = document.getElementById(`checkout-${code}`);
-      if (guestCell)    guestCell.innerHTML    = `<span style="color:var(--tx1);font-weight:500">${esc(guestName)}</span>`;
-      if (checkoutCell) checkoutCell.textContent = checkout;
-    } catch (_) {}
+  // ── Guest info (table view) — usa o índice de reservas ativas ─
+  function loadGuestInfo(code) {
+    const r = activeResvByRoom[code];
+    if (!r) return;
+    const guestCell    = document.getElementById(`guest-${code}`);
+    const checkoutCell = document.getElementById(`checkout-${code}`);
+    if (guestCell)    guestCell.innerHTML      = `<span style="color:var(--tx1);font-weight:500">${esc(r.leads?.name || 'Hóspede')}</span>`;
+    if (checkoutCell) checkoutCell.textContent = fmtDate(r.checkout_date);
   }
 
   // ── Edit modal ───────────────────────────────────────────────
@@ -1253,6 +1430,328 @@
     showToast('Exclusão desativada nesta versão — use "Inativo" para ocultar o quarto.', 'warn');
     closeModal('modal-delete');
     pendingDeleteCode = null;
+  });
+
+  // ══ COMANDA DO HÓSPEDE ═══════════════════════════════════════
+  async function openComanda(code) {
+    const resv = activeResvByRoom[code];
+    if (!resv) return;
+    comandaCtx = null;
+    document.getElementById('cmd-title').textContent = `Comanda — ${code}`;
+    document.getElementById('cmd-sub').textContent   = resv.leads?.name || '';
+    document.getElementById('cmd-body').innerHTML =
+      '<div style="text-align:center;color:var(--tx3);padding:var(--sp-5)">Carregando comanda…</div>';
+    openModal('modal-comanda');
+
+    const res = await apiFetch(`/api/room-charges/comanda/${resv.id}`);
+    if (!res || !res.success) {
+      document.getElementById('cmd-body').innerHTML =
+        '<div style="text-align:center;color:var(--err);padding:var(--sp-5)">Erro ao carregar comanda.</div>';
+      return;
+    }
+    comandaCtx = { ...res, roomCode: code };
+    renderComanda();
+  }
+
+  function renderComanda() {
+    const { reservation: r, charges, totals } = comandaCtx;
+    const nights = Math.round((new Date(r.checkout_date) - new Date(r.checkin_date)) / 86400000);
+
+    const chargesRows = charges.length
+      ? charges.map(c => `<tr>
+          <td style="color:var(--tx1)">${esc(c.products?.name || '—')}</td>
+          <td>${Number(c.quantity)} ${esc(c.products?.unit || '')}</td>
+          <td style="text-align:right">${fmtBRL(c.unit_price)}</td>
+          <td style="text-align:right;color:var(--tx1);font-weight:600">${fmtBRL(c.total)}</td>
+          <td style="text-align:right"><button class="action-btn delete" data-charge-del="${c.id}" title="Estornar">✕</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Nenhum consumo lançado</td></tr>';
+
+    document.getElementById('cmd-body').innerHTML = `
+      <div class="det-sect">
+        <div class="det-sect-title">Reserva</div>
+        <div class="cmd-row"><span class="k">Hóspede</span><span class="v">${esc(r.leads?.name || '—')}</span></div>
+        <div class="cmd-row"><span class="k">WhatsApp</span><span class="v">${esc(r.leads?.whatsapp_number || '—')}</span></div>
+        <div class="cmd-row"><span class="k">Nº reserva</span><span class="v">${esc(r.reservation_number || '—')}</span></div>
+        <div class="cmd-row"><span class="k">Período</span><span class="v">${fmtDate(r.checkin_date)} → ${fmtDate(r.checkout_date)} (${nights} noite${nights!==1?'s':''})</span></div>
+        <div class="cmd-row"><span class="k">Hóspedes</span><span class="v">${r.guests || '—'}</span></div>
+        <div class="cmd-row"><span class="k">Status</span><span class="v">${esc(r.status)}</span></div>
+      </div>
+      <div class="det-sect">
+        <div class="det-sect-title">Consumos</div>
+        <table class="cmd-table">
+          <thead><tr><th>Item</th><th>Qtd</th><th style="text-align:right">Unit.</th><th style="text-align:right">Total</th><th></th></tr></thead>
+          <tbody>${chargesRows}</tbody>
+        </table>
+      </div>
+      <div class="cmd-totals">
+        <div class="cmd-row"><span class="k">Diárias</span><span class="v">${fmtBRL(totals.room_total)}</span></div>
+        <div class="cmd-row"><span class="k">Consumos</span><span class="v">${fmtBRL(totals.charges_total)}</span></div>
+        <div class="cmd-row"><span class="k">Sinal pago</span><span class="v" style="color:var(--ok)">− ${fmtBRL(totals.deposit_paid)}</span></div>
+        <div class="cmd-row" style="border-top:1px solid var(--bdr1);padding-top:6px;margin-top:4px">
+          <span class="k" style="font-weight:700;color:var(--tx1)">Total da comanda</span>
+          <span class="cmd-grand">${fmtBRL(totals.grand_total)}</span>
+        </div>
+        <div class="cmd-row"><span class="k">Saldo a receber</span><span class="v" style="color:${totals.balance_due > 0 ? 'var(--gold)' : 'var(--ok)'}">${fmtBRL(totals.balance_due)}</span></div>
+      </div>`;
+
+    // Estornar consumo
+    document.querySelectorAll('[data-charge-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Estornar este consumo? O estoque será devolvido.')) return;
+        const res = await apiFetch(`/api/room-charges/${btn.dataset.chargeDel}`, { method: 'DELETE' });
+        if (res?.success) { showToast('Consumo estornado.', 'ok'); refreshComanda(); }
+        else showToast('Erro ao estornar.', 'err');
+      });
+    });
+  }
+
+  async function refreshComanda() {
+    if (!comandaCtx) return;
+    const res = await apiFetch(`/api/room-charges/comanda/${comandaCtx.reservation.id}`);
+    if (res?.success) { comandaCtx = { ...res, roomCode: comandaCtx.roomCode }; renderComanda(); }
+  }
+
+  // ── Lançar consumo ───────────────────────────────────────────
+  async function ensureProducts(force = false) {
+    if (productsCache.length && !force) return productsCache;
+    const res = await apiFetch('/api/products');
+    productsCache = res?.products || [];
+    return productsCache;
+  }
+
+  document.getElementById('btn-add-charge').addEventListener('click', async () => {
+    if (!comandaCtx) return;
+    await ensureProducts(true);
+    const sel = document.getElementById('charge-product');
+    const actives = productsCache.filter(p => p.active);
+    if (!actives.length) { showToast('Nenhum produto ativo. Cadastre em "Gerenciar produtos".', 'warn'); return; }
+    sel.innerHTML = actives.map(p =>
+      `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock_quantity}" data-unit="${esc(p.unit)}">${esc(p.name)} — ${fmtBRL(p.price)}</option>`).join('');
+    document.getElementById('charge-sub').textContent =
+      `${comandaCtx.roomCode} · ${comandaCtx.reservation.leads?.name || ''}`;
+    document.getElementById('charge-qty').value = 1;
+    document.getElementById('charge-note').value = '';
+    document.getElementById('charge-error').style.display = 'none';
+    syncChargeFields();
+    openModal('modal-charge');
+  });
+
+  function syncChargeFields() {
+    const sel = document.getElementById('charge-product');
+    const opt = sel.selectedOptions[0];
+    if (!opt) return;
+    document.getElementById('charge-price').value = opt.dataset.price;
+    const stock = Number(opt.dataset.stock);
+    document.getElementById('charge-stock-hint').textContent =
+      `Estoque atual: ${stock} ${opt.dataset.unit}` + (stock <= 0 ? ' — sem estoque (lançamento permitido, estoque ficará negativo)' : '');
+    updateChargeTotal();
+  }
+
+  function updateChargeTotal() {
+    const qty   = parseFloat(document.getElementById('charge-qty').value) || 0;
+    const price = parseFloat(document.getElementById('charge-price').value) || 0;
+    document.getElementById('charge-total').textContent = fmtBRL(qty * price);
+  }
+
+  document.getElementById('charge-product').addEventListener('change', syncChargeFields);
+  document.getElementById('charge-qty').addEventListener('input', updateChargeTotal);
+  document.getElementById('charge-price').addEventListener('input', updateChargeTotal);
+
+  document.getElementById('btn-save-charge').addEventListener('click', async () => {
+    const errEl = document.getElementById('charge-error');
+    errEl.style.display = 'none';
+    const qty = parseFloat(document.getElementById('charge-qty').value);
+    if (!qty || qty <= 0) { errEl.textContent = 'Quantidade inválida.'; errEl.style.display = 'block'; return; }
+
+    const btn = document.getElementById('btn-save-charge');
+    btn.disabled = true; btn.textContent = 'Lançando…';
+    const res = await apiFetch('/api/room-charges', {
+      method: 'POST',
+      body: JSON.stringify({
+        reservation_id: comandaCtx.reservation.id,
+        product_id:     document.getElementById('charge-product').value,
+        quantity:       qty,
+        unit_price:     parseFloat(document.getElementById('charge-price').value) || 0,
+        room_code:      comandaCtx.roomCode,
+        staff_note:     document.getElementById('charge-note').value.trim() || undefined,
+      }),
+    });
+    btn.disabled = false; btn.textContent = 'Lançar';
+
+    if (res?.success) {
+      closeModal('modal-charge');
+      showToast('Consumo lançado.', 'ok');
+      refreshComanda();
+    } else {
+      errEl.textContent = res?.message || res?.error || 'Erro ao lançar consumo.';
+      errEl.style.display = 'block';
+    }
+  });
+
+  // ── Checkout com voucher final ───────────────────────────────
+  document.getElementById('btn-do-checkout').addEventListener('click', async () => {
+    if (!comandaCtx) return;
+    const { reservation: r, charges, totals, roomCode } = comandaCtx;
+    if (!confirm(`Fazer checkout de ${r.leads?.name || 'hóspede'} (${roomCode})?\nTotal da comanda: ${fmtBRL(totals.grand_total)}`)) return;
+
+    const btn = document.getElementById('btn-do-checkout');
+    btn.disabled = true; btn.textContent = 'Processando…';
+
+    // 1. Registra o checkout
+    const co = await apiFetch(`/api/reservations/${r.id}/checkout`, { method: 'PATCH' });
+    if (!co?.success) {
+      btn.disabled = false; btn.textContent = '🚪 Fazer checkout';
+      showToast(co?.message || 'Erro ao registrar checkout.', 'err');
+      return;
+    }
+
+    // 2. Gera voucher final com diárias + consumos
+    const consumosTxt = charges.length
+      ? 'Consumos: ' + charges.map(c => `${Number(c.quantity)}x ${c.products?.name} (${fmtBRL(c.total)})`).join(', ')
+      : 'Sem consumos lançados';
+    const voucher = await apiFetch('/api/vouchers', {
+      method: 'POST',
+      body: JSON.stringify({
+        reservation_id: r.id,
+        guest_name:   r.leads?.name || 'Hóspede',
+        room_type:    roomCode,
+        check_in:     r.checkin_date,
+        check_out:    r.checkout_date,
+        guests:       r.guests || 1,
+        source:       'direct',
+        total_amount: totals.grand_total,
+        notes:        `Checkout. Diárias ${fmtBRL(totals.room_total)} + consumos ${fmtBRL(totals.charges_total)}. ${consumosTxt}`,
+      }),
+    });
+
+    btn.disabled = false; btn.textContent = '🚪 Fazer checkout';
+    closeModal('modal-comanda');
+    showToast('Checkout registrado.', 'ok');
+    if (voucher?.download_url) window.open(voucher.download_url, '_blank');
+    loadRooms();
+  });
+
+  // ══ GERENCIAR PRODUTOS ═══════════════════════════════════════
+  document.getElementById('btn-products').addEventListener('click', async () => {
+    clearProductForm();
+    document.getElementById('stock-entry-box').style.display = 'none';
+    openModal('modal-products');
+    await renderProductsTable(true);
+  });
+
+  async function renderProductsTable(force = false) {
+    await ensureProducts(force);
+    const tbody = document.getElementById('products-tbody');
+    if (!productsCache.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Nenhum produto cadastrado</td></tr>';
+      return;
+    }
+    const catLabel = { frigobar:'Frigobar', bar:'Bar', mercearia:'Mercearia', extra:'Extra' };
+    tbody.innerHTML = productsCache.map(p => `<tr style="${p.active ? '' : 'opacity:.5'}">
+      <td style="color:var(--tx1)">${esc(p.name)}${p.active ? '' : ' <span style="font-size:.65rem;color:var(--tx3)">(inativo)</span>'}</td>
+      <td>${catLabel[p.category] || p.category}</td>
+      <td style="text-align:right">${fmtBRL(p.price)}</td>
+      <td style="text-align:right" class="${p.low_stock ? 'prod-low' : ''}">${Number(p.stock_quantity)} ${esc(p.unit)}${p.low_stock ? ' ⚠' : ''}</td>
+      <td>
+        <div class="action-group">
+          <button class="action-btn edit" data-prod-edit="${p.id}">Editar</button>
+          <button class="action-btn" data-prod-stock="${p.id}" style="color:var(--ok)">+ Estoque</button>
+          <button class="action-btn" data-prod-toggle="${p.id}">${p.active ? 'Desativar' : 'Ativar'}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-prod-edit]').forEach(b => b.addEventListener('click', () => fillProductForm(b.dataset.prodEdit)));
+    tbody.querySelectorAll('[data-prod-stock]').forEach(b => b.addEventListener('click', () => openStockEntry(b.dataset.prodStock)));
+    tbody.querySelectorAll('[data-prod-toggle]').forEach(b => b.addEventListener('click', async () => {
+      const p = productsCache.find(x => x.id === b.dataset.prodToggle);
+      const res = await apiFetch(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: !p.active }) });
+      if (res?.success) { showToast(p.active ? 'Produto desativado.' : 'Produto ativado.', 'ok'); renderProductsTable(true); }
+    }));
+  }
+
+  function clearProductForm() {
+    document.getElementById('prod-id').value = '';
+    document.getElementById('prod-form-title').textContent = 'Novo produto';
+    ['prod-name','prod-price','prod-cost','prod-min'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('prod-category').value = 'frigobar';
+    document.getElementById('prod-unit').value = 'un';
+  }
+
+  function fillProductForm(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prod-id').value       = p.id;
+    document.getElementById('prod-form-title').textContent = `Editando: ${p.name}`;
+    document.getElementById('prod-name').value     = p.name;
+    document.getElementById('prod-category').value = p.category;
+    document.getElementById('prod-unit').value     = p.unit;
+    document.getElementById('prod-price').value    = p.price;
+    document.getElementById('prod-cost').value     = p.cost_price || '';
+    document.getElementById('prod-min').value      = p.min_stock;
+  }
+
+  document.getElementById('btn-clear-product').addEventListener('click', clearProductForm);
+
+  document.getElementById('btn-save-product').addEventListener('click', async () => {
+    const id   = document.getElementById('prod-id').value;
+    const body = {
+      name:      document.getElementById('prod-name').value.trim(),
+      category:  document.getElementById('prod-category').value,
+      unit:      document.getElementById('prod-unit').value.trim() || 'un',
+      price:     parseFloat(document.getElementById('prod-price').value),
+      cost_price: parseFloat(document.getElementById('prod-cost').value) || 0,
+      min_stock: parseFloat(document.getElementById('prod-min').value) || 0,
+    };
+    if (!body.name || isNaN(body.price)) { showToast('Nome e preço são obrigatórios.', 'warn'); return; }
+
+    const res = id
+      ? await apiFetch(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      : await apiFetch('/api/products',        { method: 'POST',  body: JSON.stringify(body) });
+
+    if (res?.success) {
+      showToast(id ? 'Produto atualizado.' : 'Produto criado.', 'ok');
+      clearProductForm();
+      renderProductsTable(true);
+    } else {
+      showToast(res?.message || 'Erro ao salvar produto.', 'err');
+    }
+  });
+
+  function openStockEntry(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    stockProductId = id;
+    document.getElementById('stock-entry-title').textContent =
+      `Entrada de estoque — ${p.name} (atual: ${Number(p.stock_quantity)} ${p.unit})`;
+    document.getElementById('stock-qty').value  = '';
+    document.getElementById('stock-cost').value = p.cost_price || '';
+    document.getElementById('stock-note').value = '';
+    document.getElementById('stock-entry-box').style.display = 'block';
+    document.getElementById('stock-qty').focus();
+  }
+
+  document.getElementById('btn-save-stock').addEventListener('click', async () => {
+    if (!stockProductId) return;
+    const qty = parseFloat(document.getElementById('stock-qty').value);
+    if (!qty || qty <= 0) { showToast('Quantidade inválida.', 'warn'); return; }
+    const res = await apiFetch(`/api/products/${stockProductId}/stock-entry`, {
+      method: 'POST',
+      body: JSON.stringify({
+        quantity:  qty,
+        unit_cost: parseFloat(document.getElementById('stock-cost').value) || 0,
+        note:      document.getElementById('stock-note').value.trim() || undefined,
+      }),
+    });
+    if (res?.success) {
+      showToast(`Estoque atualizado: ${res.product?.name} → ${Number(res.product?.stock_quantity)}.`, 'ok');
+      document.getElementById('stock-entry-box').style.display = 'none';
+      stockProductId = null;
+      renderProductsTable(true);
+    } else {
+      showToast(res?.message || 'Erro na entrada de estoque.', 'err');
+    }
   });
 
   // ── Modal helpers ────────────────────────────────────────────
