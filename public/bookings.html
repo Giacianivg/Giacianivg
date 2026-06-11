@@ -455,7 +455,10 @@ function renderKPIs() {
   const today = new Date().toISOString().split('T')[0];
   const checkins  = allReservations.filter(r => r.checkin_date  === today && ['confirmed','pending'].includes(r.status));
   const checkouts = allReservations.filter(r => r.checkout_date === today && ['checkedin','confirmed'].includes(r.status));
-  const occupied  = allReservations.filter(r => ['checkedin'].includes(r.status));
+  // ocupado = reserva ativa cobrindo a data de hoje (não apenas check-in já registrado)
+  const occupied  = allReservations.filter(r =>
+    r.checkin_date <= today && r.checkout_date > today &&
+    ['confirmed','checkedin'].includes(r.status));
 
   // Revenue: confirmed + checkedin + checkedout this month
   const monStart = `${curYear}-${String(curMonth+1).padStart(2,'0')}-01`;
@@ -540,7 +543,13 @@ function renderTimeline() {
     html += `<div class="gantt-section">Ala ${ala}</div>`;
 
     for (const room of rooms) {
-      const roomResvs = filtered.filter(r => r.room_type===room.code || r.room_type===`ALA_${ala}`);
+      // Reserva de quarto físico → linha do quarto. Reserva legada por ala
+      // (ALA_A, ALA_B, ALA_C_1/2, vinda da Luna) → apenas na PRIMEIRA linha
+      // da ala, senão uma reserva vira N barras "duplicadas".
+      const isFirstRow = room === rooms[0];
+      const roomResvs = filtered.filter(r =>
+        r.room_type === room.code ||
+        (isFirstRow && (r.room_type || '').startsWith(`ALA_${ala}`)));
 
       html += `<div class="gantt-room-label">${room.code}</div>`;
       html += `<div class="gantt-canvas" data-room="${room.code}">`;
@@ -567,10 +576,11 @@ function renderTimeline() {
         const leftPct  = startDay / daysInMonth * 100;
         const widPct   = spanDays / daysInMonth * 100;
 
-        const name  = DS.esc(r.leads?.name || '?');
+        const isLegacyAla = (r.room_type || '').startsWith('ALA_');
+        const name  = DS.esc(r.leads?.name || '?') + (isLegacyAla ? ` · ${DS.esc(r.room_type)}` : '');
         const sc    = `status-${r.status}`;
         html += `<div class="resv-bar ${sc}" style="left:${leftPct}%;width:calc(${widPct}% - 2px)"
-          data-id="${r.id}" title="${name} · ${r.checkin_date} → ${r.checkout_date}">${name}</div>`;
+          data-id="${r.id}" title="${name} · ${r.checkin_date} → ${r.checkout_date}${isLegacyAla ? ' (reserva por ala — quarto a definir)' : ''}">${name}</div>`;
       }
 
       html += `</div>`;
