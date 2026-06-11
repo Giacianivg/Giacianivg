@@ -815,19 +815,27 @@ function populateRoomSelect() {
 let foundLeadId = null;
 
 async function searchLead() {
-  const phone = (document.getElementById('modal-whatsapp').value||'').trim();
-  if (phone.length < 8) return;
-  document.getElementById('lead-found').style.display = 'none';
+  const digits = (document.getElementById('modal-whatsapp').value||'').replace(/\D/g,'');
+  const foundEl = document.getElementById('lead-found');
+  foundEl.style.display = 'none';
   foundLeadId = null;
+  if (digits.length < 8) return;
   try {
-    const data = await DS.api(`/api/leads?search=${encodeURIComponent(phone)}&limit=1`);
+    const data = await DS.api(`/api/leads?search=${encodeURIComponent(digits)}&limit=5`);
     const leads = data?.leads || data?.data || [];
-    if (leads.length) {
-      foundLeadId = leads[0].id;
-      document.getElementById('modal-nome').value = leads[0].name||'';
-      document.getElementById('lead-found').textContent = `✓ Lead encontrado: ${leads[0].name}`;
-      document.getElementById('lead-found').style.display = 'block';
+    // só aceita lead cujo número realmente contém os dígitos buscados
+    const match = leads.find(l => (l.whatsapp_number||'').replace(/\D/g,'').includes(digits));
+    if (match) {
+      foundLeadId = match.id;
+      if (match.name) document.getElementById('modal-nome').value = match.name;
+      foundEl.textContent = `✓ Lead encontrado: ${match.name||match.whatsapp_number} — confira e edite os dados se precisar`;
+      foundEl.style.color = '#22c55e';
+    } else {
+      document.getElementById('modal-nome').value = '';
+      foundEl.textContent = 'Número não cadastrado — preencha o nome para criar o hóspede';
+      foundEl.style.color = 'var(--tx3)';
     }
+    foundEl.style.display = 'block';
   } catch(e) { /* silent */ }
 }
 
@@ -839,14 +847,15 @@ async function submitNewReservation() {
   const room     = document.getElementById('modal-quarto').value;
   const guests   = parseInt(document.getElementById('modal-guests').value)||2;
   const total    = parseFloat(document.getElementById('modal-total').value)||0;
-  const deposit  = parseFloat(document.getElementById('modal-deposit').value)||(total*.3);
+  const depRaw   = (document.getElementById('modal-deposit').value||'').trim();
+  const deposit  = depRaw === '' ? Math.round(total*.3) : (parseFloat(depRaw)||0); // vazio = 30%; "0" digitado = sem sinal
   const channel  = document.getElementById('modal-channel').value;
 
   const errEl = document.getElementById('modal-error');
   errEl.style.display = 'none';
 
-  if (!whatsapp || !checkin || !checkout || !total) {
-    errEl.textContent = 'Preencha: WhatsApp, datas e valor total.';
+  if (!whatsapp || !nome || !checkin || !checkout || !total) {
+    errEl.textContent = 'Preencha: WhatsApp, nome, datas e valor total.';
     errEl.style.display = 'block';
     return;
   }
@@ -855,22 +864,29 @@ async function submitNewReservation() {
     document.getElementById('modal-submit-btn').disabled = true;
     document.getElementById('modal-submit-btn').textContent = 'Criando…';
 
-    // If no leadId found, create/get lead first
+    // Lead: cria via upsert se não existe; se existe e o nome foi editado, atualiza
     let leadId = foundLeadId;
     if (!leadId) {
-      const ld = await DS.api('/api/leads', {
+      const ld = await DS.api('/api/leads/upsert', {
         method: 'POST',
-        body: { whatsapp_number: whatsapp, name: nome||'Hóspede' },
+        body: { whatsapp_number: whatsapp.replace(/\D/g,''), name: nome },
       });
-      leadId = ld?.lead?.id || ld?.id;
+      leadId = ld?.lead_id || ld?.lead?.id;
+    } else {
+      await DS.api(`/api/leads/${leadId}`, { method:'PATCH', body:{ name: nome } }).catch(() => {});
     }
 
     if (!leadId) throw new Error('Não foi possível criar o lead');
 
-    await DS.api('/api/reservations/confirm', {
+    const created = await DS.api('/api/reservations/confirm', {
       method: 'POST',
       body: { leadId, whatsapp, roomType: room, checkin, checkout, guests, totalAmount: total, depositAmount: deposit },
     });
+
+    // /confirm não grava canal — registra em seguida
+    if (created?.reservation_id && channel) {
+      await DS.api(`/api/reservations/${created.reservation_id}`, { method:'PATCH', body:{ channel } }).catch(() => {});
+    }
 
     DS.toast('Reserva criada com sucesso', 'ok');
     document.getElementById('modal-overlay').classList.remove('open');
@@ -953,6 +969,8 @@ function bindEvents() {
   // Modal
   document.getElementById('btn-nova-reserva').addEventListener('click', () => {
     foundLeadId = null;
+    document.getElementById('lead-found').style.display = 'none';
+    document.getElementById('modal-error').style.display = 'none';
     document.getElementById('modal-overlay').classList.add('open');
   });
   document.getElementById('modal-close').addEventListener('click', () => {

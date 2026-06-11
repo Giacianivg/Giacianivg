@@ -269,6 +269,13 @@
 }
 .input::placeholder, .textarea::placeholder { color: var(--tx3); }
 .select { appearance: none; cursor: pointer; }
+/* Popup nativo de opções: cor explícita em QUALQUER <select>, com ou sem classe.
+   bg sólido (não rgba translúcido) — o popup não fica sobre a página */
+select option {
+  background-color: var(--bg1);
+  color: var(--tx1);
+}
+select option:disabled { color: var(--tx3); }
 .textarea { resize: vertical; min-height: 80px; }
 
 .search-wrap { position: relative; }

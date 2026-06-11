@@ -29,9 +29,9 @@ router.post('/upsert', async (req, res) => {
   return ok(res, { lead_id: data.id, lead: data }, 200);
 });
 
-// GET /api/leads?funnel_stage=new&limit=50&offset=0
+// GET /api/leads?funnel_stage=new&search=5519...&limit=50&offset=0
 router.get('/', async (req, res) => {
-  const { funnel_stage, limit = 50, offset = 0 } = req.query;
+  const { funnel_stage, search, limit = 50, offset = 0 } = req.query;
 
   let query = supabaseAdmin
     .from('leads')
@@ -49,6 +49,11 @@ router.get('/', async (req, res) => {
     .range(Number(offset), Number(offset) + Number(limit) - 1);
 
   if (funnel_stage) query = query.eq('funnel_stage', funnel_stage);
+  if (search) {
+    // vírgula/parênteses quebram a sintaxe do .or() do PostgREST
+    const term = String(search).replace(/[,()]/g, '').trim();
+    if (term) query = query.or(`whatsapp_number.ilike.%${term}%,name.ilike.%${term}%`);
+  }
 
   const { data, error } = await query;
   if (error) return serverError(res, error);

@@ -56,6 +56,9 @@
 /* === DARK THEME (CRM default) === */
 :root,
 :root[data-theme="dark"] {
+  /* Widgets nativos (popup de <option>, date picker, scrollbar) seguem o tema —
+     sem isso o browser pinta o popup de branco e o texto claro some */
+  color-scheme: dark;
   --bg0: #070C12;
   --bg1: #0D1520;
   --bg2: #111D2C;
@@ -94,6 +97,7 @@
 
 /* === CLEAN THEME (light, public landing + alt CRM) === */
 :root[data-theme="clean"] {
+  color-scheme: light;
   --bg0: #EEF3FB;
   --bg1: #FFFFFF;
   --bg2: #FFFFFF;
