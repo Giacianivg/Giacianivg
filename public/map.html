@@ -494,6 +494,18 @@
         </div>
 
       </div>
+
+      <!-- Relatório de consumo do dia -->
+      <div class="map-wrap" style="margin-top:var(--sp-4)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3)">
+          <div style="font-size:.9375rem;font-weight:700;color:var(--tx1)">📋 Consumo do dia — por quarto</div>
+          <div style="display:flex;gap:var(--sp-2);align-items:center">
+            <input type="date" class="input" id="report-date" style="width:auto;padding:5px 10px;font-size:.8rem">
+            <span style="font-size:.875rem;color:var(--gold);font-weight:800" id="report-total"></span>
+          </div>
+        </div>
+        <div id="report-body" style="font-size:.8125rem;color:var(--tx3)">Carregando…</div>
+      </div>
     </main>
   </div>
 </div>
@@ -535,34 +547,40 @@
 
   document.getElementById('btn-refresh').addEventListener('click', loadMap);
 
-  async function apiFetch(path) {
+  async function apiFetch(path, opts = {}) {
     if (!authToken) {
       const { data } = await sb.auth.getSession();
       authToken = data?.session?.access_token;
     }
     if (!authToken) { window.location.href = '/login.html'; return null; }
-    const res = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+    const res = await fetch(path, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: opts.body || undefined,
+    });
     if (res.status === 401) { window.location.href = '/login.html'; return null; }
     return res.json();
   }
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let roomsData = {};            // code → room object
-  let activeResv = {};           // room_type → reservation (most recent confirmed)
+  let roomsData = {};            // code físico (A1..C5) → room object
+  let activeResv = {};           // code físico → reserva ativa cobrindo hoje
+  let productsCache = [];
   let selectedCode = null;
   let selectedPin  = null;
   const TODAY = new Date().toISOString().slice(0, 10);
 
-  const WING_PINS = {
-    ALA_A:       ['08','09','10','11','12','13','14','15'],
-    ALA_B:       ['01','02','03','04','05','06','07'],
-    ALA_C_CASAL: ['16','17','18','19','20'],
+  // Pin do SVG por quarto físico
+  const ROOM_PINS = {
+    B1:'01', B2:'02', B3:'03', B4:'04', B5:'05', B6:'06', B7:'07',
+    A1:'08', A2:'09', A3:'10', A4:'11', A5:'12', A6:'13', A7:'14', A8:'15',
+    C1:'16', C2:'17', C3:'18', C4:'19', C5:'20',
   };
 
   const WING_LABELS = {
-    ALA_A:       'Ala A — Chalés',
-    ALA_B:       'Ala B — Bangalôs',
-    ALA_C_CASAL: 'Ala C — Suítes Casal',
+    A: 'Ala A — Vista Pomar',
+    B: 'Ala B — Vista Montanha',
+    C: 'Ala C — Quarto do Campo',
   };
 
   const STATUS_CFG = {
@@ -581,94 +599,81 @@
     dot.classList.add('loading');
     document.getElementById('last-updated').textContent = 'Atualizando...';
 
-    const [roomsRes, resvRes] = await Promise.all([
+    const [roomsRes, resvRes, prodRes] = await Promise.all([
       apiFetch('/api/rooms'),
-      apiFetch(`/api/reservations?status=confirmed&checkin_from=${subDays(TODAY,1)}&limit=100`),
+      apiFetch(`/api/reservations?checkin_to=${TODAY}&limit=500`),
+      apiFetch('/api/products'),
     ]);
 
-    // Rooms data
     if (roomsRes?.success) {
+      roomsData = {};
       for (const r of (roomsRes.rooms || [])) roomsData[r.code] = r;
     }
+    if (prodRes?.success) productsCache = prodRes.products || [];
 
-    // Active reservations keyed by room_type
+    // Reservas ativas/de hoje por quarto físico
     activeResv = {};
-    if (resvRes?.reservations) {
-      for (const r of resvRes.reservations) {
-        if (!activeResv[r.room_type] ||
-            new Date(r.checkin_date) > new Date(activeResv[r.room_type].checkin_date)) {
-          activeResv[r.room_type] = r;
-        }
-      }
+    for (const r of (resvRes?.reservations || [])) {
+      if (!['pending','confirmed','checkedin'].includes(r.status)) continue;
+      const coversToday  = r.checkin_date <= TODAY && r.checkout_date > TODAY;
+      const checkoutHoje = r.checkout_date === TODAY;
+      if (coversToday || checkoutHoje) activeResv[r.room_type] = r;
     }
 
     applyStatuses();
     updateStats();
+    loadDailyReport();
 
     dot.classList.remove('loading');
     const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('last-updated').textContent = `Atualizado às ${now}`;
 
-    if (selectedCode) selectRoom(selectedCode, selectedPin);
+    if (selectedCode === 'BAR') selectBar();
+    else if (selectedCode === 'MERCEARIA') selectMercearia();
+    else if (selectedCode) selectRoom(null, selectedCode);
   }
 
-  function subDays(dateStr, n) {
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
+  // Status efetivo de um quarto físico
+  function roomStatus(code) {
+    const resv = activeResv[code];
+    if (resv) {
+      if (resv.checkin_date  === TODAY && resv.status !== 'checkedin') return 'checkin';
+      if (resv.checkout_date === TODAY) return 'checkout';
+      return 'occupied';
+    }
+    const room = roomsData[code];
+    if (!room) return 'unknown';
+    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request' };
+    return map[room.today_status] || 'unknown';
   }
 
-  // ── Apply status to SVG ───────────────────────────────────────────────────
+  // ── Apply status to SVG (por quarto físico) ───────────────────────────────
   function applyStatuses() {
-    ['ALA_A', 'ALA_B', 'ALA_C_CASAL'].forEach(wing => {
-      const room  = roomsData[wing];
-      const resv  = activeResv[wing];
-      let status  = 'unknown';
-      if (room) {
-        status = mapApiStatus(room.today_status);
-        if (resv) {
-          if (resv.checkin_date === TODAY)  status = 'checkin';
-          if (resv.checkout_date === TODAY) status = 'checkout';
-        }
-      }
-      applyWingPins(wing, status);
-    });
-  }
-
-  function applyWingPins(wing, status) {
-    const cfg = STATUS_CFG[status] || STATUS_CFG.unknown;
-    for (const num of (WING_PINS[wing] || [])) {
+    for (const [code, num] of Object.entries(ROOM_PINS)) {
+      const cfg  = STATUS_CFG[roomStatus(code)] || STATUS_CFG.unknown;
       const rect = document.getElementById(`rect-pin-${num}`);
       const grp  = document.getElementById(`room-pin-${num}`);
       const txt  = document.getElementById(`pin-status-${num}`);
+      const resv = activeResv[code];
       if (rect) rect.className.baseVal = cfg.rect;
       if (grp)  grp.className.baseVal  = `room-area ${cfg.anim}`;
-      if (txt)  { txt.textContent = cfg.label; txt.setAttribute('fill', cfg.color); }
+      if (txt)  {
+        txt.textContent = resv ? (resv.leads?.name || cfg.label).split(' ')[0] : cfg.label;
+        txt.setAttribute('fill', cfg.color);
+      }
     }
-  }
-
-  function mapApiStatus(s) {
-    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request' };
-    return map[s] || 'unknown';
   }
 
   // ── Stats bar ─────────────────────────────────────────────────────────────
   function updateStats() {
-    const wings = ['ALA_A', 'ALA_B', 'ALA_C_CASAL'];
     let avail = 0, occ = 0, checkin = 0, checkout = 0;
-
-    wings.forEach(wing => {
-      const room = roomsData[wing];
-      const resv = activeResv[wing];
-      if (!room) return;
-      const pins = WING_PINS[wing]?.length || 0;
-      const st   = mapApiStatus(room.today_status);
-      if (resv?.checkin_date  === TODAY) { checkin  += pins; return; }
-      if (resv?.checkout_date === TODAY) { checkout += pins; return; }
-      if (st === 'available') avail += pins;
-      else                    occ   += pins;
-    });
-
+    for (const code of Object.keys(ROOM_PINS)) {
+      const st = roomStatus(code);
+      if (st === 'checkin')        checkin++;
+      else if (st === 'checkout')  checkout++;
+      else if (st === 'available') avail++;
+      else if (st === 'occupied' || st === 'partial') occ++;
+    }
     document.getElementById('stat-available').textContent = avail;
     document.getElementById('stat-occupied').textContent  = occ;
     document.getElementById('stat-checkin').textContent   = checkin;
@@ -680,97 +685,55 @@
     document.querySelectorAll('.room-area.selected').forEach(el => el.classList.remove('selected'));
   }
 
-  window.selectRoom = function(code, pinLabel) {
+  const fmtBRL  = v => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
+  const fmtDate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // selectRoom(wing, code) — assinatura mantida pelos onclick do SVG;
+  // o 2º argumento é o quarto físico (B1, A3, C5…)
+  window.selectRoom = function(_wing, code) {
     clearSelected();
     selectedCode = code;
-    selectedPin  = pinLabel || code;
+    selectedPin  = code;
 
-    // Highlight all pins in the wing
-    for (const num of (WING_PINS[code] || [])) {
-      document.getElementById(`room-pin-${num}`)?.classList.add('selected');
-    }
+    const pin = ROOM_PINS[code];
+    if (pin) document.getElementById(`room-pin-${pin}`)?.classList.add('selected');
 
     const room  = roomsData[code];
     const resv  = activeResv[code];
     const panel = document.getElementById('room-detail');
+    const statusKey = roomStatus(code);
+    const cfg = STATUS_CFG[statusKey] || STATUS_CFG.unknown;
 
-    if (!room) {
-      document.getElementById('detail-name').textContent = pinLabel || code.replace(/_/g,' ');
-      document.getElementById('detail-sub').textContent  = WING_LABELS[code] || '';
-      const badge = document.getElementById('detail-badge');
-      badge.className = 'status-badge sb-unknown';
-      badge.textContent = 'Sem dados';
-      document.getElementById('detail-grid').innerHTML = `
-        <div style="grid-column:1/-1;color:var(--tx3);font-size:.8125rem;padding:var(--sp-2) 0">
-          Dados do quarto não disponíveis. Verifique a API /api/rooms.
-        </div>`;
+    document.getElementById('detail-name').textContent = room?.name || code;
+    document.getElementById('detail-sub').textContent  = WING_LABELS[code[0]] || '';
+    const badge = document.getElementById('detail-badge');
+    badge.className = `status-badge ${cfg.badge}`;
+    badge.textContent = cfg.label;
+
+    // Quarto ocupado → comanda do hóspede
+    if (resv) {
+      renderComandaPanel(code, resv);
       panel.classList.add('show');
       panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
       return;
     }
 
-    // Compute effective status
-    let statusKey = mapApiStatus(room.today_status);
-    if (resv?.checkin_date  === TODAY) statusKey = 'checkin';
-    if (resv?.checkout_date === TODAY) statusKey = 'checkout';
-    const cfg = STATUS_CFG[statusKey] || STATUS_CFG.unknown;
-
-    document.getElementById('detail-name').textContent = pinLabel || room.name;
-    document.getElementById('detail-sub').textContent  = WING_LABELS[code] || room.name || '';
-    const badge = document.getElementById('detail-badge');
-    badge.className = `status-badge ${cfg.badge}`;
-    badge.textContent = cfg.label;
-
-    const fmtBRL = v => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 }).format(v || 0);
-    const fmtDate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
-    const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    // Guest box (if occupied/checkin)
-    let guestBox = '';
-    if (resv && ['occupied','checkin','checkout'].includes(statusKey)) {
-      const guestName  = resv.leads?.name || 'Hóspede';
-      const initials   = guestName.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
-      const nights     = Math.round((new Date(resv.checkout_date) - new Date(resv.checkin_date)) / 86400000);
-      guestBox = `
-        <div class="guest-box">
-          <div class="guest-avatar">${escHtml(initials)}</div>
-          <div>
-            <div class="guest-name">${escHtml(guestName)}</div>
-            <div class="guest-dates">
-              Check-in: ${fmtDate(resv.checkin_date)} · Check-out: ${fmtDate(resv.checkout_date)} · ${nights} noite${nights !== 1 ? 's' : ''}
-            </div>
-          </div>
-          <div style="margin-left:auto;text-align:right;flex-shrink:0">
-            <div class="detail-stat-label">Valor total</div>
-            <div style="font-weight:700;color:var(--tx1)">${fmtBRL(resv.total_amount)}</div>
-          </div>
-        </div>`;
-    }
-
+    // Quarto livre → ficha do quarto
     document.getElementById('detail-grid').innerHTML = `
-      ${guestBox ? guestBox + '<div class="detail-divider"></div>' : ''}
       <div>
         <div class="detail-stat-label">Capacidade</div>
-        <div class="detail-stat-value">${room.max_guests || '—'} hóspedes</div>
+        <div class="detail-stat-value">${room?.max_guests || '—'} hóspedes</div>
       </div>
       <div>
         <div class="detail-stat-label">Preço baixa</div>
-        <div class="detail-stat-value">${fmtBRL(room.base_price_baixa)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
-      </div>
-      <div>
-        <div class="detail-stat-label">Preço média</div>
-        <div class="detail-stat-value">${fmtBRL(room.base_price_media)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
+        <div class="detail-stat-value">${fmtBRL(room?.base_price_baixa)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
       </div>
       <div>
         <div class="detail-stat-label">Preço alta</div>
-        <div class="detail-stat-value" style="color:var(--gold)">${fmtBRL(room.base_price_alta)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
+        <div class="detail-stat-value" style="color:var(--gold)">${fmtBRL(room?.base_price_alta)}<span style="font-size:.7rem;color:var(--tx3)">/noite</span></div>
       </div>
-      ${room.description ? `
-      <div style="grid-column:1/-1">
-        <div class="detail-stat-label">Descrição</div>
-        <div style="font-size:.8125rem;color:var(--tx2);margin-top:3px;line-height:1.55">${escHtml(room.description)}</div>
-      </div>` : ''}
-      ${room.amenities?.length ? `
+      ${room?.amenities?.length ? `
       <div style="grid-column:1/-1">
         <div class="detail-stat-label" style="margin-bottom:var(--sp-1)">Comodidades</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
@@ -778,108 +741,231 @@
         </div>
       </div>` : ''}
     `;
-
     panel.classList.add('show');
     panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   };
 
-  // ── Bar ───────────────────────────────────────────────────────────────────
+  // ── Comanda do hóspede no painel ──────────────────────────────────────────
+  async function renderComandaPanel(code, resv) {
+    const grid = document.getElementById('detail-grid');
+    const guestName = resv.leads?.name || 'Hóspede';
+    const initials  = guestName.trim().split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+    const nights    = Math.round((new Date(resv.checkout_date) - new Date(resv.checkin_date)) / 86400000);
+
+    grid.innerHTML = `
+      <div class="guest-box">
+        <div class="guest-avatar">${escHtml(initials)}</div>
+        <div>
+          <div class="guest-name">${escHtml(guestName)}</div>
+          <div class="guest-dates">
+            ${fmtDate(resv.checkin_date)} → ${fmtDate(resv.checkout_date)} · ${nights} noite${nights !== 1 ? 's' : ''} · ${resv.guests || '—'} px
+          </div>
+        </div>
+        <div style="margin-left:auto;text-align:right;flex-shrink:0">
+          <div class="detail-stat-label">Diárias</div>
+          <div style="font-weight:700;color:var(--tx1)">${fmtBRL(resv.total_amount)}</div>
+        </div>
+      </div>
+      <div style="grid-column:1/-1;color:var(--tx3);font-size:.8125rem">Carregando comanda…</div>`;
+
+    const res = await apiFetch(`/api/room-charges/comanda/${resv.id}`);
+    if (selectedCode !== code) return; // usuário já clicou em outro quarto
+    if (!res?.success) {
+      grid.querySelector('[style*="grid-column"]').textContent = 'Erro ao carregar comanda.';
+      return;
+    }
+
+    const { charges, totals } = res;
+    const chargeRows = charges.length
+      ? charges.map(c => `<tr>
+          <td style="color:var(--tx1)">${escHtml(c.products?.name || '—')}</td>
+          <td style="text-align:right">${Number(c.quantity)}</td>
+          <td style="text-align:right">${fmtBRL(c.total)}</td>
+          <td style="text-align:right"><button data-map-charge-del="${c.id}" style="background:none;border:none;color:var(--err);cursor:pointer">✕</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--tx3);text-align:center;padding:6px">Nenhum consumo lançado</td></tr>';
+
+    const prodOptions = productsCache.filter(p => p.active)
+      .map(p => `<option value="${p.id}" data-price="${p.price}">${escHtml(p.name)} — ${fmtBRL(p.price)}</option>`).join('');
+
+    grid.innerHTML = `
+      <div class="guest-box">
+        <div class="guest-avatar">${escHtml(initials)}</div>
+        <div>
+          <div class="guest-name">${escHtml(guestName)}</div>
+          <div class="guest-dates">
+            ${fmtDate(resv.checkin_date)} → ${fmtDate(resv.checkout_date)} · ${nights} noite${nights !== 1 ? 's' : ''} · ${resv.guests || '—'} px
+          </div>
+        </div>
+        <div style="margin-left:auto;text-align:right;flex-shrink:0">
+          <div class="detail-stat-label">Comanda total</div>
+          <div style="font-weight:800;color:var(--gold);font-size:1.05rem">${fmtBRL(totals.grand_total)}</div>
+        </div>
+      </div>
+      <div class="detail-divider"></div>
+      <div style="grid-column:1/-1">
+        <div class="detail-stat-label" style="margin-bottom:var(--sp-1)">Consumos (${fmtBRL(totals.charges_total)})</div>
+        <div class="inv-wrap" style="max-height:180px;margin:0">
+          <table class="inv-table">
+            <thead><tr><th>Item</th><th style="text-align:right">Qtd</th><th style="text-align:right">Total</th><th></th></tr></thead>
+            <tbody>${chargeRows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:var(--sp-2);flex-wrap:wrap;align-items:center;background:var(--sur1);border:1px solid var(--bdr0);border-radius:var(--r-sm);padding:var(--sp-2)">
+        <select class="input" id="map-charge-product" style="flex:2;min-width:160px;padding:5px 8px;font-size:.78rem">${prodOptions || '<option value="">Sem produtos ativos</option>'}</select>
+        <input class="input" type="number" id="map-charge-qty" min="1" step="1" value="1" style="width:64px;padding:5px 8px;font-size:.78rem">
+        <button class="btn btn-sm" id="map-charge-add" style="background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.35)">+ Lançar consumo</button>
+        <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">
+          Diárias ${fmtBRL(totals.room_total)} · Sinal ${fmtBRL(totals.deposit_paid)} · Saldo <strong style="color:var(--gold)">${fmtBRL(totals.balance_due)}</strong>
+        </span>
+      </div>`;
+
+    document.getElementById('map-charge-add')?.addEventListener('click', async () => {
+      const prodId = document.getElementById('map-charge-product').value;
+      const qty    = parseFloat(document.getElementById('map-charge-qty').value) || 0;
+      if (!prodId || qty <= 0) return;
+      const r = await apiFetch('/api/room-charges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservation_id: resv.id, product_id: prodId, quantity: qty, room_code: code }),
+      });
+      if (r?.success) { await reloadProducts(); renderComandaPanel(code, resv); loadDailyReport(); }
+    });
+
+    grid.querySelectorAll('[data-map-charge-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Estornar este consumo?')) return;
+        const r = await apiFetch(`/api/room-charges/${btn.dataset.mapChargeDel}`, { method: 'DELETE' });
+        if (r?.success) { await reloadProducts(); renderComandaPanel(code, resv); loadDailyReport(); }
+      });
+    });
+  }
+
+  async function reloadProducts() {
+    const res = await apiFetch('/api/products');
+    if (res?.success) productsCache = res.products || [];
+  }
+
+  // ── Bar / Mercearia — estoque real (tabela products) ──────────────────────
   window.selectBar = function() {
-    clearSelected();
-    selectedCode = 'BAR';
-    const panel = document.getElementById('room-detail');
-    document.getElementById('detail-name').textContent = '🍹 Bar da Pousada';
-    document.getElementById('detail-sub').textContent  = 'Localização: Ala A · Térreo';
-    const badge = document.getElementById('detail-badge');
-    badge.className = 'status-badge sb-bar';
-    badge.textContent = 'Aberto · 17h–22h';
-    document.getElementById('detail-grid').innerHTML = `
-      <div><div class="detail-stat-label">Itens em estoque</div><div class="detail-stat-value">${BAR_INVENTORY.length}</div></div>
-      <div><div class="detail-stat-label">Estoque baixo</div><div class="detail-stat-value" style="color:${BAR_INVENTORY.filter(i=>i.qty<10).length>0?'var(--err)':'var(--ok)'}">${BAR_INVENTORY.filter(i=>i.qty<10).length} itens</div></div>
-      <div style="grid-column:1/-1"><div class="detail-stat-label" style="margin-bottom:var(--sp-2)">Cardápio & Estoque</div></div>
-      ${renderInvTable(BAR_INVENTORY)}
-    `;
-    panel.classList.add('show');
-    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    renderStockPanel('BAR', '🍹 Bar da Pousada', 'sb-bar', 'Aberto · 17h–22h', ['bar']);
   };
 
-  // ── Mercearia ─────────────────────────────────────────────────────────────
   window.selectMercearia = function() {
-    clearSelected();
-    selectedCode = 'MERCEARIA';
-    const panel = document.getElementById('room-detail');
-    document.getElementById('detail-name').textContent = '🛒 Mercearia';
-    document.getElementById('detail-sub').textContent  = 'Localização: Recepção';
-    const badge = document.getElementById('detail-badge');
-    badge.className = 'status-badge sb-store';
-    badge.textContent = 'Estoque geral';
-    document.getElementById('detail-grid').innerHTML = `
-      <div><div class="detail-stat-label">Itens em estoque</div><div class="detail-stat-value">${MERCADO_INVENTORY.length}</div></div>
-      <div><div class="detail-stat-label">Estoque baixo</div><div class="detail-stat-value" style="color:${MERCADO_INVENTORY.filter(i=>i.qty<8).length>0?'var(--err)':'var(--ok)'}">${MERCADO_INVENTORY.filter(i=>i.qty<8).length} itens</div></div>
-      <div style="grid-column:1/-1"><div class="detail-stat-label" style="margin-bottom:var(--sp-2)">Inventário</div></div>
-      ${renderInvTable(MERCADO_INVENTORY)}
-    `;
-    panel.classList.add('show');
-    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    renderStockPanel('MERCEARIA', '🛒 Mercearia', 'sb-store', 'Estoque geral', ['mercearia', 'frigobar', 'extra']);
   };
 
-  // ── Inventory tables (mock data — /api/inventory em breve) ─────────────────
-  const BAR_INVENTORY = [
-    { item: 'Cerveja long neck',      qty: 48, unit: 'un',   price: 12 },
-    { item: 'Cerveja lata 350ml',     qty: 72, unit: 'un',   price: 8  },
-    { item: 'Caipirinha limão',       qty: 30, unit: 'dose', price: 18 },
-    { item: 'Caipirinha maracujá',    qty: 25, unit: 'dose', price: 20 },
-    { item: 'Água mineral 500ml',     qty: 60, unit: 'un',   price: 5  },
-    { item: 'Refrigerante lata',      qty: 36, unit: 'un',   price: 7  },
-    { item: 'Suco de laranja 300ml',  qty: 20, unit: 'un',   price: 10 },
-    { item: 'Porção batata frita',    qty: 15, unit: 'un',   price: 25 },
-    { item: 'Tábua de frios',         qty: 8,  unit: 'un',   price: 45 },
-    { item: 'Coxinha de frango',      qty: 24, unit: 'un',   price: 8  },
-    { item: 'Pastéis (4 un)',         qty: 12, unit: 'un',   price: 22 },
-    { item: 'Queijo coalho grelhado', qty: 6,  unit: 'un',   price: 18 },
-  ];
+  function renderStockPanel(codeKey, title, badgeCls, badgeTxt, categories) {
+    clearSelected();
+    selectedCode = codeKey;
+    const panel = document.getElementById('room-detail');
+    document.getElementById('detail-name').textContent = title;
+    document.getElementById('detail-sub').textContent  =
+      codeKey === 'BAR' ? 'Localização: Ala A · Térreo' : 'Localização: Recepção';
+    const badge = document.getElementById('detail-badge');
+    badge.className = `status-badge ${badgeCls}`;
+    badge.textContent = badgeTxt;
 
-  const MERCADO_INVENTORY = [
-    { item: 'Água mineral 5L',      qty: 20, unit: 'galão', price: 8  },
-    { item: 'Café moído 500g',      qty: 12, unit: 'pc',    price: 15 },
-    { item: 'Açúcar 1kg',           qty: 8,  unit: 'pc',    price: 5  },
-    { item: 'Leite UHT integral',   qty: 24, unit: 'un',    price: 6  },
-    { item: 'Pão de forma',         qty: 6,  unit: 'un',    price: 9  },
-    { item: 'Manteiga 200g',        qty: 10, unit: 'un',    price: 12 },
-    { item: 'Toalha de papel',      qty: 30, unit: 'rolo',  price: 4  },
-    { item: 'Sabão em pó 1kg',      qty: 5,  unit: 'pc',    price: 18 },
-    { item: 'Desinfetante 500ml',   qty: 8,  unit: 'un',    price: 7  },
-    { item: 'Papel higiênico 12un', qty: 15, unit: 'pc',    price: 22 },
-    { item: 'Detergente 500ml',     qty: 12, unit: 'un',    price: 5  },
-    { item: 'Saco de lixo 100L',    qty: 4,  unit: 'rolo',  price: 14 },
-  ];
+    const items = productsCache.filter(p => categories.includes(p.category));
+    const low   = items.filter(p => p.low_stock);
 
-  function renderInvTable(items) {
-    const LOW_QTY = 8;
-    return `
+    const rows = items.length
+      ? items.map(p => `
+          <tr style="${p.active ? '' : 'opacity:.5'}">
+            <td style="color:var(--tx1)">${escHtml(p.name)}${p.low_stock ? ' ⚠' : ''}</td>
+            <td style="text-align:right" class="${p.low_stock ? 'inv-low' : ''}">${Number(p.stock_quantity)}</td>
+            <td style="color:var(--tx3)">${escHtml(p.unit)}</td>
+            <td style="text-align:right;color:var(--tx2)">${fmtBRL(p.price)}</td>
+            <td style="text-align:right;color:var(--tx3);font-size:.7rem">mín ${Number(p.min_stock)}</td>
+            <td style="text-align:right"><button data-stock-in="${p.id}" style="background:none;border:1px solid rgba(34,197,94,.4);color:#22c55e;border-radius:4px;cursor:pointer;font-size:.68rem;padding:2px 7px">+ Entrada</button></td>
+          </tr>`).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Nenhum produto nesta categoria — cadastre em Quartos → Gerenciar produtos</td></tr>';
+
+    document.getElementById('detail-grid').innerHTML = `
+      <div><div class="detail-stat-label">Itens cadastrados</div><div class="detail-stat-value">${items.length}</div></div>
+      <div><div class="detail-stat-label">Abaixo do mínimo</div><div class="detail-stat-value" style="color:${low.length ? 'var(--err)' : 'var(--ok)'}">${low.length} item${low.length === 1 ? '' : 's'}</div></div>
       <div class="inv-wrap" style="grid-column:1/-1">
         <table class="inv-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th style="text-align:right">Qtd</th>
-              <th>Un</th>
-              <th style="text-align:right">Preço</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map(i => `
-              <tr>
-                <td style="color:var(--tx1)">${i.item}</td>
-                <td style="text-align:right" class="${i.qty < LOW_QTY ? 'inv-low' : ''}" style="color:var(--tx2)">${i.qty}</td>
-                <td style="color:var(--tx3)">${i.unit}</td>
-                <td style="text-align:right;color:var(--tx2)">R$${i.price}</td>
-              </tr>`).join('')}
-          </tbody>
+          <thead><tr><th>Item</th><th style="text-align:right">Qtd</th><th>Un</th><th style="text-align:right">Preço</th><th></th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
         </table>
-        <div class="inv-mock-note">* Dados mockados — integração com /api/inventory em breve</div>
+      </div>
+      <div id="map-stock-form" style="grid-column:1/-1;display:none;gap:var(--sp-2);align-items:center;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:var(--r-sm);padding:var(--sp-2)">
+        <span id="map-stock-label" style="font-size:.78rem;color:var(--ok);font-weight:700;flex:1"></span>
+        <input class="input" type="number" id="map-stock-qty" placeholder="Qtd" min="1" style="width:70px;padding:5px 8px;font-size:.78rem">
+        <input class="input" type="number" id="map-stock-cost" placeholder="Custo R$" min="0" step="0.5" style="width:90px;padding:5px 8px;font-size:.78rem">
+        <button class="btn btn-sm" id="map-stock-save" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.4)">Registrar compra</button>
       </div>`;
+
+    let stockTarget = null;
+    document.querySelectorAll('[data-stock-in]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        stockTarget = productsCache.find(p => p.id === btn.dataset.stockIn);
+        if (!stockTarget) return;
+        const form = document.getElementById('map-stock-form');
+        form.style.display = 'flex';
+        document.getElementById('map-stock-label').textContent =
+          `Entrada: ${stockTarget.name} (atual ${Number(stockTarget.stock_quantity)} ${stockTarget.unit})`;
+        document.getElementById('map-stock-qty').value = '';
+        document.getElementById('map-stock-cost').value = stockTarget.cost_price || '';
+        document.getElementById('map-stock-qty').focus();
+      });
+    });
+
+    document.getElementById('map-stock-save')?.addEventListener('click', async () => {
+      if (!stockTarget) return;
+      const qty = parseFloat(document.getElementById('map-stock-qty').value) || 0;
+      if (qty <= 0) return;
+      const r = await apiFetch(`/api/products/${stockTarget.id}/stock-entry`, {
+        method: 'POST',
+        body: JSON.stringify({ quantity: qty, unit_cost: parseFloat(document.getElementById('map-stock-cost').value) || 0 }),
+      });
+      if (r?.success) {
+        await reloadProducts();
+        renderStockPanel(codeKey, title, badgeCls, badgeTxt, categories);
+      }
+    });
+
+    panel.classList.add('show');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
+
+  // ── Relatório de consumo do dia ───────────────────────────────────────────
+  async function loadDailyReport(dateOverride) {
+    const dateInput = document.getElementById('report-date');
+    if (!dateInput.value) dateInput.value = TODAY;
+    const date = dateOverride || dateInput.value || TODAY;
+
+    const res = await apiFetch(`/api/room-charges/report/daily?date=${date}`);
+    const body = document.getElementById('report-body');
+    const totalEl = document.getElementById('report-total');
+
+    if (!res?.success) {
+      body.textContent = 'Erro ao carregar relatório.';
+      totalEl.textContent = '';
+      return;
+    }
+    totalEl.textContent = `Total: ${fmtBRL(res.grand_total)}`;
+
+    if (!res.rooms.length) {
+      body.innerHTML = '<div style="padding:var(--sp-3);text-align:center">Nenhum consumo lançado nesta data.</div>';
+      return;
+    }
+
+    body.innerHTML = res.rooms.map(r => `
+      <div style="border:1px solid var(--bdr0);border-radius:var(--r-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-2)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-weight:700;color:var(--tx1)">${escHtml(r.room)} — ${escHtml(r.guest)}</span>
+          <span style="font-weight:800;color:var(--gold)">${fmtBRL(r.total)}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${r.items.map(i => `<span style="font-size:.72rem;padding:2px 8px;background:var(--sur1);border:1px solid var(--bdr0);border-radius:9999px;color:var(--tx2)">${i.quantity}x ${escHtml(i.product)} · ${fmtBRL(i.total)}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  document.getElementById('report-date').addEventListener('change', () => loadDailyReport());
 
 })();
 </script>
