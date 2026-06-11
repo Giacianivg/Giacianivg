@@ -11,19 +11,24 @@
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* Cor de borda da grade — tokens --bdr0/--bdr1 não existem no tema (t.css só
+       define --bdr/--bdr2), então a grade usa uma var própria com valor garantido */
+    :root { --calbd: #334155; }
+    [data-theme="clean"] { --calbd: #cbd5e1; }
+
     /* ── Full-height layout ── */
     html, body { height: 100%; overflow: hidden; margin: 0; padding: 0; }
     .app-shell { height: 100vh; }
     .main-content { height: 100vh; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
     .page-body { flex: 1; display: flex; flex-direction: column; padding: var(--sp-3) !important; overflow: hidden; min-height: 0; }
     .cal-area { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: var(--sp-2); }
-    .cal-scroll { flex: 1; overflow: auto; border: 1px solid var(--bdr1); border-radius: var(--r-md); background: var(--sur1); min-height: 0; }
+    .cal-scroll { flex: 1; overflow: auto; border: 1px solid var(--calbd); border-radius: var(--r-md); background: var(--sur1); min-height: 0; }
 
     /* ── Topbar extras ── */
-    .view-toggle { display: flex; gap: 2px; background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); padding: 2px; }
+    .view-toggle { display: flex; gap: 2px; background: var(--sur2); border: 1px solid var(--calbd); border-radius: var(--r-sm); padding: 2px; }
     .view-btn { padding: 4px 14px; border-radius: 4px; font-size: .78rem; font-weight: 600; cursor: pointer; background: none; border: none; color: var(--tx3); transition: all .15s; }
     .view-btn.active { background: var(--royal-bg); color: var(--royal-l); }
-    .nav-arrow { padding: 5px 10px; font-size: .875rem; background: none; border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx2); cursor: pointer; transition: all .15s; }
+    .nav-arrow { padding: 5px 10px; font-size: .875rem; background: none; border: 1px solid var(--calbd); border-radius: var(--r-sm); color: var(--tx2); cursor: pointer; transition: all .15s; }
     .nav-arrow:hover { background: var(--sur2); }
     #period-label { font-weight: 700; font-size: .9375rem; color: var(--tx1); min-width: 180px; text-align: center; }
     .today-btn { font-size: .75rem; padding: 4px 10px; }
@@ -32,7 +37,7 @@
     .legend { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; }
     .legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--tx2); }
     .legend-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
-    .legend-sep { width: 1px; height: 14px; background: var(--bdr1); }
+    .legend-sep { width: 1px; height: 14px; background: var(--calbd); }
 
     /* ══════════════════════════════
        MONTHLY TIMELINE (Gantt)
@@ -45,10 +50,10 @@
     }
 
     /* Header cells */
-    .mh-corner { background: var(--sur2); padding: 6px 6px; border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); position: sticky; top: 0; z-index: 4; }
+    .mh-corner { background: var(--sur2); padding: 6px 6px; border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); position: sticky; top: 0; z-index: 4; }
     .mh-day {
       background: var(--sur2);
-      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       text-align: center; padding: 4px 2px;
       position: sticky; top: 0; z-index: 3;
       cursor: default;
@@ -58,8 +63,12 @@
     .mh-day.is-today  { background: rgba(184,134,0,.12); }
     .mh-day.is-today .day-num { color: var(--gold); }
     .mh-day.is-weekend .day-num { color: var(--royal-l); }
-    .mh-day.is-event  { background: rgba(184,134,0,.08); }
-    .mh-day.is-event .day-name::after { content: '🌟'; font-size: .55rem; display: block; margin-top: 1px; }
+    .mh-day.is-event-nac { background: rgba(184,134,0,.1); }
+    .mh-day.is-event-nac .day-name::after { content: '★'; color: var(--gold); font-size: .6rem; display: block; margin-top: 1px; }
+    .mh-day.is-event-reg { background: rgba(168,85,247,.12); }
+    .mh-day.is-event-reg .day-name::after { content: '◆'; color: #a855f7; font-size: .6rem; display: block; margin-top: 1px; }
+    .wh-day.is-event-nac { background: rgba(184,134,0,.1); }
+    .wh-day.is-event-reg { background: rgba(168,85,247,.12); }
 
     /* Section label */
     .month-section {
@@ -68,14 +77,14 @@
       padding: 4px 8px;
       font-size: .68rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: .06em; color: var(--tx3);
-      border-top: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr0);
+      border-top: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       position: sticky; left: 0;
     }
 
     /* Room label */
     .month-room-label {
       background: var(--sur1);
-      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr0);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       padding: 0 8px;
       display: flex; align-items: center;
       font-size: .76rem; font-weight: 600; color: var(--tx2);
@@ -88,7 +97,7 @@
     .month-canvas {
       grid-column: 2 / -1;
       position: relative;
-      border-bottom: 1px solid var(--bdr0);
+      border-bottom: 1px solid var(--calbd);
       cursor: crosshair;
       overflow: visible;
     }
@@ -100,8 +109,8 @@
         to right,
         transparent,
         transparent calc(100% / var(--days, 31) - 1px),
-        var(--bdr0) calc(100% / var(--days, 31) - 1px),
-        var(--bdr0) calc(100% / var(--days, 31))
+        var(--calbd) calc(100% / var(--days, 31) - 1px),
+        var(--calbd) calc(100% / var(--days, 31))
       );
       pointer-events: none;
       z-index: 0;
@@ -143,7 +152,7 @@
     /* Price row */
     .month-price-label {
       background: var(--sur1);
-      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr0);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       padding: 0 8px;
       display: flex; align-items: center;
       font-size: .68rem; color: var(--tx3);
@@ -154,7 +163,7 @@
     .month-price-canvas {
       grid-column: 2 / -1;
       position: relative;
-      border-bottom: 1px solid var(--bdr0);
+      border-bottom: 1px solid var(--calbd);
     }
     .month-price-canvas::before {
       content: '';
@@ -163,8 +172,8 @@
         to right,
         transparent,
         transparent calc(100% / var(--days, 31) - 1px),
-        var(--bdr0) calc(100% / var(--days, 31) - 1px),
-        var(--bdr0) calc(100% / var(--days, 31))
+        var(--calbd) calc(100% / var(--days, 31) - 1px),
+        var(--calbd) calc(100% / var(--days, 31))
       );
       pointer-events: none;
     }
@@ -191,10 +200,10 @@
       gap: 0;
       font-size: .76rem;
     }
-    .wh-corner { background: var(--sur2); border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); padding: 8px 6px; position: sticky; top: 0; z-index: 4; }
+    .wh-corner { background: var(--sur2); border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); padding: 8px 6px; position: sticky; top: 0; z-index: 4; }
     .wh-day {
       background: var(--sur2);
-      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       padding: 8px 4px; text-align: center;
       position: sticky; top: 0; z-index: 3;
     }
@@ -207,7 +216,7 @@
 
     .week-room-label {
       background: var(--sur1);
-      border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr1);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       padding: 8px;
       display: flex; flex-direction: column; justify-content: center;
       font-size: .78rem; font-weight: 700; color: var(--tx2);
@@ -216,7 +225,7 @@
     .week-room-sub { font-size: .65rem; font-weight: 400; color: var(--tx3); margin-top: 2px; }
 
     .week-cell {
-      border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1);
+      border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd);
       padding: 6px 8px;
       min-height: 80px;
       transition: background .15s;
@@ -240,7 +249,7 @@
       position: fixed;
       z-index: 100;
       background: var(--sur1);
-      border: 1px solid var(--bdr1);
+      border: 1px solid var(--calbd);
       border-radius: var(--r-md);
       padding: var(--sp-4);
       width: 280px;
@@ -267,6 +276,34 @@
     }
     @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
     .new-resv-panel.hidden { display: none; }
+
+    /* ── Competitor price modal ── */
+    .price-cell.pc-add { cursor: pointer; }
+    .price-cell.pc-add:hover { background: var(--sur2); color: var(--royal-l); }
+    .comp-modal-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.55);
+      align-items: center; justify-content: center;
+    }
+    .comp-modal-backdrop.open { display: flex; }
+    .comp-modal {
+      background: var(--sur1); border: 1px solid var(--calbd);
+      border-radius: var(--r-md); padding: var(--sp-5);
+      width: min(380px, calc(100vw - 32px));
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      animation: popIn .15s ease;
+    }
+
+    /* ── Tooltip de feriados/eventos (mouse e toque) ── */
+    .cal-tooltip {
+      position: fixed; z-index: 300;
+      background: var(--sur2); border: 1px solid var(--calbd);
+      border-radius: var(--r-sm); padding: 8px 12px;
+      max-width: 280px; font-size: .74rem; line-height: 1.5; color: var(--tx1);
+      box-shadow: 0 6px 24px rgba(0,0,0,.4);
+      pointer-events: none;
+      white-space: pre-line;
+    }
   </style>
 </head>
 <body>
@@ -280,16 +317,16 @@
     </a>
     <nav class="sidebar-nav">
       <div class="nav-section-title">Principal</div>
-      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
-      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Leads</a>
-      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Quartos</a>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
       <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
-      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
       <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
-      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/><rect x="5" y="7" width="5" height="5" rx="1"/></svg>Quartos</a>
       <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa</a>
       <a class="nav-link active" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
       <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
       <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
       <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
@@ -315,6 +352,7 @@
         <button class="nav-arrow" id="btn-prev">&#8249;</button>
         <span id="period-label">—</span>
         <button class="nav-arrow" id="btn-next">&#8250;</button>
+        <span id="occ-indicator" data-tip="Ocupação do período visível — noites reservadas ÷ (20 quartos × dias)" style="font-size:.75rem;font-weight:700;color:var(--tx2);padding:4px 10px;border:1px solid var(--calbd);border-radius:var(--r-sm)">Ocupação: —</span>
         <div class="view-toggle">
           <button class="view-btn active" id="btn-month">Mês</button>
           <button class="view-btn" id="btn-week">Semana</button>
@@ -325,6 +363,11 @@
 
     <main class="page-body">
       <div class="cal-area">
+        <!-- Lembrete de atualização de preços concorrentes (segundas e quintas) -->
+        <div id="comp-banner" class="alert alert-warn" style="display:none;align-items:center;gap:var(--sp-3)">
+          <span class="alert-body"><span class="alert-title" id="comp-banner-text">Hora de atualizar os preços dos concorrentes</span></span>
+          <button class="btn btn-secondary btn-sm" id="comp-banner-btn" style="margin-left:auto;flex-shrink:0">Atualizar agora</button>
+        </div>
         <!-- Legend -->
         <div class="legend">
           <div class="legend-item"><div class="legend-dot" style="background:rgba(59,130,246,.7)"></div>Confirmado</div>
@@ -332,7 +375,8 @@
           <div class="legend-item"><div class="legend-dot" style="background:rgba(34,197,94,.7)"></div>Hospedado</div>
           <div class="legend-item"><div class="legend-dot" style="background:rgba(148,163,184,.5)"></div>Finalizado</div>
           <div class="legend-sep"></div>
-          <div class="legend-item"><span style="font-size:.8rem;color:var(--gold)">🌟</span>&nbsp;Feriado / Evento</div>
+          <div class="legend-item"><span style="font-size:.8rem;color:var(--gold)">★</span>&nbsp;Feriado nacional</div>
+          <div class="legend-item"><span style="font-size:.8rem;color:#a855f7">◆</span>&nbsp;Evento regional</div>
           <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique p/ detalhes · Arraste em vazio p/ nova reserva</div>
         </div>
         <!-- Calendar area -->
@@ -367,6 +411,53 @@
   <button class="btn btn-ghost btn-sm" id="nrp-close">✕</button>
 </div>
 
+<!-- Competitor price modal -->
+<div class="comp-modal-backdrop" id="comp-modal-backdrop">
+  <div class="comp-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4)">
+      <div style="font-size:.9375rem;font-weight:800;color:var(--tx1)">Adicionar preço concorrente</div>
+      <button class="popover-close" id="comp-modal-close" style="position:static">✕</button>
+    </div>
+    <div class="stack">
+      <div class="form-group">
+        <label class="form-label" for="comp-name-sel">Concorrente *</label>
+        <select class="select" id="comp-name-sel"></select>
+        <input class="input" type="text" id="comp-name-other" placeholder="Nome do concorrente" style="display:none;margin-top:var(--sp-2)">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)">
+        <div class="form-group">
+          <label class="form-label" for="comp-date">Data início *</label>
+          <input class="input" type="date" id="comp-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="comp-date-end">Data fim</label>
+          <input class="input" type="date" id="comp-date-end">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="comp-price">Preço/noite (R$) *</label>
+        <input class="input" type="number" id="comp-price" min="1" step="1" placeholder="350">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="comp-room">Tipo de quarto</label>
+        <select class="select" id="comp-room">
+          <option value="casal" selected>Casal</option>
+          <option value="standard">Standard</option>
+          <option value="familia">Família</option>
+          <option value="grupo">Grupo</option>
+        </select>
+      </div>
+      <div id="comp-err" class="alert alert-err" style="display:none">
+        <span class="alert-body"><span class="alert-title" id="comp-err-text">Preencha os campos.</span></span>
+      </div>
+      <div style="display:flex;gap:var(--sp-2);justify-content:flex-end">
+        <button class="btn btn-secondary btn-sm" id="comp-cancel">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="comp-save">Salvar preço</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="design-system/u.js"></script>
 <script>
 (function () {
@@ -386,7 +477,8 @@
     document.getElementById('user-avatar').textContent = (user.email||'?')[0].toUpperCase();
     sb.auth.getSession().then(({ data: sd }) => {
       authToken = sd?.session?.access_token;
-      render();
+      checkCompBanner();
+      loadSpecialPeriods().finally(render);
     });
   });
 
@@ -438,15 +530,64 @@
     ALA_C_CASAL: { baixa: 300, media: 300, alta: 400 },
     ALA_C_GRUPO: { baixa: 600, media: 700, alta: 800 },
   };
+  /* type: 'nacional' (★ dourado) | 'regional' (◆ roxo) */
   const EVENTS = [
-    { from: '2026-02-13', to: '2026-02-18', label: 'Carnaval' },
-    { from: '2026-03-28', to: '2026-04-06', label: 'Páscoa' },
-    { from: '2026-06-04', to: '2026-06-07', label: 'EBAA + Corpus' },
-    { from: '2026-09-05', to: '2026-09-07', label: 'Independência' },
-    { from: '2026-10-10', to: '2026-10-12', label: 'Aparecida' },
-    { from: '2026-11-20', to: '2026-11-22', label: 'Consciência Negra' },
-    { from: '2026-12-24', to: '2027-01-02', label: 'Natal/Réveillon' },
+    /* ── Feriados nacionais 2026 ── */
+    { from: '2026-02-13', to: '2026-02-18', type: 'nacional', label: 'Carnaval',                  desc: 'Feriado nacional — mínimo 2 noites' },
+    { from: '2026-03-28', to: '2026-04-06', type: 'nacional', label: 'Semana Santa / Páscoa',     desc: 'Sexta Santa 03/abr · Páscoa 05/abr' },
+    { from: '2026-04-21', to: '2026-04-21', type: 'nacional', label: 'Tiradentes',                desc: 'Feriado nacional — 21/abr (terça)' },
+    { from: '2026-05-01', to: '2026-05-03', type: 'nacional', label: 'Dia do Trabalho',           desc: '01/mai (sexta) — fim de semana prolongado' },
+    { from: '2026-06-04', to: '2026-06-04', type: 'nacional', label: 'Corpus Christi',            desc: 'Feriado nacional — 04/jun (quinta)' },
+    { from: '2026-09-05', to: '2026-09-07', type: 'nacional', label: 'Independência',             desc: '07/set (segunda) — feriadão' },
+    { from: '2026-10-10', to: '2026-10-12', type: 'nacional', label: 'N. Sra. Aparecida',         desc: '12/out (segunda) — feriadão' },
+    { from: '2026-10-31', to: '2026-11-02', type: 'nacional', label: 'Finados',                   desc: '02/nov (segunda) — feriadão' },
+    { from: '2026-11-15', to: '2026-11-15', type: 'nacional', label: 'Proclamação da República',  desc: '15/nov (domingo)' },
+    { from: '2026-11-20', to: '2026-11-22', type: 'nacional', label: 'Consciência Negra',         desc: '20/nov (sexta) — feriadão' },
+    { from: '2026-12-24', to: '2027-01-02', type: 'nacional', label: 'Natal / Réveillon',         desc: 'Alta temporada — mínimo 2 noites' },
+    /* ── Feriados nacionais 2027 ── */
+    { from: '2027-02-05', to: '2027-02-10', type: 'nacional', label: 'Carnaval',                  desc: 'Terça de Carnaval 09/fev' },
+    { from: '2027-03-26', to: '2027-03-28', type: 'nacional', label: 'Semana Santa / Páscoa',     desc: 'Sexta Santa 26/mar · Páscoa 28/mar' },
+    { from: '2027-04-21', to: '2027-04-21', type: 'nacional', label: 'Tiradentes',                desc: 'Feriado nacional — 21/abr (quarta)' },
+    { from: '2027-05-01', to: '2027-05-02', type: 'nacional', label: 'Dia do Trabalho',           desc: '01/mai (sábado)' },
+    { from: '2027-05-27', to: '2027-05-30', type: 'nacional', label: 'Corpus Christi',            desc: '27/mai (quinta) — feriadão emendado' },
+    { from: '2027-09-04', to: '2027-09-07', type: 'nacional', label: 'Independência',             desc: '07/set (terça) — emenda de 4 dias' },
+    { from: '2027-10-09', to: '2027-10-12', type: 'nacional', label: 'N. Sra. Aparecida',         desc: '12/out (terça) — emenda de 4 dias' },
+    { from: '2027-10-30', to: '2027-11-02', type: 'nacional', label: 'Finados',                   desc: '02/nov (terça) — emenda de 4 dias' },
+    { from: '2027-11-13', to: '2027-11-15', type: 'nacional', label: 'Proclamação da República',  desc: '15/nov (segunda) — feriadão' },
+    { from: '2027-11-20', to: '2027-11-21', type: 'nacional', label: 'Consciência Negra',         desc: '20/nov (sábado)' },
+    { from: '2027-12-24', to: '2028-01-02', type: 'nacional', label: 'Natal / Réveillon',         desc: 'Alta temporada' },
+    /* ── Eventos regionais — Socorro-SP / Águas de Lindóia ── */
+    { from: '2026-06-04', to: '2026-06-07', type: 'regional', label: 'EBAA — Águas de Lindóia',     desc: 'Encontro Brasileiro de Autos Antigos — região lota, demanda altíssima' },
+    { from: '2027-05-27', to: '2027-05-30', type: 'regional', label: '12º EBAA — Águas de Lindóia', desc: 'Encontro Brasileiro de Autos Antigos — região lota, demanda altíssima' },
+    { from: '2026-08-09', to: '2026-08-09', type: 'regional', label: 'Aniversário de Socorro',      desc: 'Feriado municipal — fundação da cidade' },
+    { from: '2027-08-09', to: '2027-08-09', type: 'regional', label: 'Aniversário de Socorro',      desc: 'Feriado municipal — fundação da cidade' },
   ];
+
+  /* Mescla períodos especiais cadastrados no Supabase (special_periods, MM-DD recorrente).
+     Só entra o que ainda não está coberto pela lista fixa acima. */
+  async function loadSpecialPeriods() {
+    try {
+      const { data, error } = await sb.from('special_periods')
+        .select('label, start_md, end_md, min_nights')
+        .eq('active', true);
+      if (error || !data) return;
+      [2026, 2027].forEach(y => {
+        data.forEach(sp => {
+          // Label com ano explícito (ex.: "Carnaval 2026") só vale naquele ano —
+          // datas móveis mudam e a projeção MM-DD em outro ano seria falsa
+          const yearInLabel = (sp.label.match(/\b(20\d{2})\b/) || [])[1];
+          if (yearInLabel && Number(yearInLabel) !== y) return;
+          const from = `${y}-${sp.start_md}`;
+          const to   = sp.end_md < sp.start_md ? `${y + 1}-${sp.end_md}` : `${y}-${sp.end_md}`;
+          const covered = EVENTS.some(e => e.from <= to && from <= e.to);
+          if (!covered) {
+            EVENTS.push({ from, to, type: 'regional', label: sp.label,
+              desc: `Período especial — mínimo ${sp.min_nights || 2} noites` });
+          }
+        });
+      });
+    } catch (e) { console.warn('special_periods não carregado:', e.message); }
+  }
 
   /* ── Utility ─────────────────────────────────────────────────────────── */
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -456,7 +597,15 @@
   function fmtBRL(v) { return 'R$' + (v||0).toLocaleString('pt-BR'); }
   function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
-  function getEventForDate(d) { return EVENTS.find(e => d >= e.from && d <= e.to) || null; }
+  function getEventsForDate(d) { return EVENTS.filter(e => d >= e.from && d <= e.to); }
+  function getEventForDate(d) { return getEventsForDate(d)[0] || null; }
+  function eventDayCls(evs, prefix) {
+    if (!evs.length) return '';
+    return evs.some(e => e.type === 'regional') ? prefix + '-reg' : prefix + '-nac';
+  }
+  function eventTooltip(evs) {
+    return evs.map(e => `${e.type === 'regional' ? '◆' : '★'} ${e.label}${e.desc ? ' — ' + e.desc : ''}`).join('\n');
+  }
   function getSeason(d) {
     const dt = parseDateLocal(d), m = dt.getMonth()+1, dow = dt.getDay();
     if (getEventForDate(d)) return 'alta';
@@ -574,6 +723,7 @@
 
     const reservations = await fetchReservations(from, to);
     if (!reservations) return;
+    updateOccupancy(reservations, from, to);
 
     let compData = null;
     if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
@@ -589,9 +739,10 @@
       const ds = isoDate(curYear, curMonth, d);
       const dow = parseDateLocal(ds).getDay();
       const isWknd = dow === 0 || dow === 6;
-      const ev = getEventForDate(ds);
-      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', ev ? 'is-event' : ''].filter(Boolean).join(' ');
-      html += `<div class="${cls}" title="${ev ? ev.label : ''}">
+      const evs = getEventsForDate(ds);
+      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
+      html += `<div class="${cls}"${tipAttr}>
         <div class="day-num">${d}</div>
         <div class="day-name">${DAYS_PT[dow]}</div>
       </div>`;
@@ -657,28 +808,30 @@
       html += '</div>';
     });
 
-    /* Pricing section (Ala A / noite) */
-    html += '<div class="month-section">Preços — Ala A / noite</div>';
-    [
-      { label: 'Preço base',    key: 'base' },
-    ].forEach(row => {
-      html += `<div class="month-price-label">${row.label}</div>`;
+    /* Pricing section — todas as alas / noite */
+    html += '<div class="month-section">Preços por noite</div>';
+    ROOMS.forEach(room => {
+      html += `<div class="month-price-label">${room.label}</div>`;
       html += `<div class="month-price-canvas" style="min-height:28px">
         <div class="price-cells">`;
       days.forEach(d => {
         const ds = isoDate(curYear, curMonth, d);
         const season = getSeason(ds);
-        const price  = BASE_PRICES.ALA_A[season] || 0;
+        const price  = (BASE_PRICES[room.code] || {})[season] || 0;
         const cls    = season === 'alta' ? 'p-alta' : season === 'media' ? 'p-media' : 'p-baixa';
-        const ev     = getEventForDate(ds);
-        html += `<div class="price-cell ${cls}" title="${ev ? ev.label : season}" style="${ev ? 'background:rgba(184,134,0,.1)' : ''}">${price ? 'R$' + price : ''}</div>`;
+        const evs    = getEventsForDate(ds);
+        const evBg   = evs.length ? (evs.some(e => e.type === 'regional') ? 'background:rgba(168,85,247,.1)' : 'background:rgba(184,134,0,.1)') : '';
+        html += `<div class="price-cell ${cls}" title="${escHtml(evs.length ? eventTooltip(evs) : season)}" style="${evBg}">${price ? 'R$' + price : ''}</div>`;
       });
       html += '</div></div>';
     });
 
     /* Competitor pricing section (visible only when competitorMode=true) */
     if (competitorMode && compData) {
-      html += '<div class="month-section">Concorrentes — Média regional (quarto casal)</div>';
+      html += `<div class="month-section" style="display:flex;align-items:center;gap:var(--sp-3)">
+        <span>Concorrentes — Média regional (quarto casal)</span>
+        <button class="btn btn-secondary btn-sm" id="btn-add-comp" style="font-size:.65rem;padding:1px 8px;text-transform:none;letter-spacing:0">+ Adicionar preço concorrente</button>
+      </div>`;
       html += '<div class="month-price-label">Média concorrentes</div>';
       html += '<div class="month-price-canvas" style="min-height:28px"><div class="price-cells">';
       days.forEach(d => {
@@ -686,13 +839,13 @@
         const comp = compData[ds];
         const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
         if (!comp) {
-          html += '<div class="price-cell p-neutral" title="Sem dados">—</div>';
+          html += `<div class="price-cell p-neutral pc-add" data-comp-date="${ds}" title="Sem dados — clique para adicionar preço concorrente">--</div>`;
           return;
         }
         const diff = own && comp.avg ? Math.round((own - comp.avg) / comp.avg * 100) : 0;
-        const cls  = diff > 15 ? 'p-expensive' : diff < -15 ? 'p-cheap' : 'p-neutral';
+        const cls  = diff > 0 ? 'p-expensive' : diff < 0 ? 'p-cheap' : 'p-neutral';
         const sign = diff > 0 ? '+' : '';
-        html += `<div class="price-cell ${cls}" title="Nossa: R$${own} · Concorr: R$${comp.avg} · ${sign}${diff}%">R$${comp.avg}</div>`;
+        html += `<div class="price-cell ${cls}" title="Nossa: R$${own} · Concorr: R$${comp.avg} (${comp.count} preço${comp.count !== 1 ? 's' : ''}) · ${sign}${diff}%">R$${comp.avg}</div>`;
       });
       html += '</div></div>';
       /* Diff % row */
@@ -704,7 +857,7 @@
         const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
         if (!comp || !comp.avg || !own) { html += '<div class="price-cell p-neutral"></div>'; return; }
         const diff = Math.round((own - comp.avg) / comp.avg * 100);
-        const cls  = diff > 15 ? 'p-expensive' : diff < -15 ? 'p-cheap' : 'p-neutral';
+        const cls  = diff > 0 ? 'p-expensive' : diff < 0 ? 'p-cheap' : 'p-neutral';
         const sign = diff > 0 ? '+' : '';
         html += `<div class="price-cell ${cls}" style="font-size:.6rem">${sign}${diff}%</div>`;
       });
@@ -768,6 +921,13 @@
     });
 
     cont.addEventListener('mouseleave', () => { drag.active = false; });
+
+    /* Competitor modal triggers */
+    const addBtn = cont.querySelector('#btn-add-comp');
+    if (addBtn) addBtn.addEventListener('click', () => openCompModal(TODAY >= from && TODAY <= to ? TODAY : from));
+    cont.querySelectorAll('[data-comp-date]').forEach(cell => {
+      cell.addEventListener('click', () => openCompModal(cell.dataset.compDate));
+    });
   }
 
   function getDayFromX(offsetX, totalWidth, daysInMonth) {
@@ -794,6 +954,7 @@
 
     const reservations = await fetchReservations(from, to);
     if (!reservations) return;
+    updateOccupancy(reservations, from, to);
 
     const days = Array.from({ length: 7 }, (_, i) => addDays(curWeekStart, i));
 
@@ -805,10 +966,12 @@
       const dt = parseDateLocal(ds);
       const dow = dt.getDay();
       const isWknd = dow === 0 || dow === 6;
-      const ev = getEventForDate(ds);
-      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : ''].filter(Boolean).join(' ');
-      html += `<div class="${cls}" title="${ev ? '🌟 ' + ev.label : ''}">
-        <div class="wday-name">${DAYS_PT[dow]}${ev ? ' 🌟' : ''}</div>
+      const evs = getEventsForDate(ds);
+      const evIcon = evs.length ? (evs.some(e => e.type === 'regional') ? ' ◆' : ' ★') : '';
+      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
+      html += `<div class="${cls}"${tipAttr}>
+        <div class="wday-name">${DAYS_PT[dow]}${evIcon}</div>
         <div class="wday-num">${dt.getDate()}</div>
         <div class="wday-month">${MONTHS_PT[dt.getMonth()].slice(0,3)}</div>
       </div>`;
@@ -931,6 +1094,174 @@
   }
 
   document.getElementById('nrp-close').addEventListener('click', closeNewPanel);
+
+  /* ── Competitor price modal ──────────────────────────────────────────── */
+  async function apiPost(path, body) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    const r = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify(body),
+    });
+    return r.json();
+  }
+
+  /* Concorrentes monitorados — espelho de services/competitor/competitors.js (DEC-018) */
+  const COMPETITORS = [
+    'Pousada Pompeia',
+    'Pousada Gruta do Anjo',
+    'Pousada Recanto do Amanhecer',
+    'Pousada Vale das Orquídeas',
+    'Pousada Encantos de Socorro',
+    'Pousada Pitauá',
+    'Pousada Igarapé',
+    'Pousada Villa dos Leais',
+    'Chalés Encantos da Serra',
+    'Pousada Nefelibatas',
+  ];
+
+  (function fillCompetitorSelect() {
+    const sel = document.getElementById('comp-name-sel');
+    sel.innerHTML = COMPETITORS.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('') +
+      '<option value="__outro">Outro (digitar nome)…</option>';
+    sel.addEventListener('change', () => {
+      document.getElementById('comp-name-other').style.display = sel.value === '__outro' ? 'block' : 'none';
+    });
+  })();
+
+  function openCompModal(date) {
+    document.getElementById('comp-date').value = date || TODAY;
+    document.getElementById('comp-date-end').value = date || TODAY;
+    document.getElementById('comp-err').style.display = 'none';
+    document.getElementById('comp-modal-backdrop').classList.add('open');
+  }
+  function closeCompModal() {
+    document.getElementById('comp-modal-backdrop').classList.remove('open');
+  }
+
+  document.getElementById('comp-modal-close').addEventListener('click', closeCompModal);
+  document.getElementById('comp-cancel').addEventListener('click', closeCompModal);
+  document.getElementById('comp-modal-backdrop').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeCompModal();
+  });
+
+  document.getElementById('comp-save').addEventListener('click', async () => {
+    const sel    = document.getElementById('comp-name-sel').value;
+    const name   = sel === '__outro' ? document.getElementById('comp-name-other').value.trim() : sel;
+    const dStart = document.getElementById('comp-date').value;
+    const dEnd   = document.getElementById('comp-date-end').value || dStart;
+    const price  = parseFloat(document.getElementById('comp-price').value);
+    const room   = document.getElementById('comp-room').value;
+    const errBox = document.getElementById('comp-err');
+
+    function showErr(msg) {
+      document.getElementById('comp-err-text').textContent = msg;
+      errBox.style.display = 'flex';
+    }
+    if (!name || !dStart || !price || price <= 0) return showErr('Preencha concorrente, data início e preço válido.');
+    if (dEnd < dStart) return showErr('Data fim deve ser igual ou posterior à data início.');
+    const span = nightsBetween(dStart, dEnd);
+    if (span > 62) return showErr('Período máximo de 62 dias por cadastro.');
+
+    const btn = document.getElementById('comp-save');
+    btn.disabled = true;
+    try {
+      for (let i = 0; i <= span; i++) {
+        btn.textContent = `Salvando… (${i + 1}/${span + 1})`;
+        const resp = await apiPost('/api/competitor-prices', {
+          competitor_name: name, date: addDays(dStart, i), price, room_type: room,
+        });
+        if (!resp?.success) throw new Error(resp?.message || 'Erro ao salvar');
+      }
+      closeCompModal();
+      document.getElementById('comp-price').value = '';
+      competitorCache = {};
+      checkCompBanner();
+      if (viewMode === 'month') renderMonth();
+    } catch (err) {
+      showErr(err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Salvar preço';
+    }
+  });
+
+  /* ── Ocupação real do período visível ────────────────────────────────── */
+  const TOTAL_UNITS = 20; // quartos ativos no Supabase: A1–A8, B1–B7, C1–C5
+
+  function updateOccupancy(reservations, from, to) {
+    const days = nightsBetween(from, to) + 1;
+    const capacity = TOTAL_UNITS * days;
+    const limit = addDays(to, 1);
+    let occupied = 0;
+    reservations.forEach(r => {
+      const s = r.checkin_date > from ? r.checkin_date : from;
+      const e = r.checkout_date < limit ? r.checkout_date : limit;
+      if (e > s) occupied += nightsBetween(s, e);
+    });
+    const pct = capacity ? Math.round(occupied / capacity * 100) : 0;
+    const el = document.getElementById('occ-indicator');
+    el.textContent = `Ocupação: ${pct}%`;
+    el.style.color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#eab308' : '#f87171';
+  }
+
+  /* ── Banner de lembrete (segundas e quintas) ─────────────────────────── */
+  async function checkCompBanner() {
+    const dow = new Date().getDay();
+    if (dow !== 1 && dow !== 4) {
+      document.getElementById('comp-banner').style.display = 'none';
+      return;
+    }
+    try {
+      const { data } = await sb.from('competitor_prices')
+        .select('scraped_at')
+        .order('scraped_at', { ascending: false })
+        .limit(1);
+      const last = data && data[0] ? data[0].scraped_at : null;
+      const daysAgo = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+      const txt = last
+        ? `Hora de atualizar os preços dos concorrentes — última atualização foi há ${daysAgo} dia${daysAgo === 1 ? '' : 's'}.`
+        : 'Hora de atualizar os preços dos concorrentes — nenhum preço cadastrado ainda.';
+      document.getElementById('comp-banner-text').textContent = txt;
+      document.getElementById('comp-banner').style.display = 'flex';
+    } catch (e) { /* banner é opcional — não quebra o calendário */ }
+  }
+
+  document.getElementById('comp-banner-btn').addEventListener('click', () => openCompModal(TODAY));
+
+  /* ── Tooltip de eventos (mouse + toque) ──────────────────────────────── */
+  const tipEl = document.createElement('div');
+  tipEl.className = 'cal-tooltip';
+  tipEl.style.display = 'none';
+  document.body.appendChild(tipEl);
+
+  function showTip(target) {
+    const txt = target.dataset.tip;
+    if (!txt) return;
+    tipEl.textContent = txt;
+    tipEl.style.display = 'block';
+    const r = target.getBoundingClientRect();
+    const tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    let top  = r.bottom + 6;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    if (top + th > window.innerHeight - 8) top = r.top - th - 6;
+    tipEl.style.left = Math.max(8, left) + 'px';
+    tipEl.style.top  = Math.max(8, top) + 'px';
+  }
+  function hideTip() { tipEl.style.display = 'none'; }
+
+  document.addEventListener('mouseover', e => {
+    const t = e.target.closest('[data-tip]');
+    if (t) showTip(t);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-tip]')) hideTip();
+  });
+  // Toque no celular gera click — mostra o tooltip; tocar fora esconde
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-tip]');
+    if (t) showTip(t); else hideTip();
+  });
 
 })();
 </script>

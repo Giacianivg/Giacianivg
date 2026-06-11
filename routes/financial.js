@@ -6,7 +6,7 @@ const { ok, serverError } = require('../services/utils/response');
 
 const router = Router();
 
-const ACTIVE_STATUSES = ['pending', 'deposit_paid', 'confirmed', 'checked_in', 'completed'];
+const ACTIVE_STATUSES = ['pending', 'deposit_paid', 'confirmed', 'checked_in', 'checkedin', 'checkedout', 'completed'];
 
 // ─── Helper: month key from ISO date string ───────────────────────────────────
 function monthKey(isoDate) {
