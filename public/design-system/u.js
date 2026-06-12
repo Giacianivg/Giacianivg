@@ -90,7 +90,14 @@
     const token = await getToken();
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(path, { ...opts, headers });
+    // body como objeto JS deve virar JSON — fetch sozinho faria String(body)
+    // e o servidor receberia "[object Object]"
+    let body = opts.body;
+    if (body !== undefined && body !== null && typeof body === 'object' &&
+        !(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof URLSearchParams)) {
+      body = JSON.stringify(body);
+    }
+    const res = await fetch(path, { ...opts, body, headers });
     if (res.status === 401) { window.location.href = 'login.html'; return null; }
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
