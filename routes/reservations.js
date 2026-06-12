@@ -57,7 +57,7 @@ router.get('/:id', async (req, res) => {
     .select(`
       *,
       leads!fk_res_lead(id, whatsapp_number, name, email),
-      payments(id, amount, status, method, payment_type, confirmed_at, created_at)
+      payments!fk_pay_reservation(id, amount, status, method, payment_type, confirmed_at, created_at)
     `)
     .eq('id', req.params.id)
     .single();
