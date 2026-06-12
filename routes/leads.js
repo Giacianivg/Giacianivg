@@ -10,10 +10,17 @@ const router = Router();
 // Body: { whatsapp_number, name?, funnel_stage? }
 // Returns: { lead_id }
 router.post('/upsert', async (req, res) => {
-  const { whatsapp_number, name, funnel_stage = 'new' } = req.body;
+  const { whatsapp_number: rawNumber, name, funnel_stage = 'new' } = req.body;
 
-  if (!whatsapp_number) {
+  if (!rawNumber) {
     return fail(res, 'missing_field', 'whatsapp_number is required');
+  }
+
+  // O banco exige 10–15 dígitos (leads_whatsapp_fmt); normaliza máscara/espaços
+  const whatsapp_number = String(rawNumber).replace(/\D/g, '');
+  if (!/^\d{10,15}$/.test(whatsapp_number)) {
+    return fail(res, 'invalid_whatsapp',
+      `Número de WhatsApp inválido: "${rawNumber}". Use código do país + DDD + número, ex: 5519999999999`);
   }
 
   const { data, error } = await supabaseAdmin

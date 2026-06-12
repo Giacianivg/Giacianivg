@@ -580,6 +580,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-detail">Fechar</button>
+      <button class="btn btn-secondary" id="det-btn-frigobar" data-code="">🧊 Frigobar</button>
       <button class="btn btn-secondary" id="det-btn-maint" data-code="" data-name="">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
         Manutenção
@@ -764,6 +765,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-comanda">Fechar</button>
+      <button class="btn btn-secondary" id="btn-cmd-frigobar">🧊 Frigobar</button>
       <button class="btn btn-secondary" id="btn-add-charge" style="border-color:rgba(34,197,94,.4);color:var(--ok)">+ Lançar consumo</button>
       <button class="btn btn-primary" id="btn-do-checkout" style="background:var(--gold);border-color:var(--gold);color:#000">🚪 Fazer checkout</button>
     </div>
@@ -859,19 +861,88 @@
           </tbody>
         </table>
       </div>
-      <!-- Entrada de estoque -->
-      <div id="stock-entry-box" style="display:none;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:var(--r-md);padding:var(--sp-3);margin-top:var(--sp-3)">
-        <div style="font-size:.78rem;font-weight:700;color:var(--ok);margin-bottom:var(--sp-2)" id="stock-entry-title">Entrada de estoque</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:var(--sp-2);align-items:center">
-          <input class="input" type="number" id="stock-qty" placeholder="Quantidade" min="1" step="1">
-          <input class="input" type="number" id="stock-cost" placeholder="Custo unit. R$" min="0" step="0.5">
-          <input class="input" type="text" id="stock-note" placeholder="Nota (fornecedor, NF…)">
-          <button class="btn btn-primary btn-sm" id="btn-save-stock" style="background:var(--ok);border-color:var(--ok)">Registrar</button>
-        </div>
-      </div>
+      <p class="field-hint" style="margin-top:var(--sp-2)">Entrada de estoque é feita no <a href="map.html" style="color:var(--royal-l)">Mapa</a> → Mercearia/Bar.</p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-products">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Frigobar do quarto ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-frigobar">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="fb-title">🧊 Frigobar</div>
+        <div class="modal-sub" id="fb-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-frigobar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group" style="display:flex;align-items:center;gap:var(--sp-3)">
+        <label class="field-label" style="margin:0">Status do frigobar</label>
+        <select class="input" id="fb-status" style="width:auto;min-width:180px">
+          <option value="ok">✅ Ok</option>
+          <option value="manutencao">🔧 Em manutenção</option>
+          <option value="sem_frigobar">➖ Sem frigobar</option>
+        </select>
+      </div>
+      <div class="det-sect">
+        <div class="det-sect-title">Itens no frigobar</div>
+        <table class="cmd-table">
+          <thead><tr><th>Item</th><th style="text-align:right">Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Devolver ao estoque</th></tr></thead>
+          <tbody id="fb-items"><tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="det-sect" id="fb-load-sect">
+        <div class="det-sect-title">Abastecer (sai do estoque central)</div>
+        <div style="display:grid;grid-template-columns:2fr 80px auto;gap:var(--sp-2);align-items:center">
+          <select class="input" id="fb-load-product"></select>
+          <input class="input" type="number" id="fb-load-qty" min="1" step="1" value="1">
+          <button class="btn btn-primary btn-sm" id="fb-load-btn">Abastecer</button>
+        </div>
+        <p class="field-hint" id="fb-load-hint"></p>
+      </div>
+      <div id="fb-error" style="color:var(--err);font-size:.78rem;display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-frigobar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Contagem do frigobar no checkout ────────────────── -->
+<div class="modal-overlay" id="modal-fb-checkout">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">🧊 Contagem do frigobar</div>
+        <div class="modal-sub" id="fbc-sub">Informe o que o hóspede consumiu — será lançado na comanda</div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-fb-checkout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <table class="cmd-table">
+        <thead><tr><th>Item</th><th style="text-align:right">No frigobar</th><th style="text-align:right">Consumido</th></tr></thead>
+        <tbody id="fbc-items"></tbody>
+      </table>
+      <div class="field-group" style="margin-top:var(--sp-4)">
+        <label class="field-label">Itens restantes após o checkout</label>
+        <div style="display:flex;gap:var(--sp-4)">
+          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="keep" checked> Deixar no frigobar</label>
+          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="return"> Devolver ao estoque/bar</label>
+        </div>
+      </div>
+      <div id="fbc-error" style="color:var(--err);font-size:.78rem;display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-fb-checkout">Cancelar</button>
+      <button class="btn btn-primary" id="fbc-continue" style="background:var(--gold);border-color:var(--gold);color:#000">Lançar e continuar checkout</button>
     </div>
   </div>
 </div>
@@ -933,8 +1004,12 @@
   let activeResvByRoom = {};   // room code → reserva ativa cobrindo hoje
   let productsCache = [];
   let comandaCtx = null;       // { reservation, totals } da comanda aberta
-  let stockProductId = null;   // produto selecionado para entrada de estoque
+  let frigobarCode = null;     // quarto com o modal de frigobar aberto
+  let fbCheckoutItems = [];    // itens do frigobar na contagem de checkout
+  // (entrada de estoque foi movida para map.html — Mercearia/Bar)
   const TODAY_ISO = new Date().toISOString().slice(0, 10);
+  const FRIG_ICON  = { ok: '✅', manutencao: '🔧', sem_frigobar: '➖' };
+  const FRIG_LABEL = { ok: 'ok', manutencao: 'em manutenção', sem_frigobar: 'sem frigobar' };
 
   // ── Date label ───────────────────────────────────────────────
   const today = new Date();
@@ -1172,7 +1247,10 @@
               <div class="room-mc-svg">${roomSVG(s)}</div>
               <div class="room-mc-foot">
                 <span class="room-mc-st ${s}">${resv ? 'Ocupado' : statusLabel(s)}</span>
-                <span style="font-size:.65rem;color:var(--tx3)">${r.max_guests ? r.max_guests + 'px' : ''}</span>
+                <span style="font-size:.65rem;color:var(--tx3)">
+                  <span title="Frigobar: ${FRIG_LABEL[r.frigobar_status || 'ok']}">${FRIG_ICON[r.frigobar_status || 'ok']}</span>
+                  ${r.max_guests ? r.max_guests + 'px' : ''}
+                </span>
               </div>
               ${guestHtml}
             </div>`;
@@ -1241,9 +1319,10 @@
       : `<span style="color:var(--tx3);font-size:.8125rem">Nenhuma cadastrada</span>`;
 
     // Wire action buttons
-    document.getElementById('det-btn-edit').dataset.code  = code;
-    document.getElementById('det-btn-maint').dataset.code = code;
-    document.getElementById('det-btn-maint').dataset.name = room.name;
+    document.getElementById('det-btn-edit').dataset.code     = code;
+    document.getElementById('det-btn-maint').dataset.code    = code;
+    document.getElementById('det-btn-maint').dataset.name    = room.name;
+    document.getElementById('det-btn-frigobar').dataset.code = code;
 
     openModal('modal-detail');
   }
@@ -1553,9 +1632,87 @@
     }
   });
 
-  // ── Checkout com voucher final ───────────────────────────────
+  // ── Checkout: contagem do frigobar → comanda → checkout → voucher ──
   document.getElementById('btn-do-checkout').addEventListener('click', async () => {
     if (!comandaCtx) return;
+    const { roomCode } = comandaCtx;
+
+    // Etapa 1: se o frigobar tem itens, conta o consumo antes de fechar
+    const fb = await apiFetch(`/api/rooms/${roomCode}/frigobar`);
+    fbCheckoutItems = (fb?.items || []).filter(i => Number(i.quantity) > 0);
+
+    if (fbCheckoutItems.length) {
+      document.getElementById('fbc-sub').textContent =
+        `${roomCode} · ${comandaCtx.reservation.leads?.name || ''} — consumido será lançado na comanda`;
+      document.getElementById('fbc-items').innerHTML = fbCheckoutItems.map(i => `<tr>
+        <td style="color:var(--tx1)">${esc(i.products?.name || '—')}</td>
+        <td style="text-align:right">${Number(i.quantity)} ${esc(i.products?.unit || '')}</td>
+        <td style="text-align:right">
+          <input class="input" type="number" min="0" max="${Number(i.quantity)}" value="0"
+            data-fbc-product="${i.products?.id}" style="width:70px;padding:4px 8px;font-size:.8rem;text-align:right">
+        </td>
+      </tr>`).join('');
+      document.getElementById('fbc-error').style.display = 'none';
+      openModal('modal-fb-checkout');
+      return;
+    }
+
+    finishCheckout();
+  });
+
+  document.getElementById('fbc-continue').addEventListener('click', async () => {
+    const errEl = document.getElementById('fbc-error');
+    errEl.style.display = 'none';
+    const btn = document.getElementById('fbc-continue');
+    btn.disabled = true; btn.textContent = 'Lançando…';
+
+    try {
+      // Lança consumos do frigobar na comanda (baixa o frigobar via trigger)
+      for (const input of document.querySelectorAll('[data-fbc-product]')) {
+        const qty = parseFloat(input.value) || 0;
+        if (qty <= 0) continue;
+        const max = parseFloat(input.max) || 0;
+        if (qty > max) throw new Error(`Consumido maior que o disponível no frigobar (máx ${max}).`);
+        const r = await apiFetch('/api/room-charges', {
+          method: 'POST',
+          body: JSON.stringify({
+            reservation_id: comandaCtx.reservation.id,
+            product_id:     input.dataset.fbcProduct,
+            quantity:       qty,
+            room_code:      comandaCtx.roomCode,
+            from_frigobar:  true,
+            staff_note:     'Contagem do frigobar no checkout',
+          }),
+        });
+        if (!r?.success) throw new Error(r?.message || 'Erro ao lançar consumo do frigobar.');
+      }
+
+      // Restantes: devolver ao estoque central, se escolhido
+      const rest = document.querySelector('[name="fbc-rest"]:checked')?.value;
+      if (rest === 'return') {
+        const fb = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar`);
+        for (const item of (fb?.items || [])) {
+          if (Number(item.quantity) <= 0) continue;
+          const r = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar/unload`, {
+            method: 'POST',
+            body: JSON.stringify({ product_id: item.products?.id, quantity: Number(item.quantity) }),
+          });
+          if (!r?.success) throw new Error(r?.message || 'Erro ao devolver itens ao estoque.');
+        }
+      }
+
+      await refreshComanda();           // comanda agora inclui o consumo do frigobar
+      closeModal('modal-fb-checkout');
+      finishCheckout();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Lançar e continuar checkout';
+    }
+  });
+
+  async function finishCheckout() {
     const { reservation: r, charges, totals, roomCode } = comandaCtx;
     if (!confirm(`Fazer checkout de ${r.leads?.name || 'hóspede'} (${roomCode})?\nTotal da comanda: ${fmtBRL(totals.grand_total)}`)) return;
 
@@ -1594,12 +1751,11 @@
     showToast('Checkout registrado.', 'ok');
     if (voucher?.download_url) window.open(voucher.download_url, '_blank');
     loadRooms();
-  });
+  }
 
-  // ══ GERENCIAR PRODUTOS ═══════════════════════════════════════
+  // ══ GERENCIAR PRODUTOS (catálogo; estoque é no map.html) ═════
   document.getElementById('btn-products').addEventListener('click', async () => {
     clearProductForm();
-    document.getElementById('stock-entry-box').style.display = 'none';
     openModal('modal-products');
     await renderProductsTable(true);
   });
@@ -1620,14 +1776,12 @@
       <td>
         <div class="action-group">
           <button class="action-btn edit" data-prod-edit="${p.id}">Editar</button>
-          <button class="action-btn" data-prod-stock="${p.id}" style="color:var(--ok)">+ Estoque</button>
           <button class="action-btn" data-prod-toggle="${p.id}">${p.active ? 'Desativar' : 'Ativar'}</button>
         </div>
       </td>
     </tr>`).join('');
 
     tbody.querySelectorAll('[data-prod-edit]').forEach(b => b.addEventListener('click', () => fillProductForm(b.dataset.prodEdit)));
-    tbody.querySelectorAll('[data-prod-stock]').forEach(b => b.addEventListener('click', () => openStockEntry(b.dataset.prodStock)));
     tbody.querySelectorAll('[data-prod-toggle]').forEach(b => b.addEventListener('click', async () => {
       const p = productsCache.find(x => x.id === b.dataset.prodToggle);
       const res = await apiFetch(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: !p.active }) });
@@ -1683,38 +1837,99 @@
     }
   });
 
-  function openStockEntry(id) {
-    const p = productsCache.find(x => x.id === id);
-    if (!p) return;
-    stockProductId = id;
-    document.getElementById('stock-entry-title').textContent =
-      `Entrada de estoque — ${p.name} (atual: ${Number(p.stock_quantity)} ${p.unit})`;
-    document.getElementById('stock-qty').value  = '';
-    document.getElementById('stock-cost').value = p.cost_price || '';
-    document.getElementById('stock-note').value = '';
-    document.getElementById('stock-entry-box').style.display = 'block';
-    document.getElementById('stock-qty').focus();
+  // ══ FRIGOBAR DO QUARTO ═══════════════════════════════════════
+  async function openFrigobar(code) {
+    frigobarCode = code;
+    document.getElementById('fb-title').textContent = `🧊 Frigobar — ${code}`;
+    document.getElementById('fb-sub').textContent =
+      activeResvByRoom[code] ? `Ocupado: ${activeResvByRoom[code].leads?.name || ''}` : 'Quarto livre';
+    document.getElementById('fb-error').style.display = 'none';
+    document.getElementById('fb-items').innerHTML =
+      '<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Carregando…</td></tr>';
+    openModal('modal-frigobar');
+    await ensureProducts(true);
+    await refreshFrigobar();
   }
 
-  document.getElementById('btn-save-stock').addEventListener('click', async () => {
-    if (!stockProductId) return;
-    const qty = parseFloat(document.getElementById('stock-qty').value);
-    if (!qty || qty <= 0) { showToast('Quantidade inválida.', 'warn'); return; }
-    const res = await apiFetch(`/api/products/${stockProductId}/stock-entry`, {
-      method: 'POST',
-      body: JSON.stringify({
-        quantity:  qty,
-        unit_cost: parseFloat(document.getElementById('stock-cost').value) || 0,
-        note:      document.getElementById('stock-note').value.trim() || undefined,
-      }),
+  async function refreshFrigobar() {
+    const code = frigobarCode;
+    const res = await apiFetch(`/api/rooms/${code}/frigobar`);
+    if (frigobarCode !== code) return;
+    if (!res?.success) {
+      document.getElementById('fb-error').textContent = res?.message || 'Erro ao carregar frigobar.';
+      document.getElementById('fb-error').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('fb-status').value = res.frigobar_status || 'ok';
+
+    const items = res.items || [];
+    document.getElementById('fb-items').innerHTML = items.length
+      ? items.map(i => `<tr>
+          <td style="color:var(--tx1)">${esc(i.products?.name || '—')}</td>
+          <td style="text-align:right">${Number(i.quantity)} ${esc(i.products?.unit || '')}</td>
+          <td style="text-align:right">${fmtBRL(i.products?.price)}</td>
+          <td style="text-align:right">
+            <button class="action-btn" data-fb-unload="${i.products?.id}" data-fb-max="${Number(i.quantity)}" style="color:var(--ok)">↩ Devolver</button>
+          </td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Frigobar vazio</td></tr>';
+
+    // Abastecer: só produtos ativos com estoque central > 0
+    const loadable = productsCache.filter(p => p.active && Number(p.stock_quantity) > 0);
+    document.getElementById('fb-load-product').innerHTML = loadable.length
+      ? loadable.map(p => `<option value="${p.id}">${esc(p.name)} (central: ${Number(p.stock_quantity)})</option>`).join('')
+      : '<option value="">Sem produtos com estoque central</option>';
+    document.getElementById('fb-load-hint').textContent = loadable.length
+      ? '' : 'Registre entrada de estoque no Mapa → Mercearia/Bar antes de abastecer.';
+
+    document.querySelectorAll('[data-fb-unload]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const max = Number(btn.dataset.fbMax);
+        const qty = parseFloat(prompt(`Devolver quantas unidades ao estoque? (máx ${max})`, max));
+        if (!qty || qty <= 0) return;
+        const r = await apiFetch(`/api/rooms/${frigobarCode}/frigobar/unload`, {
+          method: 'POST',
+          body: JSON.stringify({ product_id: btn.dataset.fbUnload, quantity: qty }),
+        });
+        if (r?.success) { showToast('Devolvido ao estoque.', 'ok'); await ensureProducts(true); refreshFrigobar(); }
+        else showToast(r?.message || 'Erro ao devolver.', 'err');
+      });
     });
-    if (res?.success) {
-      showToast(`Estoque atualizado: ${res.product?.name} → ${Number(res.product?.stock_quantity)}.`, 'ok');
-      document.getElementById('stock-entry-box').style.display = 'none';
-      stockProductId = null;
-      renderProductsTable(true);
+  }
+
+  document.getElementById('fb-load-btn').addEventListener('click', async () => {
+    const productId = document.getElementById('fb-load-product').value;
+    const qty = parseFloat(document.getElementById('fb-load-qty').value) || 0;
+    if (!productId || qty <= 0) return;
+    const r = await apiFetch(`/api/rooms/${frigobarCode}/frigobar/load`, {
+      method: 'POST',
+      body: JSON.stringify({ product_id: productId, quantity: qty }),
+    });
+    if (r?.success) {
+      showToast('Frigobar abastecido.', 'ok');
+      document.getElementById('fb-load-qty').value = 1;
+      await ensureProducts(true);
+      refreshFrigobar();
     } else {
-      showToast(res?.message || 'Erro na entrada de estoque.', 'err');
+      document.getElementById('fb-error').textContent = r?.message || 'Erro ao abastecer.';
+      document.getElementById('fb-error').style.display = 'block';
+    }
+  });
+
+  document.getElementById('fb-status').addEventListener('change', async () => {
+    const status = document.getElementById('fb-status').value;
+    const r = await apiFetch(`/api/rooms/${frigobarCode}`, {
+      method: 'PUT',
+      body: JSON.stringify({ frigobar_status: status }),
+    });
+    if (r?.success) {
+      showToast(`Frigobar de ${frigobarCode}: ${FRIG_LABEL[status]}.`, 'ok');
+      const idx = roomsCache.findIndex(x => x.code === frigobarCode);
+      if (idx >= 0) roomsCache[idx].frigobar_status = status;
+      applyFilters();
+    } else {
+      showToast(r?.message || 'Erro ao mudar status.', 'err');
     }
   });
 
@@ -1752,6 +1967,14 @@
       const btn = document.getElementById('det-btn-maint');
       closeModal('modal-detail');
       openMaintModal(btn.dataset.code, btn.dataset.name);
+    });
+    document.getElementById('det-btn-frigobar').addEventListener('click', () => {
+      const code = document.getElementById('det-btn-frigobar').dataset.code;
+      closeModal('modal-detail');
+      openFrigobar(code);
+    });
+    document.getElementById('btn-cmd-frigobar').addEventListener('click', () => {
+      if (comandaCtx) openFrigobar(comandaCtx.roomCode);
     });
   }
 

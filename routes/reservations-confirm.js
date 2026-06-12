@@ -33,6 +33,13 @@ router.post('/', async (req, res) => {
     return fail(res, 'missing_fields', 'leadId, whatsapp, roomType, checkin, checkout, guests, totalAmount required');
   }
 
+  // Normaliza máscara/espaços — a coluna é varchar(20) e o resto do sistema usa só dígitos
+  const whatsappDigits = String(whatsapp).replace(/\D/g, '');
+  if (!/^\d{10,15}$/.test(whatsappDigits)) {
+    return fail(res, 'invalid_whatsapp',
+      `Número de WhatsApp inválido: "${whatsapp}". Use código do país + DDD + número, ex: 5519999999999`);
+  }
+
   let checkinISO, checkoutISO;
   try {
     checkinISO  = toDB(checkin);
@@ -45,7 +52,7 @@ router.post('/', async (req, res) => {
 
   const { data, error } = await supabaseAdmin.rpc('create_reservation_atomic', {
     p_lead_id:        pLeadId,
-    p_whatsapp:       whatsapp,
+    p_whatsapp:       whatsappDigits,
     p_room_type:      pRoomType,
     p_checkin:        checkinISO,
     p_checkout:       checkoutISO,

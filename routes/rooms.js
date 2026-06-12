@@ -138,8 +138,13 @@ router.put('/:code', async (req, res) => {
     const ALLOWED = [
       'name', 'description', 'max_guests',
       'base_price_baixa', 'base_price_media', 'base_price_alta',
-      'amenities', 'active', 'sort_order',
+      'amenities', 'active', 'sort_order', 'frigobar_status',
     ];
+
+    if (req.body.frigobar_status !== undefined &&
+        !['ok', 'manutencao', 'sem_frigobar'].includes(req.body.frigobar_status)) {
+      return fail(res, 'invalid_frigobar_status', 'frigobar_status deve ser: ok, manutencao ou sem_frigobar');
+    }
 
     const patch = {};
     for (const key of ALLOWED) {
@@ -164,6 +169,57 @@ router.put('/:code', async (req, res) => {
   } catch (err) {
     return serverError(res, err);
   }
+});
+
+// ─── Frigobar ────────────────────────────────────────────────────────────────
+
+// GET /api/rooms/:code/frigobar — itens carregados no frigobar do quarto
+router.get('/:code/frigobar', async (req, res) => {
+  const code = req.params.code.toUpperCase();
+
+  const [{ data: room, error: roomErr }, { data: items, error: itemsErr }] = await Promise.all([
+    supabaseAdmin.from('rooms').select('code, name, frigobar_status').eq('code', code).maybeSingle(),
+    supabaseAdmin
+      .from('frigobar_items')
+      .select('id, quantity, loaded_at, products(id, name, category, unit, price, stock_quantity)')
+      .eq('room_code', code)
+      .gt('quantity', 0)
+      .order('loaded_at', { ascending: true }),
+  ]);
+
+  if (roomErr) return serverError(res, roomErr);
+  if (!room)   return notFound(res, `Room ${code}`);
+  if (itemsErr) return serverError(res, itemsErr);
+
+  return ok(res, { room_code: code, frigobar_status: room.frigobar_status, items: items || [] });
+});
+
+// POST /api/rooms/:code/frigobar/load — abastece do estoque central (RPC atômica)
+router.post('/:code/frigobar/load', async (req, res) => {
+  const code = req.params.code.toUpperCase();
+  const { product_id, quantity } = req.body;
+  if (!product_id || !quantity) return fail(res, 'missing_fields', 'product_id e quantity são obrigatórios');
+
+  const { data, error } = await supabaseAdmin.rpc('frigobar_load', {
+    p_room: code, p_product: product_id, p_qty: Number(quantity),
+  });
+  if (error) return serverError(res, error);
+  if (!data.success) return fail(res, data.error, data.message, 422);
+  return ok(res, { loaded: true });
+});
+
+// POST /api/rooms/:code/frigobar/unload — devolve ao estoque central (RPC atômica)
+router.post('/:code/frigobar/unload', async (req, res) => {
+  const code = req.params.code.toUpperCase();
+  const { product_id, quantity } = req.body;
+  if (!product_id || !quantity) return fail(res, 'missing_fields', 'product_id e quantity são obrigatórios');
+
+  const { data, error } = await supabaseAdmin.rpc('frigobar_unload', {
+    p_room: code, p_product: product_id, p_qty: Number(quantity),
+  });
+  if (error) return serverError(res, error);
+  if (!data.success) return fail(res, data.error, data.message, 422);
+  return ok(res, { unloaded: true });
 });
 
 module.exports = router;

@@ -66,7 +66,7 @@ router.get('/comanda/:reservationId', async (req, res) => {
 
 // POST /api/room-charges — lançar consumo (trigger baixa estoque)
 router.post('/', async (req, res) => {
-  const { reservation_id, product_id, quantity, room_code, staff_note, unit_price } = req.body;
+  const { reservation_id, product_id, quantity, room_code, staff_note, unit_price, from_frigobar } = req.body;
 
   if (!reservation_id || !product_id || !quantity) {
     return fail(res, 'missing_fields', 'reservation_id, product_id e quantity são obrigatórios');
@@ -91,6 +91,7 @@ router.post('/', async (req, res) => {
       unit_price: unit_price !== undefined ? Number(unit_price) : Number(product.price),
       room_code:  room_code || null,
       staff_note: staff_note || null,
+      from_frigobar: from_frigobar === true,
     })
     .select('id, room_code, quantity, unit_price, total, charged_at, staff_note, products(id, name, category, unit)')
     .single();

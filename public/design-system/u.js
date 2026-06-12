@@ -94,7 +94,8 @@
     if (res.status === 401) { window.location.href = 'login.html'; return null; }
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
-      try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}
+      // message primeiro: o usuário precisa ver a causa, não o código do erro
+      try { const j = await res.json(); msg = j.message || j.error || msg; } catch {}
       throw new Error(msg);
     }
     if (res.status === 204) return null;

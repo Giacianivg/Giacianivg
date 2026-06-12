@@ -870,6 +870,13 @@ async function submitNewReservation() {
     return;
   }
 
+  const waDigits = whatsapp.replace(/\D/g, '');
+  if (waDigits.length < 10 || waDigits.length > 15) {
+    errEl.textContent = `WhatsApp deve ter 10–15 dígitos com país+DDD (ex: 5519999999999). Você digitou ${waDigits.length} dígitos.`;
+    errEl.style.display = 'block';
+    return;
+  }
+
   try {
     document.getElementById('modal-submit-btn').disabled = true;
     document.getElementById('modal-submit-btn').textContent = 'Criando…';
