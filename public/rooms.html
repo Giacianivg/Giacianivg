@@ -1723,12 +1723,14 @@
     document.getElementById('fb-status').value = res.frigobar_status || 'ok';
 
     const items = res.items || [];
+    const hasResv = !!activeResvByRoom[code]; // só há comanda para cobrar se o quarto está ocupado
     document.getElementById('fb-items').innerHTML = items.length
       ? items.map(i => `<tr>
           <td style="color:var(--tx1)">${esc(i.products?.name || '—')}</td>
           <td style="text-align:right">${Number(i.quantity)} ${esc(i.products?.unit || '')}</td>
           <td style="text-align:right">${fmtBRL(i.products?.price)}</td>
-          <td style="text-align:right">
+          <td style="text-align:right;white-space:nowrap">
+            ${hasResv ? `<button class="action-btn" data-fb-consume="${i.products?.id}" data-fb-max="${Number(i.quantity)}" style="color:var(--gold)">🍽 Consumido</button>` : ''}
             <button class="action-btn" data-fb-unload="${i.products?.id}" data-fb-max="${Number(i.quantity)}" style="color:var(--ok)">↩ Devolver</button>
           </td>
         </tr>`).join('')
@@ -1753,6 +1755,36 @@
         });
         if (r?.success) { showToast('Devolvido ao estoque.', 'ok'); await ensureProducts(true); refreshFrigobar(); }
         else showToast(r?.message || 'Erro ao devolver.', 'err');
+      });
+    });
+
+    // Consumido → lança na comanda (from_frigobar baixa o frigobar via trigger)
+    document.querySelectorAll('[data-fb-consume]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const resv = activeResvByRoom[frigobarCode];
+        if (!resv) { showToast('Quarto sem hóspede ativo — não há comanda para cobrar.', 'warn'); return; }
+        const max = Number(btn.dataset.fbMax);
+        const qty = parseFloat(prompt(`Quantas unidades o hóspede consumiu? (máx ${max})`, 1));
+        if (!qty || qty <= 0) return;
+        if (qty > max) { showToast(`Máximo disponível no frigobar: ${max}.`, 'warn'); return; }
+        const r = await apiFetch('/api/room-charges', {
+          method: 'POST',
+          body: JSON.stringify({
+            reservation_id: resv.id,
+            product_id:     btn.dataset.fbConsume,
+            quantity:       qty,
+            room_code:      frigobarCode,
+            from_frigobar:  true,
+            staff_note:     'Consumo do frigobar',
+          }),
+        });
+        if (r?.success) {
+          showToast('Consumo lançado na comanda.', 'ok');
+          refreshFrigobar();
+          if (comandaCtx?.roomCode === frigobarCode) refreshComanda();
+        } else {
+          showToast(r?.message || 'Erro ao lançar consumo.', 'err');
+        }
       });
     });
   }
