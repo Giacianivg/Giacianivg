@@ -14,7 +14,8 @@
     { "src": "/(.*)",     "dest": "/api/index.js" }
   ],
   "crons": [
-    { "path": "/api/cron/competitor-prices", "schedule": "0 3 * * *" }
+    { "path": "/api/cron/competitor-prices", "schedule": "0 3 * * *" },
+    { "path": "/health/whatsapp",            "schedule": "0 12 * * *" }
   ],
   "env": {
     "NODE_ENV": "production"

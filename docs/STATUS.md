@@ -47,7 +47,7 @@ públicas e push para o GitHub via @devops.
 
 | # | Pendência | Contexto |
 |---|-----------|----------|
-| 1 | Reativar validação `X-Hub-Signature-256` no webhook (QA-01) | Débito de segurança conhecido (`webhook.js:30`) |
+| 1 | ~~Reativar validação `X-Hub-Signature-256` (QA-01)~~ | **Resolvido** — já estava ativa em produção (verificado 2026-06-12: POST sem assinatura → 403); docs corrigidas na DEC-021 |
 | 2 | Avaliar job diário que materialize o calendário em `price_log` (`source='calendar'`) | Hoje o log só grava em cotações; o dashboard calcula on-the-fly |
 | 3 | Unificar inventário alas × quartos físicos | Migration 021 criou quartos físicos no CRM, mas a Luna ainda reserva por ala — risco de overbooking |
 

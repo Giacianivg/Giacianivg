@@ -227,6 +227,12 @@
         <div class="date-status-pills" id="banner-pills"></div>
       </div>
 
+      <!-- Alerta de canal: token do WhatsApp inválido = Luna muda -->
+      <div id="wa-health-banner" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:var(--r-md);padding:10px 14px;margin-bottom:var(--sp-3);color:#ef4444;font-size:.85rem;font-weight:600">
+        🚨 <strong>Luna fora do ar:</strong> o token do WhatsApp está inválido — hóspedes NÃO estão recebendo resposta.
+        Troque em business.facebook.com → System User → token "Nunca expira" e atualize WHATSAPP_ACCESS_TOKEN na Vercel.
+      </div>
+
       <!-- Stat cards -->
       <div class="stat-cards">
         <div class="stat-card sc-checkin">
@@ -661,6 +667,17 @@
       btn.textContent = fdAction === 'checkin' ? '✓ Registrar check-in' : '✓ Registrar check-out';
     }
   }, true);
+
+  /* ── Saúde do canal WhatsApp (token 401 = Luna muda em silêncio) ────────── */
+  async function checkWhatsappHealth() {
+    try {
+      // /health/whatsapp é servido pela function do webhook (catch-all do vercel.json)
+      const r = await fetch('/health/whatsapp');
+      document.getElementById('wa-health-banner').style.display = r.ok ? 'none' : 'block';
+    } catch { /* rede indisponível — não alarmar */ }
+  }
+  checkWhatsappHealth();
+  setInterval(checkWhatsappHealth, 5 * 60 * 1000);
 
   /* ── Modal de saldo em aberto no check-out ──────────────────────────────── */
   let payCtx = null; // { id, btn } da cobrança em andamento

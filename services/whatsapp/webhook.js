@@ -741,7 +741,8 @@ async function handleConfirmar(userMsg, from, params, contactName, leadId, quote
         await supabaseAdmin.from('payments').insert({
           reservation_id: reservation.reservation_id,
           amount:         depositAmount,
-          payment_method: 'pix',
+          method:         'pix',
+          payment_type:   'deposit',
           status:         'pending',
         });
       } catch (err) {
@@ -1250,6 +1251,38 @@ app.post('/test-claude', async (req, res) => {
 // ---------------------------------------------------------------------------
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'pousada-whatsapp-webhook', ts: Date.now() });
+});
+
+// ---------------------------------------------------------------------------
+// GET /health/whatsapp — testa o token na Meta Graph API (DEC-021)
+// Token inválido (401) derruba a Luna em silêncio — único canal de venda.
+// Consumidores: cron diário (vercel.json), banner do frontdesk, monitor externo.
+// ---------------------------------------------------------------------------
+app.get('/health/whatsapp', async (_req, res) => {
+  if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    return res.status(503).json({ status: 'error', token: 'not_configured', ts: Date.now() });
+  }
+  try {
+    const r = await fetch(`https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_NUMBER_ID}?fields=id`, {
+      headers: { 'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+    });
+    if (r.ok) return res.json({ status: 'ok', token: 'valid', ts: Date.now() });
+
+    const body = await r.text();
+    log('error', 'whatsapp_token_check_failed', { http: r.status, body: body.slice(0, 300) });
+    if (r.status === 401 && EQUIPE_WHATSAPP_NUMBER) {
+      // Best-effort: com o token morto este envio também falha — os canais
+      // reais de alerta são o 503 (cron/monitor) e o banner do frontdesk
+      sendWhatsApp(EQUIPE_WHATSAPP_NUMBER,
+        '🚨 *ALERTA*: token do WhatsApp inválido (401). A Luna NÃO está respondendo aos hóspedes. ' +
+        'Troque em business.facebook.com → System User → token "Nunca expira" e atualize WHATSAPP_ACCESS_TOKEN na Vercel.'
+      ).catch(() => {});
+    }
+    return res.status(503).json({ status: 'error', token: 'invalid', http: r.status, ts: Date.now() });
+  } catch (err) {
+    log('error', 'whatsapp_token_check_error', { error: err.message });
+    return res.status(503).json({ status: 'error', token: 'unreachable', detail: err.message, ts: Date.now() });
+  }
 });
 
 // ---------------------------------------------------------------------------

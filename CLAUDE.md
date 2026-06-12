@@ -160,8 +160,9 @@ Auth: Supabase JWT via `Authorization: Bearer <token>` or internal calls via `X-
 
 ## Known Issues
 
-- `WHATSAPP_APP_SECRET` validation is temporarily disabled (`webhook.js:30`). The validation code exists but is bypassed with an early `return next()`.
-- `WHATSAPP_ACCESS_TOKEN` can expire — replace via Meta Business Portal with a System User Token set to "Never expires".
+- `WHATSAPP_ACCESS_TOKEN` can expire — replace via Meta Business Portal with a System User Token set to "Never expires". Monitor: `GET /health/whatsapp` (cron diário + banner no frontdesk).
+- ~~X-Hub-Signature-256 disabled~~ — **resolvido**: validação ativa em produção desde que `WHATSAPP_APP_SECRET` foi configurado na Vercel (verificado 2026-06-12: POST sem assinatura → 403).
+- Inventário duplo alas × quartos: Luna reserva por ala (`ALA_A`/`ALA_B`), CRM por quarto físico (`A1`–`C5`) — risco de overbooking com volume. Unificação exige DEC própria (DEC-021 P5).
 
 ## Stories & Epics
 
@@ -242,6 +243,10 @@ Monitoramento (feedback loop → decision-history/)
 - Adicionar novas routes em `routes/` (montar em server.js requer aprovação)
 - Criar novos services em `services/` (novos arquivos, não modificar existentes)
 - Criar stories em `docs/stories/`
+
+### Regra de hardcode (DEC-021, Founder, 2026-06-12)
+- **Nenhum hardcode novo** de dados de negócio no frontend/backend (quartos, preços, URLs de projeto, telefones) — buscar de tabela/config.
+- Ao tocar `public/bookings.html`: migrar a lista `ROOMS` hardcoded no JS para busca na tabela `rooms` (obrigatório, não opcional).
 
 ---
 
