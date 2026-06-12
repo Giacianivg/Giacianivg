@@ -761,6 +761,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-comanda">Fechar</button>
+      <button class="btn btn-secondary" id="btn-swap-room">🔄 Trocar quarto</button>
       <button class="btn btn-secondary" id="btn-cmd-frigobar">🧊 Frigobar</button>
       <button class="btn btn-secondary" id="btn-add-charge" style="border-color:rgba(34,197,94,.4);color:var(--ok)">+ Lançar consumo</button>
       <button class="btn btn-primary" id="btn-do-checkout" style="background:var(--gold);border-color:var(--gold);color:#000">🚪 Fazer checkout</button>
@@ -884,6 +885,33 @@
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-fb-checkout">Cancelar</button>
       <button class="btn btn-primary" id="fbc-continue" style="background:var(--gold);border-color:var(--gold);color:#000">Lançar e continuar checkout</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Trocar quarto ───────────────────────────────────── -->
+<div class="modal-overlay" id="modal-swap">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">🔄 Trocar quarto</div>
+        <div class="modal-sub" id="swap-sub"></div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-swap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label" for="swap-room-select">Quarto de destino (livres no período restante)</label>
+        <select class="input" id="swap-room-select"></select>
+        <p class="field-hint" id="swap-hint"></p>
+      </div>
+      <div id="swap-error" style="color:var(--err);font-size:.78rem;display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-swap">Cancelar</button>
+      <button class="btn btn-primary" id="swap-confirm">Trocar quarto</button>
     </div>
   </div>
 </div>
@@ -1571,6 +1599,61 @@
       refreshComanda();
     } else {
       errEl.textContent = res?.message || res?.error || 'Erro ao lançar consumo.';
+      errEl.style.display = 'block';
+    }
+  });
+
+  // ── Trocar quarto ────────────────────────────────────────────
+  document.getElementById('btn-swap-room').addEventListener('click', async () => {
+    if (!comandaCtx) return;
+    const { reservation: r, roomCode } = comandaCtx;
+    const sel   = document.getElementById('swap-room-select');
+    const errEl = document.getElementById('swap-error');
+    errEl.style.display = 'none';
+    document.getElementById('swap-hint').textContent = '';
+    document.getElementById('swap-sub').textContent = `${roomCode} · ${r.leads?.name || ''}`;
+    sel.innerHTML = '<option value="">Carregando…</option>';
+    openModal('modal-swap');
+
+    const res = await apiFetch(`/api/reservations/${r.id}/swap-options`);
+    if (!res?.success) {
+      sel.innerHTML = '<option value="">—</option>';
+      errEl.textContent = res?.message || 'Erro ao buscar quartos disponíveis.';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!res.options.length) {
+      sel.innerHTML = '<option value="">Nenhum quarto livre no período</option>';
+      return;
+    }
+    document.getElementById('swap-hint').textContent =
+      `${res.nights} noite${res.nights !== 1 ? 's' : ''} a partir de ${fmtDate(res.from)} — consumos já lançados ficam na comanda.`;
+    sel.innerHTML = res.options.map(o =>
+      `<option value="${o.code}">${esc(o.code)} — ${esc(o.name)} (até ${o.max_guests}px)</option>`).join('');
+  });
+
+  document.getElementById('swap-confirm').addEventListener('click', async () => {
+    if (!comandaCtx) return;
+    const newRoom = document.getElementById('swap-room-select').value;
+    const errEl   = document.getElementById('swap-error');
+    errEl.style.display = 'none';
+    if (!newRoom) { errEl.textContent = 'Escolha um quarto de destino.'; errEl.style.display = 'block'; return; }
+
+    const btn = document.getElementById('swap-confirm');
+    btn.disabled = true; btn.textContent = 'Trocando…';
+    const res = await apiFetch(`/api/reservations/${comandaCtx.reservation.id}/swap-room`, {
+      method: 'POST',
+      body: JSON.stringify({ new_room: newRoom }),
+    });
+    btn.disabled = false; btn.textContent = 'Trocar quarto';
+
+    if (res?.success) {
+      closeModal('modal-swap');
+      closeModal('modal-comanda');
+      showToast(`Quarto trocado: ${res.old_room} → ${res.new_room}.`, 'ok');
+      loadRooms();
+    } else {
+      errEl.textContent = res?.message || 'Erro ao trocar de quarto.';
       errEl.style.display = 'block';
     }
   });

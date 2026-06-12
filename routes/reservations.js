@@ -10,7 +10,7 @@ const router = Router();
 const EDITABLE_FIELDS = [
   'status', 'channel', 'notes', 'room_type', 'guests',
   'total_amount', 'deposit_amount', 'balance_amount',
-  'checkin_date', 'checkout_date',
+  'checkin_date', 'checkout_date', 'vehicle_plate',
 ];
 
 const VALID_STATUSES = ['pending', 'confirmed', 'checkedin', 'checkedout', 'cancelled'];
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     .select(`
       id, reservation_number, room_type, checkin_date, checkout_date,
       guests, total_amount, deposit_amount, balance_amount,
-      status, channel, notes, checkin_at, checkout_at, created_at,
+      status, channel, notes, checkin_at, checkout_at, created_at, vehicle_plate,
       leads!fk_res_lead!inner(id, whatsapp_number, name)
     `)
     .order('checkin_date', { ascending: true })
@@ -114,12 +114,69 @@ router.patch('/:id', async (req, res) => {
     .select(`
       id, reservation_number, room_type, checkin_date, checkout_date,
       guests, total_amount, deposit_amount, balance_amount,
-      status, channel, notes, checkin_at, checkout_at
+      status, channel, notes, checkin_at, checkout_at, vehicle_plate
     `)
     .single();
 
   if (error || !data) return notFound(res, 'Reservation');
   return ok(res, { reservation: data });
+});
+
+// GET /api/reservations/:id/swap-options — quartos livres para o período restante
+router.get('/:id/swap-options', async (req, res) => {
+  const { data: r, error: resErr } = await supabaseAdmin
+    .from('reservations')
+    .select('id, room_type, checkin_date, checkout_date, status')
+    .eq('id', req.params.id)
+    .single();
+
+  if (resErr || !r) return notFound(res, 'Reservation');
+  if (['checkedout', 'completed', 'cancelled'].includes(r.status)) {
+    return fail(res, 'reservation_closed', 'Reserva já encerrada.');
+  }
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  const from = r.checkin_date > today ? r.checkin_date : today;
+  const nights = Math.round((new Date(r.checkout_date) - new Date(from)) / 86400000);
+  if (nights <= 0) return fail(res, 'stay_finished', 'A estadia termina hoje — não há noites para mover.');
+
+  const [{ data: rooms, error: roomsErr }, { data: avail, error: availErr }] = await Promise.all([
+    supabaseAdmin.from('rooms').select('code, name, max_guests').eq('active', true).order('sort_order'),
+    supabaseAdmin.from('availability')
+      .select('room_type')
+      .gte('date', from).lt('date', r.checkout_date)
+      .eq('status', 'available'),
+  ]);
+
+  if (roomsErr || availErr) return serverError(res, roomsErr || availErr);
+
+  const freeNights = {};
+  for (const a of avail || []) freeNights[a.room_type] = (freeNights[a.room_type] || 0) + 1;
+
+  const options = (rooms || [])
+    .filter(room => room.code !== r.room_type && freeNights[room.code] >= nights)
+    .map(room => ({ code: room.code, name: room.name, max_guests: room.max_guests }));
+
+  return ok(res, { options, from, nights, current_room: r.room_type });
+});
+
+// POST /api/reservations/:id/swap-room — troca de quarto via RPC atômica
+router.post('/:id/swap-room', async (req, res) => {
+  const { new_room } = req.body;
+  if (!new_room) return fail(res, 'missing_field', 'new_room é obrigatório');
+
+  const { data, error } = await supabaseAdmin.rpc('swap_room_atomic', {
+    p_reservation_id: req.params.id,
+    p_new_room: String(new_room).toUpperCase(),
+  });
+
+  if (error) return serverError(res, error);
+  if (!data.success) {
+    const status = data.error === 'no_availability' || data.error === 'locked' ? 409 : 422;
+    return fail(res, data.error, data.message, status);
+  }
+
+  return ok(res, { old_room: data.old_room, new_room: data.new_room, from_date: data.from_date });
 });
 
 module.exports = router;

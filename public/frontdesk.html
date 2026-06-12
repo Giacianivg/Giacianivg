@@ -351,6 +351,58 @@
   </div>
 </div>
 
+<!-- ── Modal: saldo em aberto no check-out ────────────────────── -->
+<style>
+  .pay-overlay { position: fixed; inset: 0; background: rgba(2,6,12,.8); z-index: 400; display: none; align-items: center; justify-content: center; }
+  .pay-overlay.open { display: flex; }
+  .pay-modal { background: var(--bg1, #0D1520); border: 1px solid var(--bdr1); border-radius: var(--r-lg); width: 420px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; }
+  .pay-head { padding: var(--sp-4); border-bottom: 1px solid var(--bdr1); }
+  .pay-title { font-size: 1rem; font-weight: 700; color: var(--tx1); }
+  .pay-sub { font-size: .78rem; color: var(--tx3); margin-top: 2px; }
+  .pay-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+  .pay-row { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--tx2); }
+  .pay-row .v { font-weight: 600; color: var(--tx1); }
+  .pay-due { border-top: 1px solid var(--bdr1); padding-top: var(--sp-2); font-size: .9rem; }
+  .pay-due .v { color: #f59e0b; font-weight: 800; font-size: 1.05rem; }
+  .pay-methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+  .pay-method { padding: 10px 4px; text-align: center; background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-sm); cursor: pointer; font-size: .8rem; color: var(--tx2); }
+  .pay-method.sel { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08); font-weight: 700; }
+  .pay-input { height: 38px; padding: 0 var(--sp-3); background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx1); font-size: .9rem; width: 100%; box-sizing: border-box; }
+  .pay-foot { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; }
+</style>
+<div class="pay-overlay" id="pay-overlay">
+  <div class="pay-modal">
+    <div class="pay-head">
+      <div class="pay-title">💰 Saldo em aberto</div>
+      <div class="pay-sub" id="pay-sub">O check-out só é liberado após receber o saldo.</div>
+    </div>
+    <div class="pay-body">
+      <div class="pay-row"><span>Diárias</span><span class="v" id="pay-room">—</span></div>
+      <div class="pay-row"><span>Consumos</span><span class="v" id="pay-charges">—</span></div>
+      <div class="pay-row"><span>Sinal pago</span><span class="v" id="pay-deposit" style="color:#22c55e">—</span></div>
+      <div class="pay-row" id="pay-paid-row" style="display:none"><span>Pagamentos recebidos</span><span class="v" style="color:#22c55e" id="pay-paid">—</span></div>
+      <div class="pay-row pay-due"><span>Saldo a receber</span><span class="v" id="pay-due">—</span></div>
+      <div>
+        <div style="font-size:.72rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Forma de pagamento</div>
+        <div class="pay-methods">
+          <div class="pay-method sel" data-pay-method="pix">📱 PIX</div>
+          <div class="pay-method" data-pay-method="cash">💵 Dinheiro</div>
+          <div class="pay-method" data-pay-method="card">💳 Cartão</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.72rem;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Valor recebido (R$)</div>
+        <input class="pay-input" type="number" id="pay-amount" min="0" step="0.01">
+      </div>
+      <div id="pay-error" style="color:#dc2626;font-size:.78rem;display:none"></div>
+    </div>
+    <div class="pay-foot">
+      <button class="btn btn-sm btn-ghost" id="pay-cancel">Cancelar</button>
+      <button class="btn btn-sm" id="pay-confirm" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.4);font-weight:700">✓ Receber e fazer check-out</button>
+    </div>
+  </div>
+</div>
+
 <script src="design-system/u.js"></script>
 <script>
 (function () {
@@ -588,6 +640,17 @@
     const { fdAction, id } = btn.dataset;
     btn.disabled = true;
     btn.textContent = 'Registrando…';
+
+    // Check-out com saldo em aberto: bloqueia e cobra primeiro
+    if (fdAction === 'checkout') {
+      const cmd = await apiFetch(`/api/room-charges/comanda/${id}`);
+      const due = Number(cmd?.totals?.balance_due ?? 0);
+      if (cmd?.success && due > 0) {
+        openPayModal(id, cmd, btn);
+        return;
+      }
+    }
+
     const res = await apiFetch(`/api/reservations/${id}/${fdAction}`, { method: 'PATCH' });
     if (res?.success) {
       DS.toast(fdAction === 'checkin' ? 'Check-in registrado' : 'Check-out registrado', 'ok');
@@ -598,6 +661,93 @@
       btn.textContent = fdAction === 'checkin' ? '✓ Registrar check-in' : '✓ Registrar check-out';
     }
   }, true);
+
+  /* ── Modal de saldo em aberto no check-out ──────────────────────────────── */
+  let payCtx = null; // { id, btn } da cobrança em andamento
+
+  function openPayModal(id, cmd, btn) {
+    payCtx = { id, btn };
+    const t = cmd.totals;
+    const guest = cmd.reservation?.leads?.name || 'Hóspede';
+    document.getElementById('pay-sub').textContent =
+      `${guest} · ${cmd.reservation?.room_type || ''} — o check-out só é liberado após receber o saldo.`;
+    document.getElementById('pay-room').textContent    = fmtBRL(t.room_total);
+    document.getElementById('pay-charges').textContent = fmtBRL(t.charges_total);
+    document.getElementById('pay-deposit').textContent = '− ' + fmtBRL(t.deposit_paid);
+    const paid = Number(t.payments_confirmed || 0);
+    document.getElementById('pay-paid-row').style.display = paid > 0 ? 'flex' : 'none';
+    document.getElementById('pay-paid').textContent = '− ' + fmtBRL(paid);
+    document.getElementById('pay-due').textContent = fmtBRL(t.balance_due);
+    document.getElementById('pay-amount').value = Number(t.balance_due).toFixed(2);
+    document.getElementById('pay-error').style.display = 'none';
+    document.getElementById('pay-overlay').classList.add('open');
+  }
+
+  function closePayModal(restoreBtn) {
+    document.getElementById('pay-overlay').classList.remove('open');
+    if (restoreBtn && payCtx?.btn) {
+      payCtx.btn.disabled = false;
+      payCtx.btn.textContent = '✓ Registrar check-out';
+    }
+    payCtx = null;
+  }
+
+  document.querySelectorAll('[data-pay-method]').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('[data-pay-method]').forEach(m => m.classList.remove('sel'));
+      el.classList.add('sel');
+    });
+  });
+
+  document.getElementById('pay-cancel').addEventListener('click', () => closePayModal(true));
+  document.getElementById('pay-overlay').addEventListener('click', e => {
+    if (e.target.id === 'pay-overlay') closePayModal(true);
+  });
+
+  document.getElementById('pay-confirm').addEventListener('click', async () => {
+    if (!payCtx) return;
+    const errEl  = document.getElementById('pay-error');
+    errEl.style.display = 'none';
+    const amount = parseFloat(document.getElementById('pay-amount').value) || 0;
+    const method = document.querySelector('[data-pay-method].sel')?.dataset.payMethod || 'pix';
+    if (amount <= 0) { errEl.textContent = 'Informe o valor recebido.'; errEl.style.display = 'block'; return; }
+
+    const confirmBtn = document.getElementById('pay-confirm');
+    confirmBtn.disabled = true; confirmBtn.textContent = 'Registrando pagamento…';
+
+    const pay = await apiFetch('/api/payments/manual', {
+      method: 'POST',
+      body: JSON.stringify({ reservation_id: payCtx.id, amount, method, payment_type: 'balance' }),
+    });
+
+    if (!pay?.success) {
+      confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
+      errEl.textContent = pay?.message || 'Erro ao registrar pagamento.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Reconfere o saldo — pagamento parcial mantém o check-out bloqueado
+    const cmd = await apiFetch(`/api/room-charges/comanda/${payCtx.id}`);
+    const due = Number(cmd?.totals?.balance_due ?? 0);
+    if (due > 0) {
+      confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
+      openPayModal(payCtx.id, cmd, payCtx.btn);
+      DS.toast(`Pagamento de ${fmtBRL(amount)} registrado — ainda faltam ${fmtBRL(due)}.`, 'warn');
+      return;
+    }
+
+    const res = await apiFetch(`/api/reservations/${payCtx.id}/checkout`, { method: 'PATCH' });
+    confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
+    if (res?.success) {
+      DS.toast('Pagamento recebido e check-out registrado.', 'ok');
+      closePayModal(false);
+      loadData();
+    } else {
+      errEl.textContent = res?.message || 'Pagamento registrado, mas o check-out falhou. Tente de novo.';
+      errEl.style.display = 'block';
+    }
+  });
 
   /* ── Rooms list ──────────────────────────────────────────────────────── */
   function renderRooms(rooms) {

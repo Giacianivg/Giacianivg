@@ -54,6 +54,45 @@ router.post('/pix', async (req, res) => {
   }, 201);
 });
 
+// POST /api/payments/manual
+// Pagamento recebido no balcão (PIX/dinheiro/cartão) — registrado já confirmado.
+// Body: { reservation_id, amount, method, payment_type? }
+router.post('/manual', async (req, res) => {
+  const { reservation_id, amount, method, payment_type } = req.body;
+
+  if (!reservation_id || amount === undefined || !method) {
+    return fail(res, 'missing_fields', 'reservation_id, amount e method são obrigatórios');
+  }
+  if (Number(amount) <= 0) return fail(res, 'invalid_amount', 'amount deve ser > 0');
+
+  const validMethods = ['pix', 'cash', 'card', 'transfer'];
+  if (!validMethods.includes(method)) {
+    return fail(res, 'invalid_method', `method deve ser um de: ${validMethods.join(', ')}`);
+  }
+
+  const validTypes = ['deposit', 'balance', 'full'];
+  const type = payment_type || 'balance';
+  if (!validTypes.includes(type)) {
+    return fail(res, 'invalid_payment_type', `payment_type deve ser um de: ${validTypes.join(', ')}`);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('payments')
+    .insert({
+      reservation_id,
+      payment_type: type,
+      amount:       Number(amount),
+      method,
+      status:       'confirmed',
+      confirmed_at: new Date().toISOString(),
+    })
+    .select('id, amount, method, payment_type, confirmed_at')
+    .single();
+
+  if (error) return serverError(res, error);
+  return ok(res, { payment: data }, 201);
+});
+
 // GET /api/payments/:id
 router.get('/:id', async (req, res) => {
   const { data, error } = await supabaseAdmin

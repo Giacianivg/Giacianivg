@@ -28,11 +28,15 @@ router.get('/', async (req, res) => {
 router.get('/comanda/:reservationId', async (req, res) => {
   const { reservationId } = req.params;
 
-  const [{ data: reservation, error: resErr }, { data: charges, error: chErr }] = await Promise.all([
+  const [
+    { data: reservation, error: resErr },
+    { data: charges, error: chErr },
+    { data: payments, error: payErr },
+  ] = await Promise.all([
     supabaseAdmin
       .from('reservations')
       .select(`id, reservation_number, room_type, checkin_date, checkout_date, guests,
-               total_amount, deposit_amount, status, channel, checkin_at, checkout_at,
+               total_amount, deposit_amount, status, channel, checkin_at, checkout_at, vehicle_plate,
                leads!fk_res_lead(id, whatsapp_number, name)`)
       .eq('id', reservationId)
       .single(),
@@ -41,15 +45,25 @@ router.get('/comanda/:reservationId', async (req, res) => {
       .select('id, room_code, quantity, unit_price, total, charged_at, staff_note, products(id, name, category, unit)')
       .eq('reservation_id', reservationId)
       .order('charged_at', { ascending: true }),
+    supabaseAdmin
+      .from('payments')
+      .select('amount, payment_type')
+      .eq('reservation_id', reservationId)
+      .eq('status', 'confirmed')
+      .in('payment_type', ['balance', 'full']),
   ]);
 
   if (resErr || !reservation) return notFound(res, 'Reservation');
   if (chErr) return serverError(res, chErr);
+  if (payErr) return serverError(res, payErr);
 
   const list = charges || [];
   const charges_total = list.reduce((s, c) => s + Number(c.total || 0), 0);
   const room_total    = Number(reservation.total_amount || 0);
   const deposit       = Number(reservation.deposit_amount || 0);
+  // Sinal vive em reservations.deposit_amount; aqui só os pagamentos de saldo
+  // confirmados (balcão/PIX), para o balance_due refletir o que já foi recebido.
+  const payments_confirmed = (payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
 
   return ok(res, {
     reservation,
@@ -59,7 +73,8 @@ router.get('/comanda/:reservationId', async (req, res) => {
       charges_total,
       grand_total:  room_total + charges_total,
       deposit_paid: deposit,
-      balance_due:  room_total + charges_total - deposit,
+      payments_confirmed,
+      balance_due:  room_total + charges_total - deposit - payments_confirmed,
     },
   });
 });
