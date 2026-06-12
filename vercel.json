@@ -7,6 +7,9 @@
   },
   "routes": [
     { "handle": "filesystem" },
+    { "src": "/grupos",          "dest": "/grupos.html" },
+    { "src": "/fds-especiais",   "dest": "/fds-especiais.html" },
+    { "src": "/orcamento-grupo", "dest": "/orcamento-grupo.html" },
     { "src": "/api/(.*)", "dest": "/api/crm.js" },
     { "src": "/(.*)",     "dest": "/api/index.js" }
   ],
