@@ -124,6 +124,14 @@
     return new Intl.DateTimeFormat('pt-BR').format(dt);
   }
 
+  // Data de HOJE no fuso local do navegador (YYYY-MM-DD).
+  // toISOString() é UTC: à noite no Brasil já devolve o dia seguinte,
+  // o que joga check-ins de hoje para "ontem" nas telas operacionais.
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function datetime(d) {
     if (!d) return '—';
     return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d));
@@ -395,7 +403,7 @@
     // Fetch
     api,
     // Formatters
-    cur, date, datetime, rel, room, esc, initials,
+    cur, date, datetime, rel, room, esc, initials, todayISO,
     // Badges
     statusBadge, scoreBadge, alertIcon, countdownBadge,
     STATUS_LABELS,

@@ -568,7 +568,7 @@
   let productsCache = [];
   let selectedCode = null;
   let selectedPin  = null;
-  const TODAY = new Date().toISOString().slice(0, 10);
+  const TODAY = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
 
   // Pin do SVG por quarto físico
   const ROOM_PINS = {

@@ -394,7 +394,7 @@
   }
 
   /* ── Utils ───────────────────────────────────────────────────────────── */
-  const TODAY = new Date().toISOString().slice(0, 10);
+  const TODAY = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
   function addDays(d, n) {
     const dt = new Date(d + 'T12:00:00');
     dt.setDate(dt.getDate() + n);

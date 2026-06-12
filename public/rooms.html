@@ -1007,7 +1007,7 @@
   let frigobarCode = null;     // quarto com o modal de frigobar aberto
   let fbCheckoutItems = [];    // itens do frigobar na contagem de checkout
   // (entrada de estoque foi movida para map.html — Mercearia/Bar)
-  const TODAY_ISO = new Date().toISOString().slice(0, 10);
+  const TODAY_ISO = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
   const FRIG_ICON  = { ok: '✅', manutencao: '🔧', sem_frigobar: '➖' };
   const FRIG_LABEL = { ok: 'ok', manutencao: 'em manutenção', sem_frigobar: 'sem frigobar' };
 

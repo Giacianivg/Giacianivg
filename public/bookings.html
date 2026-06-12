@@ -452,7 +452,7 @@ async function loadAndRender() {
 // ─── KPIs ────────────────────────────────────────────────────────────────────
 
 function renderKPIs() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
   const checkins  = allReservations.filter(r => r.checkin_date  === today && ['confirmed','pending'].includes(r.status));
   const checkouts = allReservations.filter(r => r.checkout_date === today && ['checkedin','confirmed'].includes(r.status));
   // ocupado = reserva ativa cobrindo a data de hoje (não apenas check-in já registrado)
