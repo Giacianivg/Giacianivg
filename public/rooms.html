@@ -424,10 +424,6 @@
       </div>
       <div class="topbar-right">
         <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
-        <button class="btn btn-secondary" id="btn-products">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-          Gerenciar produtos
-        </button>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -810,61 +806,6 @@
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-charge">Cancelar</button>
       <button class="btn btn-primary" id="btn-save-charge">Lançar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── Modal: Gerenciar produtos ──────────────────────────────── -->
-<div class="modal-overlay" id="modal-products">
-  <div class="modal modal-lg">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">Gerenciar produtos</div>
-        <div class="modal-sub">Frigobar, bar, mercearia e extras</div>
-      </div>
-      <button class="btn btn-ghost btn-icon" data-close="modal-products">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <!-- Form criar/editar -->
-      <div style="background:var(--sur2);border:1px solid var(--bdr1);border-radius:var(--r-md);padding:var(--sp-3);margin-bottom:var(--sp-4)">
-        <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)" id="prod-form-title">Novo produto</div>
-        <input type="hidden" id="prod-id">
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--sp-2);margin-bottom:var(--sp-2)">
-          <input class="input" id="prod-name" placeholder="Nome do produto">
-          <select class="input" id="prod-category">
-            <option value="frigobar">Frigobar</option>
-            <option value="bar">Bar</option>
-            <option value="mercearia">Mercearia</option>
-            <option value="extra">Extra</option>
-          </select>
-          <input class="input" id="prod-unit" placeholder="Unidade" value="un">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:var(--sp-2);align-items:center">
-          <input class="input" type="number" id="prod-price" placeholder="Preço R$" min="0" step="0.5">
-          <input class="input" type="number" id="prod-cost" placeholder="Custo R$" min="0" step="0.5">
-          <input class="input" type="number" id="prod-min" placeholder="Estoque mín." min="0" step="1">
-          <button class="btn btn-primary btn-sm" id="btn-save-product">Salvar</button>
-          <button class="btn btn-ghost btn-sm" id="btn-clear-product" title="Limpar formulário">✕</button>
-        </div>
-      </div>
-      <!-- Lista -->
-      <div style="overflow:auto;max-height:330px">
-        <table class="cmd-table" id="products-table">
-          <thead><tr>
-            <th>Produto</th><th>Cat.</th><th style="text-align:right">Preço</th>
-            <th style="text-align:right">Estoque</th><th>Ações</th>
-          </tr></thead>
-          <tbody id="products-tbody">
-            <tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="field-hint" style="margin-top:var(--sp-2)">Entrada de estoque é feita no <a href="map.html" style="color:var(--royal-l)">Mapa</a> → Mercearia/Bar.</p>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-secondary" data-close="modal-products">Fechar</button>
     </div>
   </div>
 </div>
@@ -1754,90 +1695,6 @@
     if (voucher?.download_url) window.open(voucher.download_url, '_blank');
     loadRooms();
   }
-
-  // ══ GERENCIAR PRODUTOS (catálogo; estoque é no map.html) ═════
-  document.getElementById('btn-products').addEventListener('click', async () => {
-    clearProductForm();
-    openModal('modal-products');
-    await renderProductsTable(true);
-  });
-
-  async function renderProductsTable(force = false) {
-    await ensureProducts(force);
-    const tbody = document.getElementById('products-tbody');
-    if (!productsCache.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Nenhum produto cadastrado</td></tr>';
-      return;
-    }
-    const catLabel = { frigobar:'Frigobar', bar:'Bar', mercearia:'Mercearia', extra:'Extra' };
-    tbody.innerHTML = productsCache.map(p => `<tr style="${p.active ? '' : 'opacity:.5'}">
-      <td style="color:var(--tx1)">${esc(p.name)}${p.active ? '' : ' <span style="font-size:.65rem;color:var(--tx3)">(inativo)</span>'}</td>
-      <td>${catLabel[p.category] || p.category}</td>
-      <td style="text-align:right">${fmtBRL(p.price)}</td>
-      <td style="text-align:right" class="${p.low_stock ? 'prod-low' : ''}">${Number(p.stock_quantity)} ${esc(p.unit)}${p.low_stock ? ' ⚠' : ''}</td>
-      <td>
-        <div class="action-group">
-          <button class="action-btn edit" data-prod-edit="${p.id}">Editar</button>
-          <button class="action-btn" data-prod-toggle="${p.id}">${p.active ? 'Desativar' : 'Ativar'}</button>
-        </div>
-      </td>
-    </tr>`).join('');
-
-    tbody.querySelectorAll('[data-prod-edit]').forEach(b => b.addEventListener('click', () => fillProductForm(b.dataset.prodEdit)));
-    tbody.querySelectorAll('[data-prod-toggle]').forEach(b => b.addEventListener('click', async () => {
-      const p = productsCache.find(x => x.id === b.dataset.prodToggle);
-      const res = await apiFetch(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: !p.active }) });
-      if (res?.success) { showToast(p.active ? 'Produto desativado.' : 'Produto ativado.', 'ok'); renderProductsTable(true); }
-    }));
-  }
-
-  function clearProductForm() {
-    document.getElementById('prod-id').value = '';
-    document.getElementById('prod-form-title').textContent = 'Novo produto';
-    ['prod-name','prod-price','prod-cost','prod-min'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('prod-category').value = 'frigobar';
-    document.getElementById('prod-unit').value = 'un';
-  }
-
-  function fillProductForm(id) {
-    const p = productsCache.find(x => x.id === id);
-    if (!p) return;
-    document.getElementById('prod-id').value       = p.id;
-    document.getElementById('prod-form-title').textContent = `Editando: ${p.name}`;
-    document.getElementById('prod-name').value     = p.name;
-    document.getElementById('prod-category').value = p.category;
-    document.getElementById('prod-unit').value     = p.unit;
-    document.getElementById('prod-price').value    = p.price;
-    document.getElementById('prod-cost').value     = p.cost_price || '';
-    document.getElementById('prod-min').value      = p.min_stock;
-  }
-
-  document.getElementById('btn-clear-product').addEventListener('click', clearProductForm);
-
-  document.getElementById('btn-save-product').addEventListener('click', async () => {
-    const id   = document.getElementById('prod-id').value;
-    const body = {
-      name:      document.getElementById('prod-name').value.trim(),
-      category:  document.getElementById('prod-category').value,
-      unit:      document.getElementById('prod-unit').value.trim() || 'un',
-      price:     parseFloat(document.getElementById('prod-price').value),
-      cost_price: parseFloat(document.getElementById('prod-cost').value) || 0,
-      min_stock: parseFloat(document.getElementById('prod-min').value) || 0,
-    };
-    if (!body.name || isNaN(body.price)) { showToast('Nome e preço são obrigatórios.', 'warn'); return; }
-
-    const res = id
-      ? await apiFetch(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
-      : await apiFetch('/api/products',        { method: 'POST',  body: JSON.stringify(body) });
-
-    if (res?.success) {
-      showToast(id ? 'Produto atualizado.' : 'Produto criado.', 'ok');
-      clearProductForm();
-      renderProductsTable(true);
-    } else {
-      showToast(res?.message || 'Erro ao salvar produto.', 'err');
-    }
-  });
 
   // ══ FRIGOBAR DO QUARTO ═══════════════════════════════════════
   async function openFrigobar(code) {

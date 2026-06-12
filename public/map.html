@@ -213,6 +213,37 @@
     }
     .refresh-dot.loading { background: var(--gold); animation: pulse-checkin 1s ease-in-out infinite; }
 
+    /* ── Modal (Gerenciar produtos) ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.55);
+      backdrop-filter: blur(4px); z-index: 400;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--sur1); border: 1px solid var(--bdr2); border-radius: var(--r-xl);
+      box-shadow: 0 24px 60px rgba(0,0,0,.4); width: 100%; max-width: 680px;
+      max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    .modal-head { padding: var(--sp-5) var(--sp-5) var(--sp-4); border-bottom: 1px solid var(--bdr1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+    .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
+    .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
+    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
+    .modal-foot  { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; }
+    .cmd-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .cmd-table th { text-align: left; padding: 6px 8px; color: var(--tx3); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--bdr1); }
+    .cmd-table td { padding: 6px 8px; border-bottom: 1px solid var(--bdr0); color: var(--tx2); }
+    .cmd-table tr:last-child td { border-bottom: none; }
+    .prod-low { color: var(--err); font-weight: 700; }
+    .action-btn {
+      padding: 4px 9px; border-radius: var(--r-sm); border: 1px solid var(--bdr1);
+      background: transparent; cursor: pointer; color: var(--tx3);
+      font-size: .72rem; transition: background .15s, color .15s;
+    }
+    .action-btn:hover { background: var(--sur2); color: var(--tx1); }
+    .action-btn.edit:hover { background: rgba(99,102,241,.1); color: var(--royal-l); }
+
     @media (max-width: 640px) {
       .map-stats { grid-template-columns: repeat(2, 1fr); }
     }
@@ -507,6 +538,70 @@
         <div id="report-body" style="font-size:.8125rem;color:var(--tx3)">Carregando…</div>
       </div>
     </main>
+  </div>
+</div>
+
+<!-- ── Modal: Gerenciar produtos ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-products">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Gerenciar produtos</div>
+        <div class="modal-sub">Frigobar, bar, mercearia e extras — catálogo e estoque</div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-products">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Form criar/editar -->
+      <div style="background:var(--sur2);border:1px solid var(--bdr1);border-radius:var(--r-md);padding:var(--sp-3);margin-bottom:var(--sp-4)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)" id="prod-form-title">Novo produto</div>
+        <input type="hidden" id="prod-id">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--sp-2);margin-bottom:var(--sp-2)">
+          <input class="input" id="prod-name" placeholder="Nome do produto">
+          <select class="input" id="prod-category">
+            <option value="frigobar">Frigobar</option>
+            <option value="bar">Bar</option>
+            <option value="mercearia">Mercearia</option>
+            <option value="extra">Extra</option>
+          </select>
+          <input class="input" id="prod-unit" placeholder="Unidade" value="un">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:var(--sp-2);align-items:center">
+          <input class="input" type="number" id="prod-price" placeholder="Preço R$" min="0" step="0.5">
+          <input class="input" type="number" id="prod-cost" placeholder="Custo R$" min="0" step="0.5">
+          <input class="input" type="number" id="prod-min" placeholder="Estoque mín." min="0" step="1">
+          <button class="btn btn-primary btn-sm" id="btn-save-product">Salvar</button>
+          <button class="btn btn-ghost btn-sm" id="btn-clear-product" title="Limpar formulário">✕</button>
+        </div>
+      </div>
+      <!-- Lista -->
+      <div style="overflow:auto;max-height:300px">
+        <table class="cmd-table">
+          <thead><tr>
+            <th>Produto</th><th>Cat.</th><th style="text-align:right">Preço</th>
+            <th style="text-align:right">Estoque</th><th>Ações</th>
+          </tr></thead>
+          <tbody id="products-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Entrada de estoque -->
+      <div id="stock-entry-box" style="display:none;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.25);border-radius:var(--r-md);padding:var(--sp-3);margin-top:var(--sp-3)">
+        <div style="font-size:.78rem;font-weight:700;color:var(--ok);margin-bottom:var(--sp-2)" id="stock-entry-title">Entrada de estoque</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:var(--sp-2);align-items:center">
+          <input class="input" type="number" id="stock-qty" placeholder="Quantidade" min="1" step="1">
+          <input class="input" type="number" id="stock-cost" placeholder="Custo unit. R$" min="0" step="0.5">
+          <input class="input" type="text" id="stock-note" placeholder="Nota (fornecedor, NF…)">
+          <button class="btn btn-primary btn-sm" id="btn-save-stock" style="background:var(--ok);border-color:var(--ok)">Registrar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-products">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -885,6 +980,9 @@
     document.getElementById('detail-grid').innerHTML = `
       <div><div class="detail-stat-label">Itens cadastrados</div><div class="detail-stat-value">${items.length}</div></div>
       <div><div class="detail-stat-label">Abaixo do mínimo</div><div class="detail-stat-value" style="color:${low.length ? 'var(--err)' : 'var(--ok)'}">${low.length} item${low.length === 1 ? '' : 's'}</div></div>
+      <div style="display:flex;align-items:center;justify-content:flex-end">
+        <button class="btn btn-secondary btn-sm" id="btn-manage-products">🗂 Gerenciar produtos</button>
+      </div>
       <div class="inv-wrap" style="grid-column:1/-1">
         <table class="inv-table">
           <thead><tr><th>Item</th><th style="text-align:right">Qtd</th><th>Un</th><th style="text-align:right">Preço</th><th></th><th></th></tr></thead>
@@ -927,9 +1025,140 @@
       }
     });
 
+    document.getElementById('btn-manage-products')?.addEventListener('click', () => {
+      clearProductForm();
+      document.getElementById('stock-entry-box').style.display = 'none';
+      document.getElementById('modal-products').classList.add('open');
+      renderProductsTable(true);
+    });
+
     panel.classList.add('show');
     panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
   }
+
+  // ══ GERENCIAR PRODUTOS (catálogo + entrada de estoque) ════════════════════
+  let stockProductId = null;
+
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => document.getElementById(btn.dataset.close).classList.remove('open'));
+  });
+  document.getElementById('modal-products').addEventListener('click', e => {
+    if (e.target.id === 'modal-products') e.target.classList.remove('open');
+  });
+
+  async function renderProductsTable(force = false) {
+    if (force || !productsCache.length) await reloadProducts();
+    const tbody = document.getElementById('products-tbody');
+    if (!productsCache.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Nenhum produto cadastrado</td></tr>';
+      return;
+    }
+    const catLabel = { frigobar:'Frigobar', bar:'Bar', mercearia:'Mercearia', extra:'Extra' };
+    tbody.innerHTML = productsCache.map(p => `<tr style="${p.active ? '' : 'opacity:.5'}">
+      <td style="color:var(--tx1)">${escHtml(p.name)}${p.active ? '' : ' <span style="font-size:.65rem;color:var(--tx3)">(inativo)</span>'}</td>
+      <td>${catLabel[p.category] || p.category}</td>
+      <td style="text-align:right">${fmtBRL(p.price)}</td>
+      <td style="text-align:right" class="${p.low_stock ? 'prod-low' : ''}">${Number(p.stock_quantity)} ${escHtml(p.unit)}${p.low_stock ? ' ⚠' : ''}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="action-btn edit" data-prod-edit="${p.id}">Editar</button>
+          <button class="action-btn" data-prod-stock="${p.id}" style="color:var(--ok)">+ Estoque</button>
+          <button class="action-btn" data-prod-toggle="${p.id}">${p.active ? 'Desativar' : 'Ativar'}</button>
+        </div>
+      </td>
+    </tr>`).join('');
+
+    tbody.querySelectorAll('[data-prod-edit]').forEach(b => b.addEventListener('click', () => fillProductForm(b.dataset.prodEdit)));
+    tbody.querySelectorAll('[data-prod-stock]').forEach(b => b.addEventListener('click', () => openStockEntry(b.dataset.prodStock)));
+    tbody.querySelectorAll('[data-prod-toggle]').forEach(b => b.addEventListener('click', async () => {
+      const p = productsCache.find(x => x.id === b.dataset.prodToggle);
+      const res = await apiFetch(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ active: !p.active }) });
+      if (res?.success) { DS.toast(p.active ? 'Produto desativado.' : 'Produto ativado.', 'ok'); renderProductsTable(true); }
+    }));
+  }
+
+  function clearProductForm() {
+    document.getElementById('prod-id').value = '';
+    document.getElementById('prod-form-title').textContent = 'Novo produto';
+    ['prod-name','prod-price','prod-cost','prod-min'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('prod-category').value = 'frigobar';
+    document.getElementById('prod-unit').value = 'un';
+  }
+
+  function fillProductForm(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prod-id').value       = p.id;
+    document.getElementById('prod-form-title').textContent = `Editando: ${p.name}`;
+    document.getElementById('prod-name').value     = p.name;
+    document.getElementById('prod-category').value = p.category;
+    document.getElementById('prod-unit').value     = p.unit;
+    document.getElementById('prod-price').value    = p.price;
+    document.getElementById('prod-cost').value     = p.cost_price || '';
+    document.getElementById('prod-min').value      = p.min_stock;
+  }
+
+  document.getElementById('btn-clear-product').addEventListener('click', clearProductForm);
+
+  document.getElementById('btn-save-product').addEventListener('click', async () => {
+    const id   = document.getElementById('prod-id').value;
+    const body = {
+      name:       document.getElementById('prod-name').value.trim(),
+      category:   document.getElementById('prod-category').value,
+      unit:       document.getElementById('prod-unit').value.trim() || 'un',
+      price:      parseFloat(document.getElementById('prod-price').value),
+      cost_price: parseFloat(document.getElementById('prod-cost').value) || 0,
+      min_stock:  parseFloat(document.getElementById('prod-min').value) || 0,
+    };
+    if (!body.name || isNaN(body.price)) { DS.toast('Nome e preço são obrigatórios.', 'warn'); return; }
+
+    const res = id
+      ? await apiFetch(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      : await apiFetch('/api/products',        { method: 'POST',  body: JSON.stringify(body) });
+
+    if (res?.success) {
+      DS.toast(id ? 'Produto atualizado.' : 'Produto criado.', 'ok');
+      clearProductForm();
+      renderProductsTable(true);
+    } else {
+      DS.toast(res?.message || 'Erro ao salvar produto.', 'err');
+    }
+  });
+
+  function openStockEntry(id) {
+    const p = productsCache.find(x => x.id === id);
+    if (!p) return;
+    stockProductId = id;
+    document.getElementById('stock-entry-title').textContent =
+      `Entrada de estoque — ${p.name} (atual: ${Number(p.stock_quantity)} ${p.unit})`;
+    document.getElementById('stock-qty').value  = '';
+    document.getElementById('stock-cost').value = p.cost_price || '';
+    document.getElementById('stock-note').value = '';
+    document.getElementById('stock-entry-box').style.display = 'block';
+    document.getElementById('stock-qty').focus();
+  }
+
+  document.getElementById('btn-save-stock').addEventListener('click', async () => {
+    if (!stockProductId) return;
+    const qty = parseFloat(document.getElementById('stock-qty').value);
+    if (!qty || qty <= 0) { DS.toast('Quantidade inválida.', 'warn'); return; }
+    const res = await apiFetch(`/api/products/${stockProductId}/stock-entry`, {
+      method: 'POST',
+      body: JSON.stringify({
+        quantity:  qty,
+        unit_cost: parseFloat(document.getElementById('stock-cost').value) || 0,
+        note:      document.getElementById('stock-note').value.trim() || undefined,
+      }),
+    });
+    if (res?.success) {
+      DS.toast(`Estoque atualizado: ${res.product?.name} → ${Number(res.product?.stock_quantity)}.`, 'ok');
+      document.getElementById('stock-entry-box').style.display = 'none';
+      stockProductId = null;
+      renderProductsTable(true);
+    } else {
+      DS.toast(res?.message || 'Erro na entrada de estoque.', 'err');
+    }
+  });
 
   // ── Relatório de consumo do dia ───────────────────────────────────────────
   async function loadDailyReport(dateOverride) {
