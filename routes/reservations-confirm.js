@@ -74,6 +74,7 @@ router.post('/', async (req, res) => {
     reservation_number: data.reservation_number,
     reservation_id:     data.reservation_id,
     room_type:          data.room_type,
+    voucher_id:         data.voucher_id || null, // gerado automaticamente pela RPC (migration 024)
     checkin_date:       checkinISO,
     checkout_date:      checkoutISO,
   }, 201);
