@@ -118,8 +118,10 @@ router.get('/report/daily', async (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return fail(res, 'invalid_date', 'date deve ser YYYY-MM-DD');
 
-  const from = `${date}T00:00:00.000Z`;
-  const to   = `${date}T23:59:59.999Z`;
+  // Janela do dia no fuso da pousada (America/Sao_Paulo, UTC-3 fixo desde 2019).
+  // Em UTC, consumo lançado após 21h BRT caía no dia seguinte e sumia do relatório.
+  const from = `${date}T00:00:00.000-03:00`;
+  const to   = `${date}T23:59:59.999-03:00`;
 
   const { data, error } = await supabaseAdmin
     .from('room_charges')
