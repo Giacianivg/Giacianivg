@@ -1039,11 +1039,13 @@
     }
     roomsCache = res.rooms || [];
 
-    // Indexa reservas ativas (cobrindo hoje) por quarto físico
+    // Indexa reservas ativas por quarto físico.
+    // checkout >= hoje: no dia do checkout o hóspede ainda ocupa o quarto.
+    // pending incluso: reservas do CRM nascem pending até a confirmação.
     activeResvByRoom = {};
     for (const r of (resvRes?.reservations || [])) {
-      if (!['pending','confirmed','checkedin'].includes(r.status)) continue;
-      if (!(r.checkin_date <= TODAY_ISO && r.checkout_date > TODAY_ISO)) continue;
+      if (!['pending','deposit_paid','confirmed','checkedin'].includes(r.status)) continue;
+      if (!(r.checkin_date <= TODAY_ISO && r.checkout_date >= TODAY_ISO)) continue;
       activeResvByRoom[r.room_type] = r;
     }
 
