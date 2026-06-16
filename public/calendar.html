@@ -356,7 +356,7 @@
         <div class="view-toggle">
           <button class="view-btn active" id="btn-month">Mês</button>
           <button class="view-btn" id="btn-week">Semana</button>
-          <button class="view-btn" id="btn-competitors">💰 Concorrentes</button>
+          <button class="view-btn active" id="btn-competitors">💰 Concorrentes</button>
         </div>
       </div>
     </header>
@@ -501,7 +501,7 @@
   let curMonth        = new Date().getMonth();
   let curWeekStart    = getMonday(TODAY);
   let resvCache       = {};  // key → reservations array
-  let competitorMode  = false;
+  let competitorMode  = true;  // concorrência visível por padrão (toggle só esconde)
   let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
 
   /* ── Constants ───────────────────────────────────────────────────────── */
