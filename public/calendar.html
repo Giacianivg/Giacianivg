@@ -191,6 +191,14 @@
     .price-cell.p-cheap     { color: #4ade80; font-weight: 700; }
     .price-cell.p-neutral   { color: var(--tx3); }
 
+    /* Preço real do motor: valor vigente + preço de tabela em tom claro abaixo */
+    .price-cell { flex-direction: column; line-height: 1.05; }
+    .pc-final { font-weight: 700; }
+    .price-base-ref { font-size: .52rem; color: var(--tx3); opacity: .85; font-weight: 600; }
+    .motor-badge { font-size: .58rem; font-weight: 700; padding: 1px 7px; border-radius: 8px; text-transform: none; letter-spacing: 0; margin-left: 8px; }
+    .motor-badge.motor-on  { background: rgba(34,197,94,.16); color: #4ade80; }
+    .motor-badge.motor-off { background: var(--sur2); color: var(--tx3); }
+
     /* ══════════════════════════════
        WEEKLY DETAIL VIEW
     ══════════════════════════════ */
@@ -503,6 +511,7 @@
   let resvCache       = {};  // key → reservations array
   let competitorMode  = true;  // concorrência visível por padrão (toggle só esconde)
   let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
+  let pricingData     = null; // { settings, quote_base, motorByDate } — preço real do motor
 
   /* ── Constants ───────────────────────────────────────────────────────── */
   const ROOMS = [
@@ -524,12 +533,8 @@
   };
   const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const BASE_PRICES = {
-    ALA_A:       { baixa: 300, media: 300, alta: 400 },
-    ALA_B:       { baixa: 300, media: 350, alta: 400 },
-    ALA_C_CASAL: { baixa: 300, media: 300, alta: 400 },
-    ALA_C_GRUPO: { baixa: 600, media: 700, alta: 800 },
-  };
+  /* Preço-base vem da tabela rooms via /api/pricing/calendar (sem hardcode — DEC-021).
+     O preço exibido é o REAL do motor: base × multiplicador, clampado [floor, ceiling]. */
   /* type: 'nacional' (★ dourado) | 'regional' (◆ roxo) */
   const EVENTS = [
     /* ── Feriados nacionais 2026 ── */
@@ -665,6 +670,43 @@
     return result;
   }
 
+  /* ── Preço real do motor (base da tabela rooms × multiplicador) ───────── */
+  async function fetchPricingData() {
+    if (pricingData) return pricingData;
+    let resp = null;
+    try { resp = await apiFetch('/api/pricing/calendar?days=365'); } catch (e) { /* degrada */ }
+    const motorByDate = {};
+    (resp?.days || []).forEach(x => { motorByDate[x.date] = { multiplier: x.multiplier, locked: x.locked }; });
+    pricingData = {
+      settings:   resp?.settings   || { pricing_mode: 'off', price_floor: 0, price_ceiling: 999999 },
+      quote_base: resp?.quote_base || {},
+      motorByDate,
+    };
+    return pricingData;
+  }
+
+  /* Preço-base por ala/temporada (null = sob consulta, ex.: grupo). getSeason
+     do calendário devolve 'alta' para feriados/eventos. */
+  function basePriceFor(code, season) {
+    const qb = pricingData?.quote_base || {};
+    if (code === 'ALA_C_GRUPO') return null;
+    if (season === 'alta' || season === 'feriado') return qb.alta || null;
+    const b = qb[code];
+    return b ? (season === 'media' ? b.media : b.baixa) : null;
+  }
+
+  /* Preço final exibido: base × multiplicador do motor (se 'auto'), senão base. */
+  function motorPriceFor(code, ds) {
+    const base = basePriceFor(code, getSeason(ds));
+    if (base == null) return null;
+    const s = pricingData?.settings || {};
+    const m = pricingData?.motorByDate?.[ds];
+    if (s.pricing_mode === 'auto' && m) {
+      return Math.min(Math.max(Math.round(base * m.multiplier), s.price_floor), s.price_ceiling);
+    }
+    return base;
+  }
+
   /* ── Navigation ──────────────────────────────────────────────────────── */
   function render() {
     closePopover();
@@ -724,6 +766,7 @@
     const reservations = await fetchReservations(from, to);
     if (!reservations) return;
     updateOccupancy(reservations, from, to);
+    await fetchPricingData();
 
     let compData = null;
     if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
@@ -808,20 +851,38 @@
       html += '</div>';
     });
 
-    /* Pricing section — todas as alas / noite */
-    html += '<div class="month-section">Preços por noite</div>';
+    /* Pricing section — preço REAL: base da tabela rooms × motor dinâmico */
+    const motorOn = pricingData.settings.pricing_mode === 'auto';
+    html += `<div class="month-section">Preços por noite ${motorOn
+      ? '<span class="motor-badge motor-on">motor ativo</span>'
+      : '<span class="motor-badge motor-off">motor off — preço de tabela</span>'}</div>`;
     ROOMS.forEach(room => {
       html += `<div class="month-price-label">${room.label}</div>`;
-      html += `<div class="month-price-canvas" style="min-height:28px">
+      html += `<div class="month-price-canvas" style="min-height:34px">
         <div class="price-cells">`;
       days.forEach(d => {
-        const ds = isoDate(curYear, curMonth, d);
+        const ds     = isoDate(curYear, curMonth, d);
         const season = getSeason(ds);
-        const price  = (BASE_PRICES[room.code] || {})[season] || 0;
-        const cls    = season === 'alta' ? 'p-alta' : season === 'media' ? 'p-media' : 'p-baixa';
         const evs    = getEventsForDate(ds);
         const evBg   = evs.length ? (evs.some(e => e.type === 'regional') ? 'background:rgba(168,85,247,.1)' : 'background:rgba(184,134,0,.1)') : '';
-        html += `<div class="price-cell ${cls}" title="${escHtml(evs.length ? eventTooltip(evs) : season)}" style="${evBg}">${price ? 'R$' + price : ''}</div>`;
+        const base   = basePriceFor(room.code, season);
+        if (base == null) {
+          html += `<div class="price-cell p-baixa" title="Grupo — sob consulta" style="${evBg}">—</div>`;
+          return;
+        }
+        const m     = pricingData.motorByDate[ds];
+        const live  = motorOn && m;
+        const final = live
+          ? Math.min(Math.max(Math.round(base * m.multiplier), pricingData.settings.price_floor), pricingData.settings.price_ceiling)
+          : base;
+        const cls   = season === 'alta' ? 'p-alta' : season === 'media' ? 'p-media' : 'p-baixa';
+        const showRef = live && final !== base;
+        const tip = live
+          ? `Motor: tabela R$${base} × ${m.multiplier}${m.locked ? ' (travado)' : ''} = R$${final}${evs.length ? ' · ' + eventTooltip(evs) : ''}`
+          : (evs.length ? eventTooltip(evs) : `Tabela: R$${base} (${season === 'alta' ? 'alta temporada' : season === 'media' ? 'fim de semana' : 'dias úteis'})`);
+        html += `<div class="price-cell ${cls}" title="${escHtml(tip)}" style="${evBg}">
+          <span class="pc-final">R$${final}</span>${showRef ? `<span class="price-base-ref">tab ${base}</span>` : ''}
+        </div>`;
       });
       html += '</div></div>';
     });
@@ -837,7 +898,7 @@
       days.forEach(d => {
         const ds   = isoDate(curYear, curMonth, d);
         const comp = compData[ds];
-        const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
+        const own  = motorPriceFor('ALA_A', ds) || 0;
         if (!comp) {
           html += `<div class="price-cell p-neutral pc-add" data-comp-date="${ds}" title="Sem dados — clique para adicionar preço concorrente">--</div>`;
           return;
@@ -854,7 +915,7 @@
       days.forEach(d => {
         const ds   = isoDate(curYear, curMonth, d);
         const comp = compData[ds];
-        const own  = BASE_PRICES.ALA_A[getSeason(ds)] || 0;
+        const own  = motorPriceFor('ALA_A', ds) || 0;
         if (!comp || !comp.avg || !own) { html += '<div class="price-cell p-neutral"></div>'; return; }
         const diff = Math.round((own - comp.avg) / comp.avg * 100);
         const cls  = diff > 0 ? 'p-expensive' : diff < 0 ? 'p-cheap' : 'p-neutral';

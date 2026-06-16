@@ -52,11 +52,25 @@ router.get('/calendar', async (req, res) => {
       } : null,
     }));
 
+    // quote_base: preços-base por ala (baixa/media) + alta, para o calendário
+    // exibir o preço real do motor (base × multiplicador) sem hardcode no front.
+    // Mesma fonte da cotação da Luna: rooms (ALA_*) + settings.alta_base_price.
+    const QUOTABLE = ['ALA_A', 'ALA_B', 'ALA_C_CASAL'];
+    const [alaRes, altaRes] = await Promise.all([
+      supabaseAdmin.from('rooms').select('code, base_price_baixa, base_price_media').in('code', QUOTABLE),
+      supabaseAdmin.from('settings').select('value').eq('key', 'alta_base_price').maybeSingle(),
+    ]);
+    const quote_base = { alta: altaRes.data ? Number(altaRes.data.value) : 400 };
+    for (const r of alaRes.data || []) {
+      quote_base[r.code] = { baixa: Number(r.base_price_baixa), media: Number(r.base_price_media) };
+    }
+
     return ok(res, {
       settings: calendar.settings,
       reference_price: calendar.referencePrice,
       total_rooms: calendar.totalRooms,
       rooms: rooms || [],
+      quote_base,
       days: daysOut,
     });
   } catch (err) {
