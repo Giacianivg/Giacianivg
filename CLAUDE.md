@@ -162,7 +162,8 @@ Auth: Supabase JWT via `Authorization: Bearer <token>` or internal calls via `X-
 
 - `WHATSAPP_ACCESS_TOKEN` can expire — replace via Meta Business Portal with a System User Token set to "Never expires". Monitor: `GET /health/whatsapp` (cron diário + banner no frontdesk).
 - ~~X-Hub-Signature-256 disabled~~ — **resolvido**: validação ativa em produção desde que `WHATSAPP_APP_SECRET` foi configurado na Vercel (verificado 2026-06-12: POST sem assinatura → 403).
-- Inventário duplo alas × quartos: Luna reserva por ala (`ALA_A`/`ALA_B`), CRM por quarto físico (`A1`–`C5`) — risco de overbooking com volume. Unificação exige DEC própria (DEC-021 P5).
+- Inventário duplo alas × quartos: Luna reserva por ala (`ALA_A`/`ALA_B`), CRM por quarto físico (`A1`–`C5`) — risco de overbooking com volume. Unificação exige DEC própria (DEC-021 P5 → DEC-022).
+- ⚠️ **Motor de pricing em `auto` (não `off`)** — verificado em produção 2026-06-16: `pricing_mode='auto'`, `price_floor=220`. `buildCalendar()` funcional; `price_log` vazio só porque a Luna está inativa. Com ocupação ~0%, o motor cotaria no piso (~R$220). **Revisar floor/teto/multiplicadores ANTES de religar a Luna** (ver `docs/STATUS.md`).
 
 ## Stories & Epics
 

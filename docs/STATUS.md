@@ -1,13 +1,30 @@
 # STATUS — Pousada Luz da Lua
 
-> Atualizado: 2026-06-12 (sessão de fechamento: grupos + deploy)
-> Branch: `master` | Último commit antes desta sessão: `3ea4a3b` (frigobar → comanda)
+> Atualizado: 2026-06-16 (sessão: melhorias calendário/reservas + diagnóstico de pricing)
+> Branch: `master`
+
+## ⚠️ AVISO CRÍTICO — Motor de pricing está LIGADO (`auto`)
+
+**Antes de reativar a Luna (hoje inativa por questão do Facebook), REVISAR os
+parâmetros do motor e validar os preços que ele vai cotar. NÃO reativar a Luna
+sem essa revisão.**
+
+Diagnóstico em produção (`nqxesjxbqupmhnivkfyk`, 2026-06-16):
+- `pricing_mode = 'auto'` (a documentação antiga dizia `off` — estava errada).
+- `price_floor = 220` · `price_ceiling = 550` · `target_occupancy = 70`.
+- `buildCalendar()` roda sem erro (motor funcional, **não** inerte).
+- `price_log` **vazio** + `0 overrides` → **nenhuma cotação real saiu com preço do
+  motor** (Luna inativa nunca o invocou).
+- **Simulação:** com ocupação ~0% nas datas futuras, o motor cotaria quase tudo no
+  **piso R$220** (ALA_A R$300 → R$220; ALA_B R$350 → R$245). Religar a Luna assim
+  faria ela cotar muito barato. Revisar floor/teto/multiplicadores antes.
 
 ## Fase atual
 
 **Operação do CRM + captação de grupos.** A Fase 1.5 (Motor de Precificação Dinâmica)
-está completa e commitada desde 2026-06-10 (`df50890`), com `pricing_mode='off'`
-aguardando ativação pelo Founder no `pricing.html`.
+está completa e commitada desde 2026-06-10 (`df50890`). **Status real:
+`pricing_mode='auto'`** (ver aviso crítico acima) — só não cobra ninguém porque a
+Luna está inativa.
 
 ## Trabalho recente (sessões de 11–12/06)
 
@@ -37,7 +54,7 @@ públicas e push para o GitHub via @devops.
 
 | # | Pendência | Contexto |
 |---|-----------|----------|
-| 1 | **Ativar o motor de pricing** (`pricing.html` → "Ativar motor") | Código em produção após o deploy de hoje; `pricing_mode='off'`. Acompanhar `price_log` nos primeiros dias. |
+| 1 | **Revisar o motor de pricing ANTES de religar a Luna** | `pricing_mode` JÁ está `auto` (ver aviso crítico no topo). Com ocupação ~0%, cotaria no piso R$220. Revisar floor/teto/multiplicadores e validar preços antes de reativar a Luna. |
 | 2 | **Revisar piso/teto/meta** (R$155 / R$550 / 70%) | Valores da spec; editáveis no dashboard. |
 | 3 | **Alimentar `competitor_prices`** | Tabela vazia → fator concorrência neutro. Validar se o cron de scraping (03h UTC) roda após o deploy. |
 | 4 | **Trocar WHATSAPP_ACCESS_TOKEN por System User Token "Nunca expira"** | Pendência antiga (erro 401 recorrente). |
