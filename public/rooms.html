@@ -919,6 +919,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="design-system/u.js"></script>
+<script src="design-system/checkout-guard.js"></script>
 <script>
 (function () {
   'use strict';
@@ -964,6 +965,12 @@
     if (res.status === 401) { window.location.href = '/login.html'; return null; }
     return res.json();
   }
+
+  // Adapter p/ o CheckoutGuard (que envia body como objeto); o apiFetch
+  // desta tela espera body já serializado.
+  const cgApiFetch = (path, opts) =>
+    apiFetch(path, opts && opts.body && typeof opts.body === 'object'
+      ? { ...opts, body: JSON.stringify(opts.body) } : opts);
 
   // ── State ────────────────────────────────────────────────────
   let roomsCache  = [];
@@ -1745,13 +1752,10 @@
     const btn = document.getElementById('btn-do-checkout');
     btn.disabled = true; btn.textContent = 'Processando…';
 
-    // 1. Registra o checkout
-    const co = await apiFetch(`/api/reservations/${r.id}/checkout`, { method: 'PATCH' });
-    if (!co?.success) {
-      btn.disabled = false; btn.textContent = '🚪 Fazer checkout';
-      showToast(co?.message || 'Erro ao registrar checkout.', 'err');
-      return;
-    }
+    // 1. Check-out guardado: a trava de saldo é no banco (RPC). Se houver
+    //    saldo, o CheckoutGuard abre o popup e só finaliza após receber.
+    const done = await CheckoutGuard.run({ id: r.id, apiFetch: cgApiFetch, toast: showToast });
+    if (!done) { btn.disabled = false; btn.textContent = '🚪 Fazer checkout'; return; }
 
     // 2. Gera voucher final com diárias + consumos
     const consumosTxt = charges.length

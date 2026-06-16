@@ -411,6 +411,7 @@
 </div>
 
 <script src="design-system/u.js"></script>
+<script src="design-system/checkout-guard.js"></script>
 <script>
 (function () {
   'use strict';
@@ -648,13 +649,21 @@
     btn.disabled = true;
     btn.textContent = 'Registrando…';
 
-    // Saldo em aberto: check-out bloqueia até receber; check-in oferece
-    // "cobrar agora" ou "cobrar no check-out" (não-bloqueante).
-    if (fdAction === 'checkout' || fdAction === 'checkin') {
+    // Check-out: caminho ÚNICO via CheckoutGuard — trava de saldo no banco
+    // (RPC) e popup idêntico ao de rooms.html e map.html.
+    if (fdAction === 'checkout') {
+      const done = await CheckoutGuard.run({ id, apiFetch, toast: DS.toast });
+      if (done) { DS.toast('Check-out registrado', 'ok'); loadData(); }
+      else { btn.disabled = false; btn.textContent = '✓ Registrar check-out'; }
+      return;
+    }
+
+    // Check-in: saldo em aberto abre popup não-bloqueante (cobrar agora / no check-out).
+    if (fdAction === 'checkin') {
       const cmd = await apiFetch(`/api/room-charges/comanda/${id}`);
       const due = Number(cmd?.totals?.balance_due ?? 0);
       if (cmd?.success && due > 0) {
-        openPayModal(id, cmd, btn, fdAction);
+        openPayModal(id, cmd, btn, 'checkin');
         return;
       }
     }

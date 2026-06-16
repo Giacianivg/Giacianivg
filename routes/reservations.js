@@ -81,16 +81,31 @@ router.patch('/:id/checkin', async (req, res) => {
 });
 
 // PATCH /api/reservations/:id/checkout
+// Porta ÚNICA de check-out: a RPC checkout_reservation valida o saldo
+// (diárias + consumos − sinal − pagamentos) e REJEITA se houver saldo.
+// Trava final no banco — nenhum frontend consegue pular a validação.
 router.patch('/:id/checkout', async (req, res) => {
-  const { data, error } = await supabaseAdmin
-    .from('reservations')
-    .update({ status: 'checkedout', checkout_at: new Date().toISOString() })
-    .eq('id', req.params.id)
-    .select('id, reservation_number, status, checkout_at, room_type')
-    .single();
+  const { data, error } = await supabaseAdmin.rpc('checkout_reservation', {
+    p_reservation_id: req.params.id,
+  });
 
-  if (error || !data) return notFound(res, 'Reservation');
-  return ok(res, { reservation: data });
+  if (error) return serverError(res, error);
+  if (!data) return notFound(res, 'Reservation');
+
+  if (data.success !== true) {
+    const code   = data.error || 'checkout_failed';
+    const status = code === 'balance_due' ? 422 : code === 'not_found' ? 404 : 400;
+    // Inclui os totais para o frontend abrir o popup de cobrança com o detalhamento.
+    return res.status(status).json({
+      success: false, error: code, message: data.message, totals: data.totals || null,
+    });
+  }
+
+  return ok(res, {
+    reservation: { id: data.reservation_id, status: data.status },
+    totals:      data.totals || null,
+    already:     data.already === true,
+  });
 });
 
 // PATCH /api/reservations/:id  — edição geral

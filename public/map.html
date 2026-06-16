@@ -633,6 +633,7 @@
 </div>
 
 <script src="design-system/u.js"></script>
+<script src="design-system/checkout-guard.js"></script>
 <script>
 (function () {
   'use strict';
@@ -683,6 +684,12 @@
     if (res.status === 401) { window.location.href = '/login.html'; return null; }
     return res.json();
   }
+
+  // Adapter p/ o CheckoutGuard (envia body como objeto); o apiFetch desta
+  // tela espera body já serializado.
+  const cgApiFetch = (path, opts) =>
+    apiFetch(path, opts && opts.body && typeof opts.body === 'object'
+      ? { ...opts, body: JSON.stringify(opts.body) } : opts);
 
   // ── State ─────────────────────────────────────────────────────────────────
   let roomsData = {};            // code físico (A1..C5) → room object
@@ -963,12 +970,23 @@
         <input class="input" type="number" id="map-charge-qty" min="1" step="1" value="1" style="width:64px;padding:5px 8px;font-size:.78rem">
         <button class="btn btn-sm" id="map-charge-add" style="background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.35)">+ Lançar consumo</button>
         <button class="btn btn-sm" id="map-swap-room" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.35)">🔄 Trocar quarto</button>
+        <button class="btn btn-sm" id="map-do-checkout" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.4)">🚪 Fazer checkout</button>
         <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">
           Diárias ${fmtBRL(totals.room_total)} · Sinal ${fmtBRL(totals.deposit_paid)} · Saldo <strong style="color:var(--gold)">${fmtBRL(totals.balance_due)}</strong>
         </span>
       </div>`;
 
     document.getElementById('map-swap-room')?.addEventListener('click', () => openSwapModal(code, resv));
+
+    // Check-out guardado: mesmo fluxo/popup das outras telas; trava de saldo no banco.
+    document.getElementById('map-do-checkout')?.addEventListener('click', async () => {
+      const done = await CheckoutGuard.run({ id: resv.id, apiFetch: cgApiFetch, toast: DS.toast });
+      if (done) {
+        DS.toast('Checkout registrado.', 'ok');
+        document.getElementById('room-detail').classList.remove('show');
+        loadMap();
+      }
+    });
 
     document.getElementById('map-charge-add')?.addEventListener('click', async () => {
       const prodId = document.getElementById('map-charge-product').value;
