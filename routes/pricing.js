@@ -26,6 +26,21 @@ const SETTINGS_RULES = {
   pricing_mode:     { type: 'enum', values: ['off', 'auto'] },
 };
 
+// Alas com preço absoluto editável (mesmas cotáveis da Luna; grupo é sob consulta)
+const VALID_ALAS = ['ALA_A', 'ALA_B', 'ALA_C_CASAL'];
+
+// Datas inclusivas de from..to (YYYY-MM-DD), em UTC para evitar shift de fuso
+function inclusiveDateRange(from, to) {
+  const out = [];
+  const d = new Date(from + 'T00:00:00Z');
+  const end = new Date(to + 'T00:00:00Z');
+  while (d <= end) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
+}
+
 // GET /api/pricing/calendar?days=90
 router.get('/calendar', async (req, res) => {
   try {
@@ -215,6 +230,73 @@ router.get('/log', async (req, res) => {
   if (error) return serverError(res, error);
 
   return ok(res, { log: data, count: data.length });
+});
+
+// ─── Overrides de preço ABSOLUTO por ala/data (Bloco 4 / C′) ────────────────
+// Lidos pelo calendário (visão do dono). A Luna só honra após edição futura do
+// engine.js (gated em auto) — ver pendência em docs/STATUS.md.
+
+// GET /api/pricing/room-overrides?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/room-overrides', async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) {
+    return fail(res, 'invalid_date', 'from e to (YYYY-MM-DD) são obrigatórios');
+  }
+  const { data, error } = await supabaseAdmin
+    .from('room_price_overrides')
+    .select('room_type, date, price, note')
+    .gte('date', from)
+    .lte('date', to)
+    .order('date');
+  if (error) return serverError(res, error);
+  return ok(res, { overrides: data, count: data.length });
+});
+
+// PUT /api/pricing/room-overrides  { room_type, from, to, price, note? }
+router.put('/room-overrides', async (req, res) => {
+  const { room_type, from, to, price, note } = req.body;
+  if (!VALID_ALAS.includes(room_type)) {
+    return fail(res, 'invalid_room_type', `room_type deve ser um de: ${VALID_ALAS.join(', ')}`);
+  }
+  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) {
+    return fail(res, 'invalid_date', 'from e to (YYYY-MM-DD) são obrigatórios');
+  }
+  if (from > to) return fail(res, 'invalid_range', 'from deve ser <= to');
+  const numPrice = Number(price);
+  if (!Number.isFinite(numPrice) || numPrice <= 0) {
+    return fail(res, 'invalid_price', 'price deve ser número positivo');
+  }
+  const dates = inclusiveDateRange(from, to);
+  if (dates.length > 62) return fail(res, 'range_too_large', 'Período máximo de 62 dias por edição');
+
+  const nowIso = new Date().toISOString();
+  const rows = dates.map(date => ({ room_type, date, price: numPrice, note: note || null, updated_at: nowIso }));
+  const { data, error } = await supabaseAdmin
+    .from('room_price_overrides')
+    .upsert(rows, { onConflict: 'room_type,date' })
+    .select('room_type, date, price');
+  if (error) return serverError(res, error);
+  return ok(res, { saved: data.length, room_type, from, to, price: numPrice });
+});
+
+// DELETE /api/pricing/room-overrides  { room_type, from, to }
+router.delete('/room-overrides', async (req, res) => {
+  const { room_type, from, to } = req.body;
+  if (!VALID_ALAS.includes(room_type)) {
+    return fail(res, 'invalid_room_type', `room_type deve ser um de: ${VALID_ALAS.join(', ')}`);
+  }
+  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) {
+    return fail(res, 'invalid_date', 'from e to (YYYY-MM-DD) são obrigatórios');
+  }
+  const { data, error } = await supabaseAdmin
+    .from('room_price_overrides')
+    .delete()
+    .eq('room_type', room_type)
+    .gte('date', from)
+    .lte('date', to)
+    .select('date');
+  if (error) return serverError(res, error);
+  return ok(res, { removed: data.length, room_type, from, to });
 });
 
 module.exports = router;

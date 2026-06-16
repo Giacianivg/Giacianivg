@@ -19,6 +19,21 @@ Diagnóstico em produção (`nqxesjxbqupmhnivkfyk`, 2026-06-16):
   **piso R$220** (ALA_A R$300 → R$220; ALA_B R$350 → R$245). Religar a Luna assim
   faria ela cotar muito barato. Revisar floor/teto/multiplicadores antes.
 
+### 🔗 Pendência amarrada a religar a Luna — Bloco 4 / C′ (overrides de preço absoluto)
+
+O Bloco 4 cria a tabela `room_price_overrides` (preço absoluto em R$ por ala/data,
+migration 031) e o **calendário já exibe e trava** esses preços. **A Luna AINDA NÃO
+honra esses overrides** — isso foi deixado de fora de propósito porque exige editar
+`services/quotation/engine.js` (caminho da cotação).
+
+**Antes de religar a Luna, fazer (com OK explícito do Founder):**
+1. Editar `engine.js` para honrar `room_price_overrides` (gated em `pricing_mode='auto'`).
+2. **Teste obrigatório** provando que a cotação **sem** override fica **byte-idêntica** à atual.
+3. Validar junto com a revisão de floor/teto/multiplicadores acima.
+
+Enquanto isso não for feito: os overrides são apenas a visão operacional do dono no
+calendário; não afetam nenhuma cotação (e a Luna está inativa de qualquer forma).
+
 ## Fase atual
 
 **Operação do CRM + captação de grupos.** A Fase 1.5 (Motor de Precificação Dinâmica)

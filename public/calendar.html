@@ -199,6 +199,19 @@
     .motor-badge.motor-on  { background: rgba(34,197,94,.16); color: #4ade80; }
     .motor-badge.motor-off { background: var(--sur2); color: var(--tx3); }
 
+    /* Preço travado manual (override absoluto) — prioridade sobre motor/tabela */
+    .price-cell.pc-locked { color: var(--gold); font-weight: 800; background: rgba(184,134,0,.12); box-shadow: inset 0 0 0 1px var(--gold); border-radius: 3px; }
+    .month-price-canvas[data-price-room] { cursor: crosshair; }
+    /* Popup de edição de preço */
+    .price-edit-pop { position: fixed; z-index: 330; background: var(--sur1); border: 1px solid var(--calbd); border-radius: var(--r-md); padding: var(--sp-4); width: 250px; box-shadow: 0 8px 32px rgba(0,0,0,.45); }
+    .price-edit-pop .pe-title { font-size: .84rem; font-weight: 800; color: var(--tx1); margin-bottom: 2px; }
+    .price-edit-pop .pe-range { font-size: .72rem; color: var(--tx3); margin-bottom: var(--sp-3); }
+    .price-edit-pop .pe-label { font-size: .72rem; color: var(--tx2); font-weight: 600; display: block; margin-bottom: 4px; }
+    .price-edit-pop .input { width: 100%; box-sizing: border-box; margin-bottom: var(--sp-3); }
+    .price-edit-pop .pe-err { color: #f87171; font-size: .72rem; margin-bottom: var(--sp-2); }
+    .price-edit-pop .pe-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+    .price-edit-pop .pe-actions .btn { flex: 1; }
+
     /* ══════════════════════════════
        WEEKLY DETAIL VIEW
     ══════════════════════════════ */
@@ -512,6 +525,7 @@
   let competitorMode  = true;  // concorrência visível por padrão (toggle só esconde)
   let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
   let pricingData     = null; // { settings, quote_base, motorByDate } — preço real do motor
+  let overrideCache   = {};   // key `${from}_${to}` → { `${ala}|${date}`: preço travado }
 
   /* ── Constants ───────────────────────────────────────────────────────── */
   const ROOMS = [
@@ -707,6 +721,29 @@
     return base;
   }
 
+  /* Overrides de preço ABSOLUTO travados pelo dono (por ala/data). */
+  async function fetchRoomOverrides(from, to) {
+    const key = `${from}_${to}`;
+    if (overrideCache[key]) return overrideCache[key];
+    let resp = null;
+    try { resp = await apiFetch(`/api/pricing/room-overrides?from=${from}&to=${to}`); } catch (e) { /* degrada */ }
+    const map = {};
+    (resp?.overrides || []).forEach(o => { map[`${o.room_type}|${o.date}`] = Number(o.price); });
+    overrideCache[key] = map;
+    return map;
+  }
+
+  /* apiFetch só faz GET; este envia PUT/DELETE com corpo JSON. */
+  async function apiSend(method, path, body) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    const r = await fetch(path, {
+      method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify(body),
+    });
+    return r.json();
+  }
+
   /* ── Navigation ──────────────────────────────────────────────────────── */
   function render() {
     closePopover();
@@ -767,6 +804,7 @@
     if (!reservations) return;
     updateOccupancy(reservations, from, to);
     await fetchPricingData();
+    const roomOverrides = await fetchRoomOverrides(from, to);
 
     let compData = null;
     if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
@@ -851,21 +889,30 @@
       html += '</div>';
     });
 
-    /* Pricing section — preço REAL: base da tabela rooms × motor dinâmico */
+    /* Pricing section — preço REAL: override travado > motor dinâmico > tabela */
     const motorOn = pricingData.settings.pricing_mode === 'auto';
     html += `<div class="month-section">Preços por noite ${motorOn
       ? '<span class="motor-badge motor-on">motor ativo</span>'
-      : '<span class="motor-badge motor-off">motor off — preço de tabela</span>'}</div>`;
+      : '<span class="motor-badge motor-off">motor off — preço de tabela</span>'}<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tx3);font-size:.62rem;margin-left:8px">arraste numa ala p/ travar preço 🔒</span></div>`;
     ROOMS.forEach(room => {
+      const editable = room.code !== 'ALA_C_GRUPO';
       html += `<div class="month-price-label">${room.label}</div>`;
-      html += `<div class="month-price-canvas" style="min-height:34px">
+      html += `<div class="month-price-canvas" style="min-height:34px"${editable ? ` data-price-room="${room.code}"` : ''}>
         <div class="price-cells">`;
       days.forEach(d => {
         const ds     = isoDate(curYear, curMonth, d);
         const season = getSeason(ds);
         const evs    = getEventsForDate(ds);
         const evBg   = evs.length ? (evs.some(e => e.type === 'regional') ? 'background:rgba(168,85,247,.1)' : 'background:rgba(184,134,0,.1)') : '';
-        const base   = basePriceFor(room.code, season);
+
+        // Prioridade 1: preço absoluto travado pelo dono
+        const ov = roomOverrides[`${room.code}|${ds}`];
+        if (ov != null) {
+          html += `<div class="price-cell pc-locked" title="Preço travado: R$${ov} (manual) — arraste p/ alterar/destravar" style="${evBg}"><span class="pc-final">🔒R$${ov}</span></div>`;
+          return;
+        }
+
+        const base = basePriceFor(room.code, season);
         if (base == null) {
           html += `<div class="price-cell p-baixa" title="Grupo — sob consulta" style="${evBg}">—</div>`;
           return;
@@ -989,10 +1036,130 @@
     cont.querySelectorAll('[data-comp-date]').forEach(cell => {
       cell.addEventListener('click', () => openCompModal(cell.dataset.compDate));
     });
+
+    /* Drag na linha de preço de uma ala → travar/destravar preço absoluto */
+    bindPriceDrag(cont, daysInMonth);
   }
 
   function getDayFromX(offsetX, totalWidth, daysInMonth) {
     return Math.max(1, Math.min(daysInMonth, Math.ceil((offsetX / totalWidth) * daysInMonth)));
+  }
+
+  /* ── Travar preço absoluto por ala/data (Bloco 4 / C′) ────────────────── */
+  // Dia a partir do clientX relativo ao canvas (as células de preço preenchem o
+  // canvas, então e.offsetX seria relativo à célula filha — usar o rect do canvas)
+  function dayFromEvent(e, canvas, daysInMonth) {
+    const rect = canvas.getBoundingClientRect();
+    return getDayFromX(e.clientX - rect.left, rect.width, daysInMonth);
+  }
+
+  function bindPriceDrag(cont, daysInMonth) {
+    let drag = { active: false, room: null, startDay: 0, endDay: 0 };
+
+    cont.querySelectorAll('.month-price-canvas[data-price-room]').forEach(canvas => {
+      const roomCode = canvas.dataset.priceRoom;
+      let selEl = null;
+
+      canvas.addEventListener('mousedown', e => {
+        closePriceEdit();
+        cont.querySelectorAll('.month-price-canvas .drag-sel').forEach(el => el.remove());
+        drag = { active: true, room: roomCode, startDay: dayFromEvent(e, canvas, daysInMonth), endDay: 0 };
+        selEl = document.createElement('div');
+        selEl.className = 'drag-sel';
+        canvas.appendChild(selEl);
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!drag.active || drag.room !== roomCode || !selEl) return;
+        drag.endDay = dayFromEvent(e, canvas, daysInMonth);
+        const s  = Math.min(drag.startDay, drag.endDay);
+        const en = Math.max(drag.startDay, drag.endDay);
+        selEl.style.left  = (s - 1) / daysInMonth * 100 + '%';
+        selEl.style.width = Math.max(1, en - s + 1) / daysInMonth * 100 + '%';
+      });
+
+      canvas.addEventListener('mouseup', e => {
+        if (!drag.active || drag.room !== roomCode) return;
+        drag.active = false;
+        if (selEl) { selEl.remove(); selEl = null; }
+        const s  = Math.min(drag.startDay, drag.endDay || drag.startDay);
+        const en = Math.max(drag.startDay, drag.endDay || drag.startDay);
+        const from = isoDate(curYear, curMonth, s);
+        const to   = isoDate(curYear, curMonth, en); // intervalo INCLUSIVO (dias de preço)
+        showPriceEdit(roomCode, from, to, e.clientX, e.clientY);
+      });
+    });
+
+    cont.addEventListener('mouseleave', () => {
+      drag.active = false;
+      cont.querySelectorAll('.month-price-canvas .drag-sel').forEach(el => el.remove());
+    });
+  }
+
+  let _priceEditEl = null;
+  function closePriceEdit() {
+    if (_priceEditEl) { _priceEditEl.remove(); _priceEditEl = null; }
+    document.removeEventListener('mousedown', onPriceOutside, true);
+    document.removeEventListener('keydown', onPriceEsc, true);
+  }
+  function onPriceOutside(e) { if (_priceEditEl && !_priceEditEl.contains(e.target)) closePriceEdit(); }
+  function onPriceEsc(e) { if (e.key === 'Escape') closePriceEdit(); }
+
+  function showPriceEdit(roomCode, from, to, x, y) {
+    closePriceEdit();
+    const room = ROOMS.find(r => r.code === roomCode);
+    const dias = nightsBetween(from, to) + 1; // intervalo inclusivo
+    const pop = document.createElement('div');
+    pop.className = 'price-edit-pop';
+    pop.innerHTML = `
+      <div class="pe-title">Travar preço — ${escHtml(room?.label || roomCode)}</div>
+      <div class="pe-range">${fmtDateBR(from)} → ${fmtDateBR(to)} · ${dias} dia${dias !== 1 ? 's' : ''}</div>
+      <label class="pe-label" for="pe-price">Preço/noite (R$)</label>
+      <input class="input" type="number" id="pe-price" min="1" step="10" placeholder="380">
+      <div id="pe-err" class="pe-err" style="display:none"></div>
+      <div class="pe-actions">
+        <button class="btn btn-primary btn-sm" id="pe-lock">Travar</button>
+        <button class="btn btn-secondary btn-sm" id="pe-unlock">Destravar</button>
+        <button class="btn btn-ghost btn-sm" id="pe-cancel">Cancelar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    _priceEditEl = pop;
+
+    const pw = 250, ph = pop.offsetHeight || 190;
+    pop.style.left = Math.min(x, window.innerWidth  - pw - 12) + 'px';
+    pop.style.top  = Math.min(y, window.innerHeight - ph - 12) + 'px';
+
+    const inp   = pop.querySelector('#pe-price');
+    const errEl = pop.querySelector('#pe-err');
+    inp.focus();
+    function showErr(m) { errEl.textContent = m; errEl.style.display = 'block'; }
+
+    pop.querySelector('#pe-cancel').addEventListener('click', closePriceEdit);
+
+    pop.querySelector('#pe-lock').addEventListener('click', async () => {
+      const price = parseFloat(inp.value);
+      if (!Number.isFinite(price) || price <= 0) return showErr('Digite um preço válido.');
+      const btn = pop.querySelector('#pe-lock'); btn.disabled = true; btn.textContent = 'Travando…';
+      try {
+        const resp = await apiSend('PUT', '/api/pricing/room-overrides', { room_type: roomCode, from, to, price });
+        if (!resp?.success) throw new Error(resp?.message || 'Erro ao travar');
+        closePriceEdit(); overrideCache = {}; renderMonth();
+      } catch (e) { showErr(e.message); btn.disabled = false; btn.textContent = 'Travar'; }
+    });
+
+    pop.querySelector('#pe-unlock').addEventListener('click', async () => {
+      const btn = pop.querySelector('#pe-unlock'); btn.disabled = true; btn.textContent = 'Destravando…';
+      try {
+        const resp = await apiSend('DELETE', '/api/pricing/room-overrides', { room_type: roomCode, from, to });
+        if (!resp?.success) throw new Error(resp?.message || 'Erro ao destravar');
+        closePriceEdit(); overrideCache = {}; renderMonth();
+      } catch (e) { showErr(e.message); btn.disabled = false; btn.textContent = 'Destravar'; }
+    });
+
+    setTimeout(() => {
+      document.addEventListener('mousedown', onPriceOutside, true);
+      document.addEventListener('keydown', onPriceEsc, true);
+    }, 0);
   }
 
   /* ══════════════════════════════════════════════════════════════════════
