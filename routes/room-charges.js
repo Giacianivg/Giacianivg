@@ -291,4 +291,22 @@ router.post('/counter-tabs/:id/pay', async (req, res) => {
   return ok(res, data);
 });
 
+// POST /api/room-charges/counter-tabs/:id/add-items — adiciona itens a comanda aberta
+// Body: { items: [{ product_id, quantity }] }
+router.post('/counter-tabs/:id/add-items', async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return fail(res, 'empty_cart', 'Nenhum item para adicionar');
+  }
+
+  const { data, error } = await supabaseAdmin.rpc('counter_tab_add_items', {
+    p_tab_id: req.params.id,
+    p_items:  items,
+  });
+
+  if (error) return serverError(res, error);
+  if (!data?.success) return fail(res, data?.error || 'add_failed', data?.message || 'Falha ao adicionar itens');
+  return ok(res, data, 201);
+});
+
 module.exports = router;
