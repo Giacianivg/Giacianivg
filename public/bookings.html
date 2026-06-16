@@ -95,6 +95,8 @@
     .act-btn.act-cancel   { border-color: rgba(239,68,68,.4); color: #dc2626; }
     .act-btn.act-cancel:hover { background: rgba(239,68,68,.1); }
     .act-btn.act-detail   { border-color: var(--bdr1); color: var(--gold); }
+    .act-btn.act-edit     { border-color: rgba(99,102,241,.4); color: var(--royal-l); }
+    .act-btn.act-edit:hover { background: rgba(99,102,241,.1); }
     .deposit-bar { display: flex; align-items: center; gap: 5px; }
     .deposit-track { flex: 1; min-width: 50px; max-width: 80px; height: 5px; border-radius: 3px; background: var(--bdr1); overflow: hidden; }
     .deposit-fill { height: 100%; border-radius: 3px; background: var(--gold); }
@@ -279,7 +281,7 @@
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Nova Reserva</div>
+      <div class="modal-title" id="modal-title">Nova Reserva</div>
       <button class="drawer-close" id="modal-close">✕</button>
     </div>
     <div class="modal-body">
@@ -398,6 +400,7 @@ let currentView  = 'timeline';
 let curYear, curMonth; // 0-based month
 let searchDebounce = null;
 let openReservation = null;
+let editingId = null; // id da reserva em edição (null = modal em modo "nova reserva")
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
@@ -675,6 +678,7 @@ function buildActionButtons(r) {
   if (r.status === 'confirmed')  btns += `<button class="act-btn act-checkin" data-action="checkin" data-id="${id}">Check-in</button>`;
   if (r.status === 'checkedin')  btns += `<button class="act-btn act-checkout" data-action="checkout" data-id="${id}">Check-out</button>`;
   if (!['cancelled','checkedout'].includes(r.status)) {
+    btns += `<button class="act-btn act-edit" data-action="edit" data-id="${id}">Editar</button>`;
     btns += `<button class="act-btn act-cancel" data-action="cancel" data-id="${id}">✕</button>`;
   }
   return btns;
@@ -686,6 +690,11 @@ async function handleAction(action, id) {
   if (action === 'detail') {
     const r = allReservations.find(x => x.id===id);
     if (r) openDrawer(r);
+    return;
+  }
+  if (action === 'edit') {
+    const r = allReservations.find(x => x.id===id);
+    if (r) openEditModal(r);
     return;
   }
   if (action === 'cancel') {
@@ -808,6 +817,7 @@ function buildDrawerActions(r) {
   if (r.status === 'confirmed') html += `<button class="act-btn act-checkin" data-action="checkin" data-id="${r.id}">🏠 Check-in</button>`;
   if (r.status === 'checkedin') html += `<button class="act-btn act-checkout" data-action="checkout" data-id="${r.id}">🚪 Check-out</button>`;
   if (!['cancelled','checkedout'].includes(r.status)) {
+    html += `<button class="act-btn act-edit" data-action="edit" data-id="${r.id}">✎ Editar</button>`;
     html += `<button class="act-btn act-cancel" data-action="cancel" data-id="${r.id}">✕ Cancelar</button>`;
   }
   html += `<button class="act-btn act-detail" onclick="window.open('vouchers.html?reservation_id=${r.id}','_blank')">📄 Voucher</button>`;
@@ -926,6 +936,135 @@ async function submitNewReservation() {
   }
 }
 
+// ─── Modal editar reserva ─────────────────────────────────────────────────────
+
+function resetModalForCreate() {
+  editingId = null;
+  foundLeadId = null;
+  document.getElementById('modal-title').textContent = 'Nova Reserva';
+  document.getElementById('modal-submit-btn').textContent = 'Criar reserva';
+  ['modal-whatsapp','modal-nome','modal-checkin','modal-checkout','modal-total','modal-deposit','modal-placa']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('modal-guests').value  = 2;
+  document.getElementById('modal-channel').value = 'whatsapp';
+  // remove opções de ala legada injetadas em edições anteriores
+  const sel = document.getElementById('modal-quarto');
+  Array.from(sel.options).forEach(o => { if (o.dataset.legacy) o.remove(); });
+  sel.selectedIndex = 0;
+  document.getElementById('lead-found').style.display = 'none';
+  document.getElementById('modal-error').style.display = 'none';
+}
+
+function openEditModal(r) {
+  editingId   = r.id;
+  foundLeadId = r.leads?.id || null;
+
+  document.getElementById('modal-title').textContent = 'Editar Reserva';
+  document.getElementById('modal-submit-btn').textContent = 'Salvar alterações';
+
+  document.getElementById('modal-whatsapp').value = r.leads?.whatsapp_number || '';
+  document.getElementById('modal-nome').value     = r.leads?.name || '';
+  document.getElementById('modal-checkin').value  = r.checkin_date || '';
+  document.getElementById('modal-checkout').value = r.checkout_date || '';
+
+  // Quarto: reservas legadas por ala (ALA_A, ALA_C_1…) não estão no ROOMS do
+  // select. Injeta uma opção temporária para não trocar o quarto sem querer.
+  const sel = document.getElementById('modal-quarto');
+  Array.from(sel.options).forEach(o => { if (o.dataset.legacy) o.remove(); });
+  if (r.room_type && !Array.from(sel.options).some(o => o.value === r.room_type)) {
+    const opt = document.createElement('option');
+    opt.value = r.room_type;
+    opt.textContent = `${r.room_type} — reserva por ala (legado)`;
+    opt.dataset.legacy = '1';
+    sel.insertBefore(opt, sel.firstChild);
+  }
+  sel.value = r.room_type || '';
+
+  document.getElementById('modal-guests').value  = r.guests || 2;
+  document.getElementById('modal-total').value   = r.total_amount  || '';
+  document.getElementById('modal-deposit').value = r.deposit_amount || '';
+  document.getElementById('modal-placa').value   = r.vehicle_plate || '';
+  document.getElementById('modal-channel').value = r.channel || 'whatsapp';
+
+  document.getElementById('lead-found').style.display = 'none';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function submitEditReservation() {
+  const whatsapp = (document.getElementById('modal-whatsapp').value||'').trim();
+  const nome     = (document.getElementById('modal-nome').value||'').trim();
+  const checkin  = document.getElementById('modal-checkin').value;
+  const checkout = document.getElementById('modal-checkout').value;
+  const room     = document.getElementById('modal-quarto').value;
+  const guests   = parseInt(document.getElementById('modal-guests').value)||2;
+  const total    = parseFloat(document.getElementById('modal-total').value)||0;
+  const depRaw   = (document.getElementById('modal-deposit').value||'').trim();
+  const deposit  = depRaw === '' ? Math.round(total*.3) : (parseFloat(depRaw)||0);
+  const channel  = document.getElementById('modal-channel').value;
+  const placa    = document.getElementById('modal-placa').value.trim().toUpperCase().replace(/\s/g, '');
+
+  const errEl = document.getElementById('modal-error');
+  errEl.style.display = 'none';
+
+  if (!whatsapp || !nome || !checkin || !checkout || !total) {
+    errEl.textContent = 'Preencha: WhatsApp, nome, datas e valor total.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const waDigits = whatsapp.replace(/\D/g, '');
+  if (waDigits.length < 10 || waDigits.length > 15) {
+    errEl.textContent = `WhatsApp deve ter 10–15 dígitos com país+DDD (ex: 5519999999999). Você digitou ${waDigits.length} dígitos.`;
+    errEl.style.display = 'block';
+    return;
+  }
+  if (checkout <= checkin) {
+    errEl.textContent = 'Check-out deve ser depois do check-in.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const submitBtn = document.getElementById('modal-submit-btn');
+  try {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando…';
+
+    // 1. Corrige o lead vinculado (nome + número)
+    if (foundLeadId) {
+      await DS.api(`/api/leads/${foundLeadId}`, {
+        method: 'PATCH',
+        body: { name: nome, whatsapp_number: waDigits },
+      });
+    }
+
+    // 2. Atualiza reserva + recalcula disponibilidade (RPC atômica)
+    await DS.api(`/api/reservations/${editingId}/update`, {
+      method: 'POST',
+      body: {
+        room_type: room, checkin, checkout, guests,
+        total_amount: total, deposit_amount: deposit,
+        channel, vehicle_plate: placa,
+      },
+    });
+
+    DS.toast('Reserva atualizada', 'ok');
+    document.getElementById('modal-overlay').classList.remove('open');
+    const editedId = editingId;
+    editingId = null;
+    await loadAndRender();
+    if (openReservation?.id === editedId) {
+      const updated = allReservations.find(r => r.id === editedId);
+      if (updated) openDrawer(updated); else closeDrawer();
+    }
+  } catch(e) {
+    errEl.textContent = e.message || 'Erro ao salvar alterações';
+    errEl.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = editingId ? 'Salvar alterações' : 'Criar reserva';
+  }
+}
+
 // ─── View rendering ───────────────────────────────────────────────────────────
 
 function renderCurrentView() {
@@ -994,9 +1133,7 @@ function bindEvents() {
 
   // Modal
   document.getElementById('btn-nova-reserva').addEventListener('click', () => {
-    foundLeadId = null;
-    document.getElementById('lead-found').style.display = 'none';
-    document.getElementById('modal-error').style.display = 'none';
+    resetModalForCreate();
     document.getElementById('modal-overlay').classList.add('open');
   });
   document.getElementById('modal-close').addEventListener('click', () => {
@@ -1013,7 +1150,10 @@ function bindEvents() {
     const total = parseFloat(document.getElementById('modal-total').value)||0;
     document.getElementById('modal-deposit').value = Math.round(total * 0.3);
   });
-  document.getElementById('modal-submit-btn').addEventListener('click', submitNewReservation);
+  document.getElementById('modal-submit-btn').addEventListener('click', () => {
+    if (editingId) submitEditReservation();
+    else submitNewReservation();
+  });
 }
 </script>
 </body>

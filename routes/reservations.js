@@ -3,6 +3,7 @@
 const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
 const { ok, fail, notFound, serverError } = require('../services/utils/response');
+const { toDB } = require('../services/utils/dates');
 
 const router = Router();
 
@@ -120,6 +121,54 @@ router.patch('/:id', async (req, res) => {
 
   if (error || !data) return notFound(res, 'Reservation');
   return ok(res, { reservation: data });
+});
+
+// POST /api/reservations/:id/update — edição com recálculo de disponibilidade (RPC atômica)
+// Diferente do PATCH /:id (campos diretos), esta rota recalcula a availability
+// quando quarto ou datas mudam — evita overbooking.
+router.post('/:id/update', async (req, res) => {
+  const {
+    room_type, checkin, checkout, guests,
+    total_amount, deposit_amount, channel, vehicle_plate,
+  } = req.body;
+
+  if (!room_type || !checkin || !checkout || !guests || total_amount === undefined) {
+    return fail(res, 'missing_fields', 'room_type, checkin, checkout, guests, total_amount são obrigatórios');
+  }
+
+  let checkinISO, checkoutISO;
+  try {
+    checkinISO  = toDB(checkin);
+    checkoutISO = toDB(checkout);
+  } catch (e) {
+    return fail(res, 'invalid_date', e.message);
+  }
+
+  const deposit = deposit_amount ?? Math.round(Number(total_amount) * 0.30);
+
+  const { data, error } = await supabaseAdmin.rpc('update_reservation_atomic', {
+    p_reservation_id: req.params.id,
+    p_room_type:      String(room_type).toUpperCase(),
+    p_checkin:        checkinISO,
+    p_checkout:       checkoutISO,
+    p_guests:         Number(guests),
+    p_total_amount:   Number(total_amount),
+    p_deposit_amount: Number(deposit),
+    p_channel:        channel || null,
+    p_vehicle_plate:  vehicle_plate ? String(vehicle_plate).toUpperCase().replace(/\s/g, '') : null,
+  });
+
+  if (error) return serverError(res, error);
+  if (!data.success) {
+    const status = data.error === 'no_availability' || data.error === 'locked' ? 409 : 422;
+    return fail(res, data.error, data.message, status);
+  }
+
+  return ok(res, {
+    reservation_id:         data.reservation_id,
+    room_type:              data.room_type,
+    inventory_recalculated: data.inventory_recalculated,
+  });
 });
 
 // GET /api/reservations/:id/swap-options — quartos livres para o período restante

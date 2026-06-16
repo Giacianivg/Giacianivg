@@ -98,6 +98,17 @@ router.patch('/:id', async (req, res) => {
   for (const key of allowed) {
     if (req.body[key] !== undefined) updates[key] = req.body[key];
   }
+
+  // whatsapp_number (chave única do lead) — correção de contato com validação
+  if (req.body.whatsapp_number !== undefined) {
+    const digits = String(req.body.whatsapp_number).replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(digits)) {
+      return fail(res, 'invalid_whatsapp',
+        `Número de WhatsApp inválido: "${req.body.whatsapp_number}". Use país + DDD + número, ex: 5519999999999`);
+    }
+    updates.whatsapp_number = digits;
+  }
+
   if (!Object.keys(updates).length) return fail(res, 'no_updates', 'No valid fields to update');
 
   updates.updated_at = new Date().toISOString();
@@ -109,7 +120,13 @@ router.patch('/:id', async (req, res) => {
     .select('id, whatsapp_number, name, funnel_stage, updated_at')
     .single();
 
-  if (error) return serverError(res, error);
+  if (error) {
+    // 23505 = violação de unique (número já pertence a outro lead)
+    if (error.code === '23505') {
+      return fail(res, 'whatsapp_taken', 'Este número já está cadastrado em outro lead.', 409);
+    }
+    return serverError(res, error);
+  }
   return ok(res, { lead: data });
 });
 
