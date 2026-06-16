@@ -347,6 +347,11 @@
           <span style="margin-left:auto;font-size:.75rem;color:var(--tx3)">Clique no quarto para detalhes</span>
         </div>
 
+        <!-- PDV — botão central de venda -->
+        <div style="display:flex;justify-content:center;margin:var(--sp-3) 0 var(--sp-4)">
+          <button class="btn" id="btn-pos" style="font-size:.95rem;font-weight:700;padding:11px 30px;color:#1a1206;background:var(--gold);border:1px solid var(--gold);border-radius:9999px;box-shadow:0 4px 16px rgba(184,134,0,.35)">🛒 Vender — Ponto de Venda</button>
+        </div>
+
         <!-- Floor plan SVG -->
         <svg class="floor-svg" viewBox="0 0 800 510" xmlns="http://www.w3.org/2000/svg" id="floor-plan">
           <defs>
@@ -526,6 +531,15 @@
 
       </div>
 
+      <!-- Comandas de balcão abertas -->
+      <div class="map-wrap" id="counter-tabs-wrap" style="margin-top:var(--sp-4);display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3)">
+          <div style="font-size:.9375rem;font-weight:700;color:var(--tx1)">🧾 Comandas de balcão abertas</div>
+          <span style="font-size:.8125rem;color:var(--gold);font-weight:800" id="counter-tabs-total"></span>
+        </div>
+        <div id="counter-tabs-body" style="font-size:.8125rem;color:var(--tx3)"></div>
+      </div>
+
       <!-- Relatório de consumo do dia -->
       <div class="map-wrap" style="margin-top:var(--sp-4)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-3)">
@@ -628,6 +642,89 @@
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-swap">Cancelar</button>
       <button class="btn btn-primary" id="swap-confirm">Trocar quarto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: PDV (Ponto de Venda) ────────────────────────────── -->
+<div class="modal-overlay" id="modal-pos">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">🛒 Ponto de Venda</div>
+        <div class="modal-sub">Mercearia e bar — venda para quarto ou balcão</div>
+      </div>
+      <button class="btn btn-ghost btn-icon" data-close="modal-pos">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- Produtos -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--sp-2);margin-bottom:var(--sp-2)">
+        <input class="input" id="pos-search" placeholder="Buscar produto…">
+        <select class="input" id="pos-cat">
+          <option value="">Todas as categorias</option>
+          <option value="mercearia">Mercearia</option>
+          <option value="bar">Bar</option>
+          <option value="frigobar">Frigobar</option>
+          <option value="extra">Extra</option>
+        </select>
+      </div>
+      <div id="pos-products" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--sp-2);max-height:220px;overflow:auto;margin-bottom:var(--sp-4)"></div>
+
+      <!-- Carrinho -->
+      <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)">Carrinho</div>
+      <div style="overflow:auto;max-height:200px;margin-bottom:var(--sp-2)">
+        <table class="cmd-table" style="width:100%">
+          <thead><tr>
+            <th>Item</th><th style="text-align:center">Qtd</th>
+            <th style="text-align:right">Subtotal</th><th></th>
+          </tr></thead>
+          <tbody id="pos-cart-body">
+            <tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Carrinho vazio</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;font-size:1rem;font-weight:800;color:var(--gold);margin-bottom:var(--sp-4)">
+        Total: <span id="pos-total" style="margin-left:8px">R$ 0</span>
+      </div>
+
+      <!-- Destino -->
+      <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)">Destino da venda</div>
+      <div style="display:flex;gap:var(--sp-3);margin-bottom:var(--sp-2);flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;color:var(--tx1)">
+          <input type="radio" name="pos-dest" value="room" checked> Lançar em quarto
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;color:var(--tx1)">
+          <input type="radio" name="pos-dest" value="counter"> Venda de balcão
+        </label>
+      </div>
+      <select class="input" id="pos-room" style="margin-bottom:var(--sp-4)"></select>
+
+      <!-- Pagamento -->
+      <div style="font-size:.78rem;font-weight:700;color:var(--tx2);margin-bottom:var(--sp-2)">Pagamento</div>
+      <div style="display:flex;gap:var(--sp-3);margin-bottom:var(--sp-2);flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;color:var(--tx1)">
+          <input type="radio" name="pos-pay" value="now" checked> Pago agora
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.85rem;color:var(--tx1)">
+          <input type="radio" name="pos-pay" value="later"> Marcar (fiado)
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-2)">
+        <select class="input" id="pos-method">
+          <option value="pix">PIX</option>
+          <option value="cash">Dinheiro</option>
+          <option value="card">Cartão</option>
+        </select>
+        <input class="input" id="pos-customer" placeholder="Nome do cliente (balcão)" style="display:none">
+      </div>
+      <p class="field-hint" id="pos-hint" style="margin-top:var(--sp-2)"></p>
+      <div id="pos-error" style="color:var(--err);font-size:.78rem;margin-top:var(--sp-2);display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" data-close="modal-pos">Cancelar</button>
+      <button class="btn btn-primary" id="pos-confirm" disabled>Confirmar venda</button>
     </div>
   </div>
 </div>
@@ -752,6 +849,7 @@
     applyStatuses();
     updateStats();
     loadDailyReport();
+    loadCounterTabs();
 
     dot.classList.remove('loading');
     const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -1358,6 +1456,226 @@
   }
 
   document.getElementById('report-date').addEventListener('change', () => loadDailyReport());
+
+  // ══ PDV (Ponto de Venda) ══════════════════════════════════════════════════
+  let posCart = []; // [{ product_id, name, price, qty }]
+
+  const posDest   = () => document.querySelector('input[name="pos-dest"]:checked')?.value || 'room';
+  const posPay    = () => document.querySelector('input[name="pos-pay"]:checked')?.value || 'now';
+  const posTotal  = () => posCart.reduce((s, i) => s + i.price * i.qty, 0);
+
+  document.getElementById('btn-pos').addEventListener('click', openPos);
+
+  async function openPos() {
+    posCart = [];
+    await reloadProducts();
+    document.getElementById('pos-search').value = '';
+    document.getElementById('pos-cat').value = '';
+    document.querySelector('input[name="pos-dest"][value="room"]').checked = true;
+    document.querySelector('input[name="pos-pay"][value="now"]').checked = true;
+    document.getElementById('pos-method').value = 'pix';
+    document.getElementById('pos-customer').value = '';
+    document.getElementById('pos-error').style.display = 'none';
+
+    // Quartos ocupados hoje → destino "room"
+    const occupied = Object.entries(activeResv);
+    const roomSel = document.getElementById('pos-room');
+    roomSel.innerHTML = occupied.length
+      ? occupied.map(([code, r]) =>
+          `<option value="${code}">${escHtml(code)} — ${escHtml(r.leads?.name || 'hóspede')}</option>`).join('')
+      : '<option value="">Nenhum quarto ocupado</option>';
+
+    renderPosProducts();
+    renderCart();
+    updatePosUI();
+    document.getElementById('modal-pos').classList.add('open');
+  }
+
+  function renderPosProducts() {
+    const term = document.getElementById('pos-search').value.trim().toLowerCase();
+    const cat  = document.getElementById('pos-cat').value;
+    const items = productsCache.filter(p =>
+      p.active &&
+      (!cat || p.category === cat) &&
+      (!term || p.name.toLowerCase().includes(term)));
+
+    const box = document.getElementById('pos-products');
+    box.innerHTML = items.length
+      ? items.map(p => `
+          <button class="btn btn-secondary" data-pos-add="${p.id}" style="flex-direction:column;align-items:flex-start;padding:8px 10px;height:auto;text-align:left;gap:2px">
+            <span style="font-size:.78rem;color:var(--tx1);font-weight:600">${escHtml(p.name)}</span>
+            <span style="font-size:.72rem;color:var(--gold)">${fmtBRL(p.price)} · ${Number(p.stock_quantity)} ${escHtml(p.unit)}</span>
+          </button>`).join('')
+      : '<div style="grid-column:1/-1;color:var(--tx3);text-align:center;padding:var(--sp-3)">Nenhum produto encontrado</div>';
+
+    box.querySelectorAll('[data-pos-add]').forEach(b =>
+      b.addEventListener('click', () => addToCart(b.dataset.posAdd)));
+  }
+
+  function addToCart(productId) {
+    const p = productsCache.find(x => x.id === productId);
+    if (!p) return;
+    const item = posCart.find(i => i.product_id === productId);
+    if (item) item.qty += 1;
+    else posCart.push({ product_id: p.id, name: p.name, price: Number(p.price), qty: 1 });
+    renderCart();
+  }
+
+  function changeQty(productId, delta) {
+    const item = posCart.find(i => i.product_id === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) posCart = posCart.filter(i => i.product_id !== productId);
+    renderCart();
+  }
+
+  function renderCart() {
+    const body = document.getElementById('pos-cart-body');
+    body.innerHTML = posCart.length
+      ? posCart.map(i => `
+          <tr>
+            <td style="color:var(--tx1)">${escHtml(i.name)}</td>
+            <td style="text-align:center;white-space:nowrap">
+              <button class="action-btn" data-pos-minus="${i.product_id}">−</button>
+              <span style="margin:0 8px">${i.qty}</span>
+              <button class="action-btn" data-pos-plus="${i.product_id}">+</button>
+            </td>
+            <td style="text-align:right;color:var(--tx2)">${fmtBRL(i.price * i.qty)}</td>
+            <td style="text-align:right"><button class="action-btn" data-pos-del="${i.product_id}" style="color:var(--err)">✕</button></td>
+          </tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:var(--sp-3)">Carrinho vazio</td></tr>';
+
+    body.querySelectorAll('[data-pos-plus]').forEach(b => b.addEventListener('click', () => changeQty(b.dataset.posPlus, 1)));
+    body.querySelectorAll('[data-pos-minus]').forEach(b => b.addEventListener('click', () => changeQty(b.dataset.posMinus, -1)));
+    body.querySelectorAll('[data-pos-del]').forEach(b => b.addEventListener('click', () => changeQty(b.dataset.posDel, -9999)));
+
+    document.getElementById('pos-total').textContent = fmtBRL(posTotal());
+    updatePosUI();
+  }
+
+  function updatePosUI() {
+    const dest = posDest();
+    const pay  = posPay();
+    const roomSel  = document.getElementById('pos-room');
+    const methodEl = document.getElementById('pos-method');
+    const custEl   = document.getElementById('pos-customer');
+    const hint     = document.getElementById('pos-hint');
+
+    roomSel.style.display  = dest === 'room' ? 'block' : 'none';
+    methodEl.style.display = pay === 'now' ? 'block' : 'none';
+    // Nome do cliente: relevante só para balcão (obrigatório se fiado, opcional se pago)
+    custEl.style.display   = dest === 'counter' ? 'block' : 'none';
+    custEl.placeholder = (dest === 'counter' && pay === 'later')
+      ? 'Nome do cliente (obrigatório)' : 'Nome do cliente (opcional)';
+
+    if (dest === 'counter' && pay === 'later') hint.textContent = 'Comanda de balcão fica aberta para cobrança posterior.';
+    else if (dest === 'room' && pay === 'later') hint.textContent = 'Consumo entra na comanda do hóspede (paga no check-out).';
+    else hint.textContent = 'Pagamento registrado e baixado do estoque na confirmação.';
+
+    const noRoom = dest === 'room' && !roomSel.value;
+    document.getElementById('pos-confirm').disabled = posCart.length === 0 || noRoom;
+  }
+
+  document.getElementById('pos-search').addEventListener('input', renderPosProducts);
+  document.getElementById('pos-cat').addEventListener('change', renderPosProducts);
+  document.querySelectorAll('input[name="pos-dest"], input[name="pos-pay"]').forEach(r =>
+    r.addEventListener('change', updatePosUI));
+  document.getElementById('pos-room').addEventListener('change', updatePosUI);
+
+  document.getElementById('pos-confirm').addEventListener('click', async () => {
+    const dest = posDest();
+    const pay  = posPay();
+    const errEl = document.getElementById('pos-error');
+    errEl.style.display = 'none';
+
+    if (!posCart.length) return;
+
+    const body = {
+      items: posCart.map(i => ({ product_id: i.product_id, quantity: i.qty })),
+      destination: dest,
+      payment: pay,
+    };
+
+    if (dest === 'room') {
+      const code = document.getElementById('pos-room').value;
+      if (!code) { errEl.textContent = 'Selecione um quarto ocupado.'; errEl.style.display = 'block'; return; }
+      body.reservation_id = activeResv[code]?.id;
+      body.room_code = code;
+    } else {
+      const name = document.getElementById('pos-customer').value.trim();
+      if (pay === 'later' && !name) {
+        errEl.textContent = 'Informe o nome do cliente para a comanda de balcão.';
+        errEl.style.display = 'block'; return;
+      }
+      if (name) body.customer_name = name;
+    }
+    if (pay === 'now') body.method = document.getElementById('pos-method').value;
+
+    const btn = document.getElementById('pos-confirm');
+    btn.disabled = true; btn.textContent = 'Registrando…';
+    const res = await apiFetch('/api/room-charges/pos-sale', { method: 'POST', body: JSON.stringify(body) });
+    btn.disabled = false; btn.textContent = 'Confirmar venda';
+
+    if (res?.success) {
+      document.getElementById('modal-pos').classList.remove('open');
+      DS.toast(`Venda registrada: ${fmtBRL(res.total)} (${res.items} ${res.items === 1 ? 'item' : 'itens'}).`, 'ok');
+      loadMap();
+    } else {
+      errEl.textContent = res?.message || 'Erro ao registrar venda.';
+      errEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('modal-pos').addEventListener('click', e => {
+    if (e.target.id === 'modal-pos') e.target.classList.remove('open');
+  });
+
+  // ── Comandas de balcão abertas ────────────────────────────────────────────
+  async function loadCounterTabs() {
+    const res = await apiFetch('/api/room-charges/counter-tabs?status=aberta');
+    const wrap = document.getElementById('counter-tabs-wrap');
+    const body = document.getElementById('counter-tabs-body');
+    const totalEl = document.getElementById('counter-tabs-total');
+    if (!res?.success) { wrap.style.display = 'none'; return; }
+
+    const tabs = res.tabs || [];
+    if (!tabs.length) { wrap.style.display = 'none'; return; }
+
+    wrap.style.display = 'block';
+    const grand = tabs.reduce((s, t) => s + Number(t.balance_due || 0), 0);
+    totalEl.textContent = `A receber: ${fmtBRL(grand)}`;
+
+    body.innerHTML = tabs.map(t => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);border:1px solid var(--bdr0);border-radius:var(--r-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-2);flex-wrap:wrap">
+        <div>
+          <span style="font-weight:700;color:var(--tx1)">${escHtml(t.customer_name)}</span>
+          <span style="color:var(--gold);font-weight:800;margin-left:8px">${fmtBRL(t.balance_due)}</span>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span style="font-size:.72rem;color:var(--tx3);margin-right:4px">Cobrar:</span>
+          <button class="action-btn" data-tab-pay="${t.id}" data-method="pix">PIX</button>
+          <button class="action-btn" data-tab-pay="${t.id}" data-method="cash">Dinheiro</button>
+          <button class="action-btn" data-tab-pay="${t.id}" data-method="card">Cartão</button>
+        </div>
+      </div>`).join('');
+
+    body.querySelectorAll('[data-tab-pay]').forEach(b =>
+      b.addEventListener('click', () => payCounterTab(b.dataset.tabPay, b.dataset.method)));
+  }
+
+  async function payCounterTab(id, method) {
+    const res = await apiFetch(`/api/room-charges/counter-tabs/${id}/pay`, {
+      method: 'POST',
+      body: JSON.stringify({ method }),
+    });
+    if (res?.success) {
+      DS.toast(`Comanda quitada: ${fmtBRL(res.amount)}.`, 'ok');
+      loadCounterTabs();
+      loadDailyReport();
+    } else {
+      DS.toast(res?.message || 'Erro ao quitar comanda.', 'err');
+    }
+  }
 
 })();
 </script>

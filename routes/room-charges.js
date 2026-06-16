@@ -142,7 +142,8 @@ router.get('/report/daily', async (req, res) => {
     .from('room_charges')
     .select(`id, room_code, quantity, unit_price, total, charged_at, staff_note,
              products(name, category, unit),
-             reservations(reservation_number, room_type, leads!fk_res_lead(name))`)
+             reservations(reservation_number, room_type, leads!fk_res_lead(name)),
+             counter_tabs(customer_name, status)`)
     .gte('charged_at', from)
     .lte('charged_at', to)
     .order('charged_at', { ascending: true });
@@ -152,8 +153,12 @@ router.get('/report/daily', async (req, res) => {
   const charges = data || [];
   const byRoom = {};
   for (const c of charges) {
-    const room = c.room_code || c.reservations?.room_type || '—';
-    if (!byRoom[room]) byRoom[room] = { room, guest: c.reservations?.leads?.name || '—', items: [], total: 0 };
+    // Venda de balcão (sem quarto) entra agrupada como "Balcão — <cliente>".
+    const room = c.room_code
+      || c.reservations?.room_type
+      || (c.counter_tabs ? `Balcão — ${c.counter_tabs.customer_name}` : '—');
+    const guest = c.reservations?.leads?.name || c.counter_tabs?.customer_name || '—';
+    if (!byRoom[room]) byRoom[room] = { room, guest, items: [], total: 0 };
     byRoom[room].items.push({
       product:  c.products?.name || '—',
       category: c.products?.category || '—',
@@ -168,6 +173,122 @@ router.get('/report/daily', async (req, res) => {
   const grand_total = rooms.reduce((s, r) => s + r.total, 0);
 
   return ok(res, { date, rooms, grand_total, charge_count: charges.length });
+});
+
+// ── PDV (Ponto de Venda) ──────────────────────────────────────────────────────
+
+// POST /api/room-charges/pos-sale — venda do PDV (carrinho + destino + pagamento)
+// Body: { items:[{product_id, quantity}], destination:'room'|'counter',
+//         payment:'now'|'later', reservation_id?, room_code?, customer_name?, method? }
+router.post('/pos-sale', async (req, res) => {
+  const { items, destination, payment, reservation_id, room_code, customer_name, method } = req.body;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return fail(res, 'empty_cart', 'Carrinho vazio');
+  }
+  if (!['room', 'counter'].includes(destination)) {
+    return fail(res, 'invalid_destination', "destination deve ser 'room' ou 'counter'");
+  }
+  if (!['now', 'later'].includes(payment)) {
+    return fail(res, 'invalid_payment', "payment deve ser 'now' ou 'later'");
+  }
+
+  const { data, error } = await supabaseAdmin.rpc('pos_register_sale', {
+    p_items:          items,
+    p_destination:    destination,
+    p_payment:        payment,
+    p_reservation_id: reservation_id || null,
+    p_room_code:      room_code || null,
+    p_customer_name:  customer_name || null,
+    p_method:         method || null,
+  });
+
+  if (error) return serverError(res, error);
+  if (!data?.success) return fail(res, data?.error || 'sale_failed', data?.message || 'Falha ao registrar venda');
+  return ok(res, data, 201);
+});
+
+// GET /api/room-charges/counter-tabs?status=aberta — comandas de balcão
+router.get('/counter-tabs', async (req, res) => {
+  const { status } = req.query;
+
+  let query = supabaseAdmin
+    .from('counter_tabs')
+    .select('id, customer_name, status, created_at, paid_at, room_charges(total), payments(amount, status)')
+    .order('created_at', { ascending: false });
+  if (status) query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) return serverError(res, error);
+
+  const tabs = (data || []).map(t => {
+    const charges_total = (t.room_charges || []).reduce((s, c) => s + Number(c.total || 0), 0);
+    const paid = (t.payments || [])
+      .filter(p => p.status === 'confirmed')
+      .reduce((s, p) => s + Number(p.amount || 0), 0);
+    return {
+      id: t.id,
+      customer_name: t.customer_name,
+      status: t.status,
+      created_at: t.created_at,
+      paid_at: t.paid_at,
+      charges_total,
+      paid,
+      balance_due: charges_total - paid,
+    };
+  });
+
+  return ok(res, { tabs, count: tabs.length });
+});
+
+// GET /api/room-charges/counter-tabs/:id — detalhe da comanda avulsa
+router.get('/counter-tabs/:id', async (req, res) => {
+  const [{ data: tab, error: tabErr }, { data: charges, error: chErr }, { data: payments, error: payErr }] =
+    await Promise.all([
+      supabaseAdmin.from('counter_tabs').select('*').eq('id', req.params.id).single(),
+      supabaseAdmin
+        .from('room_charges')
+        .select('id, quantity, unit_price, total, charged_at, products(name, category, unit)')
+        .eq('counter_tab_id', req.params.id)
+        .order('charged_at', { ascending: true }),
+      supabaseAdmin
+        .from('payments')
+        .select('amount, method, status, confirmed_at')
+        .eq('counter_tab_id', req.params.id)
+        .eq('status', 'confirmed'),
+    ]);
+
+  if (tabErr || !tab) return notFound(res, 'Counter tab');
+  if (chErr) return serverError(res, chErr);
+  if (payErr) return serverError(res, payErr);
+
+  const list = charges || [];
+  const charges_total = list.reduce((s, c) => s + Number(c.total || 0), 0);
+  const paid = (payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+
+  return ok(res, {
+    tab,
+    charges: list,
+    totals: { charges_total, paid, balance_due: charges_total - paid },
+  });
+});
+
+// POST /api/room-charges/counter-tabs/:id/pay — quita comanda de balcão fiada
+// Body: { method: 'pix'|'cash'|'card'|'transfer' }
+router.post('/counter-tabs/:id/pay', async (req, res) => {
+  const { method } = req.body;
+  if (!['pix', 'cash', 'card', 'transfer'].includes(method)) {
+    return fail(res, 'invalid_method', 'method deve ser pix, cash, card ou transfer');
+  }
+
+  const { data, error } = await supabaseAdmin.rpc('counter_tab_pay', {
+    p_tab_id: req.params.id,
+    p_method: method,
+  });
+
+  if (error) return serverError(res, error);
+  if (!data?.success) return fail(res, data?.error || 'pay_failed', data?.message || 'Falha ao quitar comanda');
+  return ok(res, data);
 });
 
 module.exports = router;
