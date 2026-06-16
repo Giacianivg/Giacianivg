@@ -11,6 +11,12 @@
   <link rel="stylesheet" href="design-system/l.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* Cor da grade da timeline — os tokens --bdr0/--bdr1 não existem no tema
+       (t.css só define --bdr/--bdr2), então a grade usa uma var própria com
+       valor garantido, igual ao calendar.html. */
+    :root { --calbd: #334155; }
+    [data-theme="clean"] { --calbd: #cbd5e1; }
+
     html, body { height: 100%; margin: 0; padding: 0; }
     .app-shell { height: 100vh; }
     .main-content { height: 100vh; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
@@ -52,17 +58,26 @@
       font-size: .72rem;
       min-width: 700px;
     }
-    .gh-corner { background: var(--sur2); border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); padding: 5px 8px; position: sticky; top: 0; left: 0; z-index: 5; }
-    .gh-day { background: var(--sur2); border-right: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr1); text-align: center; padding: 4px 2px; position: sticky; top: 0; z-index: 3; cursor: default; }
+    .gh-corner { background: var(--sur2); border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); padding: 5px 8px; position: sticky; top: 0; left: 0; z-index: 5; }
+    .gh-day { background: var(--sur2); border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); text-align: center; padding: 4px 2px; position: sticky; top: 0; z-index: 3; cursor: default; }
     .gh-day .day-num { font-weight: 700; color: var(--tx2); font-size: .73rem; }
     .gh-day .day-name { font-size: .58rem; color: var(--tx3); }
     .gh-day.is-today { background: rgba(184,134,0,.12); }
     .gh-day.is-today .day-num { color: var(--gold); }
     .gh-day.is-weekend .day-num { color: var(--royal-l); }
-    .gantt-section { grid-column: 1 / -1; background: var(--sur2); padding: 3px 10px; font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--tx3); border-top: 1px solid var(--bdr0); border-bottom: 1px solid var(--bdr0); position: sticky; left: 0; }
-    .gantt-room-label { background: var(--sur1); border-right: 1px solid var(--bdr1); border-bottom: 1px solid var(--bdr0); padding: 0 8px; display: flex; align-items: center; font-size: .74rem; font-weight: 600; color: var(--tx2); white-space: nowrap; position: sticky; left: 0; z-index: 2; min-height: 44px; }
-    .gantt-canvas { grid-column: 2 / -1; position: relative; border-bottom: 1px solid var(--bdr0); cursor: pointer; overflow: visible; min-height: 44px; }
-    .gantt-canvas::before { content:''; position:absolute; inset:0; background-image: repeating-linear-gradient(to right, transparent, transparent calc(100% / var(--days, 31) - 1px), var(--bdr0) calc(100% / var(--days, 31) - 1px), var(--bdr0) calc(100% / var(--days, 31))); pointer-events:none; z-index:0; }
+    .gantt-section { grid-column: 1 / -1; background: var(--sur2); padding: 3px 10px; font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--tx3); border-top: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); position: sticky; left: 0; }
+    .gantt-room-label { background: var(--sur1); border-right: 1px solid var(--calbd); border-bottom: 1px solid var(--calbd); padding: 0 8px; display: flex; align-items: center; font-size: .74rem; font-weight: 600; color: var(--tx2); white-space: nowrap; position: sticky; left: 0; z-index: 2; min-height: 44px; }
+    .gantt-canvas { grid-column: 2 / -1; position: relative; border-bottom: 1px solid var(--calbd); cursor: crosshair; overflow: visible; min-height: 44px; }
+    .gantt-canvas::before { content:''; position:absolute; inset:0; background-image: repeating-linear-gradient(to right, transparent, transparent calc(100% / var(--days, 31) - 1px), var(--calbd) calc(100% / var(--days, 31) - 1px), var(--calbd) calc(100% / var(--days, 31))); pointer-events:none; z-index:0; }
+    /* Overlay de seleção por arraste (multi-período) */
+    .drag-sel { position: absolute; top: 3px; bottom: 3px; background: rgba(99,102,241,.25); border: 1.5px solid #6366f1; border-radius: 3px; pointer-events: none; z-index: 3; }
+    /* Menu de ações em lote após seleção */
+    .batch-menu { position: fixed; z-index: 320; background: var(--sur1); border: 1px solid var(--calbd); border-radius: var(--r-md); padding: var(--sp-3); width: 232px; box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+    .batch-menu-title { font-size: .72rem; color: var(--tx3); margin-bottom: var(--sp-1); }
+    .batch-menu-range { font-size: .84rem; font-weight: 700; color: var(--tx1); margin-bottom: var(--sp-3); }
+    .batch-menu-btn { width: 100%; text-align: left; padding: 8px 10px; border-radius: var(--r-sm); border: 1px solid var(--bdr1); background: var(--sur2); color: var(--tx1); font-size: .8rem; font-weight: 600; cursor: pointer; transition: all .12s; display: flex; align-items: center; gap: 8px; }
+    .batch-menu-btn:hover { background: var(--royal-bg); color: var(--royal-l); border-color: rgba(99,102,241,.35); }
+    .batch-menu-hint { font-size: .68rem; color: var(--tx3); margin-top: var(--sp-2); line-height: 1.4; }
     .today-stripe { position:absolute; top:0; bottom:0; background: rgba(234,179,8,.08); pointer-events:none; z-index:1; }
     .resv-bar {
       position: absolute; top: 5px; bottom: 5px;
@@ -605,6 +620,116 @@ function renderTimeline() {
       if (r) openDrawer(r);
     });
   });
+
+  // Drag para selecionar intervalo de datas no quarto → menu de ações
+  bindTimelineDrag(container, daysInMonth);
+}
+
+// ─── Seleção por arraste (multi-período) ──────────────────────────────────────
+
+// ISO local-safe (evita o shift de fuso do toISOString)
+function ymdLocal(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function getDayFromX(offsetX, totalWidth, daysInMonth) {
+  return Math.max(1, Math.min(daysInMonth, Math.ceil((offsetX / totalWidth) * daysInMonth)));
+}
+
+function bindTimelineDrag(container, daysInMonth) {
+  let drag = { active: false, room: null, startDay: 0, endDay: 0 };
+
+  container.querySelectorAll('.gantt-canvas').forEach(canvas => {
+    const roomCode = canvas.dataset.room;
+    let selEl = null;
+
+    canvas.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('resv-bar')) return; // clique numa reserva
+      closeBatchMenu();
+      container.querySelectorAll('.drag-sel').forEach(el => el.remove()); // limpa seleção órfã de outra linha
+      drag = { active: true, room: roomCode, startDay: getDayFromX(e.offsetX, canvas.offsetWidth, daysInMonth), endDay: 0 };
+      selEl = document.createElement('div');
+      selEl.className = 'drag-sel';
+      canvas.appendChild(selEl);
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!drag.active || drag.room !== roomCode || !selEl) return;
+      drag.endDay = getDayFromX(e.offsetX, canvas.offsetWidth, daysInMonth);
+      const s  = Math.min(drag.startDay, drag.endDay);
+      const en = Math.max(drag.startDay, drag.endDay);
+      selEl.style.left  = (s - 1) / daysInMonth * 100 + '%';
+      selEl.style.width = Math.max(1, en - s + 1) / daysInMonth * 100 + '%';
+    });
+
+    canvas.addEventListener('mouseup', e => {
+      if (!drag.active || drag.room !== roomCode) return;
+      drag.active = false;
+      if (selEl) { selEl.remove(); selEl = null; }
+      const s  = Math.min(drag.startDay, drag.endDay || drag.startDay);
+      const en = Math.max(drag.startDay, drag.endDay || drag.startDay);
+      const checkin  = ymdLocal(new Date(curYear, curMonth, s));      // 1ª noite
+      const checkout = ymdLocal(new Date(curYear, curMonth, en + 1)); // saída (exclusiva)
+      showBatchMenu(roomCode, checkin, checkout, e.clientX, e.clientY);
+    });
+  });
+
+  container.addEventListener('mouseleave', () => {
+    drag.active = false;
+    container.querySelectorAll('.drag-sel').forEach(el => el.remove());
+  });
+}
+
+let _batchMenuEl = null;
+
+function closeBatchMenu() {
+  if (_batchMenuEl) { _batchMenuEl.remove(); _batchMenuEl = null; }
+  document.removeEventListener('mousedown', onBatchOutside, true);
+  document.removeEventListener('keydown', onBatchEsc, true);
+}
+function onBatchOutside(e) { if (_batchMenuEl && !_batchMenuEl.contains(e.target)) closeBatchMenu(); }
+function onBatchEsc(e) { if (e.key === 'Escape') closeBatchMenu(); }
+
+function showBatchMenu(roomCode, checkin, checkout, x, y) {
+  closeBatchMenu();
+  const nights = Math.round((new Date(checkout) - new Date(checkin)) / 86400000);
+  const menu = document.createElement('div');
+  menu.className = 'batch-menu';
+  menu.innerHTML = `
+    <div class="batch-menu-title">Quarto ${DS.esc(roomCode)} · ${nights} noite${nights===1?'':'s'}</div>
+    <div class="batch-menu-range">${DS.date(checkin)} → ${DS.date(checkout)}</div>
+    <button class="batch-menu-btn" data-batch="new">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova reserva neste período
+    </button>
+    <div class="batch-menu-hint">Fechar quarto e preço em lote chegam nos próximos blocos.</div>`;
+  document.body.appendChild(menu);
+  _batchMenuEl = menu;
+
+  // Posiciona dentro da viewport
+  const mw = 232, mh = menu.offsetHeight || 120;
+  menu.style.left = Math.min(x, window.innerWidth  - mw - 12) + 'px';
+  menu.style.top  = Math.min(y, window.innerHeight - mh - 12) + 'px';
+
+  menu.querySelector('[data-batch="new"]').addEventListener('click', () => {
+    closeBatchMenu();
+    openNewReservationPrefilled(roomCode, checkin, checkout);
+  });
+
+  // Fecha ao clicar fora ou Esc (captura na fase de captura para não conflitar)
+  setTimeout(() => {
+    document.addEventListener('mousedown', onBatchOutside, true);
+    document.addEventListener('keydown', onBatchEsc, true);
+  }, 0);
+}
+
+function openNewReservationPrefilled(roomCode, checkin, checkout) {
+  resetModalForCreate();
+  const sel = document.getElementById('modal-quarto');
+  if (Array.from(sel.options).some(o => o.value === roomCode)) sel.value = roomCode;
+  document.getElementById('modal-checkin').value  = checkin;
+  document.getElementById('modal-checkout').value = checkout;
+  document.getElementById('modal-overlay').classList.add('open');
 }
 
 // ─── List ────────────────────────────────────────────────────────────────────
