@@ -404,6 +404,7 @@
     </div>
     <div class="pay-foot">
       <button class="btn btn-sm btn-ghost" id="pay-cancel">Cancelar</button>
+      <button class="btn btn-sm" id="pay-later" style="display:none;background:rgba(234,179,8,.12);color:#eab308;border:1px solid rgba(234,179,8,.4);font-weight:700">Cobrar no check-out</button>
       <button class="btn btn-sm" id="pay-confirm" style="background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.4);font-weight:700">✓ Receber e fazer check-out</button>
     </div>
   </div>
@@ -647,12 +648,13 @@
     btn.disabled = true;
     btn.textContent = 'Registrando…';
 
-    // Check-out com saldo em aberto: bloqueia e cobra primeiro
-    if (fdAction === 'checkout') {
+    // Saldo em aberto: check-out bloqueia até receber; check-in oferece
+    // "cobrar agora" ou "cobrar no check-out" (não-bloqueante).
+    if (fdAction === 'checkout' || fdAction === 'checkin') {
       const cmd = await apiFetch(`/api/room-charges/comanda/${id}`);
       const due = Number(cmd?.totals?.balance_due ?? 0);
       if (cmd?.success && due > 0) {
-        openPayModal(id, cmd, btn);
+        openPayModal(id, cmd, btn, fdAction);
         return;
       }
     }
@@ -682,12 +684,16 @@
   /* ── Modal de saldo em aberto no check-out ──────────────────────────────── */
   let payCtx = null; // { id, btn } da cobrança em andamento
 
-  function openPayModal(id, cmd, btn) {
-    payCtx = { id, btn };
+  function openPayModal(id, cmd, btn, mode) {
+    mode = mode || 'checkout';
     const t = cmd.totals;
+    const isCheckin = mode === 'checkin';
+    payCtx = { id, btn, mode, due: Number(t.balance_due) };
     const guest = cmd.reservation?.leads?.name || 'Hóspede';
-    document.getElementById('pay-sub').textContent =
-      `${guest} · ${cmd.reservation?.room_type || ''} — o check-out só é liberado após receber o saldo.`;
+    const room  = cmd.reservation?.room_type || '';
+    document.getElementById('pay-sub').textContent = isCheckin
+      ? `${guest} · ${room} — receba o saldo agora ou deixe para o check-out.`
+      : `${guest} · ${room} — o check-out só é liberado após receber o saldo.`;
     document.getElementById('pay-room').textContent    = fmtBRL(t.room_total);
     document.getElementById('pay-charges').textContent = fmtBRL(t.charges_total);
     document.getElementById('pay-deposit').textContent = '− ' + fmtBRL(t.deposit_paid);
@@ -697,6 +703,10 @@
     document.getElementById('pay-due').textContent = fmtBRL(t.balance_due);
     document.getElementById('pay-amount').value = Number(t.balance_due).toFixed(2);
     document.getElementById('pay-error').style.display = 'none';
+    document.getElementById('pay-later').style.display = isCheckin ? 'inline-flex' : 'none';
+    document.getElementById('pay-confirm').textContent = isCheckin
+      ? '✓ Cobrar agora e fazer check-in'
+      : '✓ Receber e fazer check-out';
     document.getElementById('pay-overlay').classList.add('open');
   }
 
@@ -704,7 +714,7 @@
     document.getElementById('pay-overlay').classList.remove('open');
     if (restoreBtn && payCtx?.btn) {
       payCtx.btn.disabled = false;
-      payCtx.btn.textContent = '✓ Registrar check-out';
+      payCtx.btn.textContent = payCtx.mode === 'checkin' ? '✓ Registrar check-in' : '✓ Registrar check-out';
     }
     payCtx = null;
   }
@@ -723,6 +733,7 @@
 
   document.getElementById('pay-confirm').addEventListener('click', async () => {
     if (!payCtx) return;
+    const isCheckin = payCtx.mode === 'checkin';
     const errEl  = document.getElementById('pay-error');
     errEl.style.display = 'none';
     const amount = parseFloat(document.getElementById('pay-amount').value) || 0;
@@ -730,38 +741,87 @@
     if (amount <= 0) { errEl.textContent = 'Informe o valor recebido.'; errEl.style.display = 'block'; return; }
 
     const confirmBtn = document.getElementById('pay-confirm');
+    const origLabel = confirmBtn.textContent;
     confirmBtn.disabled = true; confirmBtn.textContent = 'Registrando pagamento…';
 
     const pay = await apiFetch('/api/payments/manual', {
       method: 'POST',
-      body: JSON.stringify({ reservation_id: payCtx.id, amount, method, payment_type: 'balance' }),
+      body: { reservation_id: payCtx.id, amount, method, payment_type: 'balance' },
     });
 
     if (!pay?.success) {
-      confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
+      confirmBtn.disabled = false; confirmBtn.textContent = origLabel;
       errEl.textContent = pay?.message || 'Erro ao registrar pagamento.';
       errEl.style.display = 'block';
       return;
     }
 
-    // Reconfere o saldo — pagamento parcial mantém o check-out bloqueado
+    // Reconfere o saldo após o pagamento
     const cmd = await apiFetch(`/api/room-charges/comanda/${payCtx.id}`);
     const due = Number(cmd?.totals?.balance_due ?? 0);
+
+    if (isCheckin) {
+      // Check-in é não-bloqueante: registra o que foi pago e segue.
+      // Saldo restante (se houver) continua visível no card e nos alertas.
+      const res = await apiFetch(`/api/reservations/${payCtx.id}/checkin`, { method: 'PATCH' });
+      confirmBtn.disabled = false; confirmBtn.textContent = origLabel;
+      if (res?.success) {
+        DS.toast(due > 0
+          ? `Pagamento de ${fmtBRL(amount)} recebido e check-in registrado. Saldo restante: ${fmtBRL(due)}.`
+          : 'Saldo recebido e check-in registrado.', 'ok');
+        closePayModal(false);
+        loadData();
+      } else {
+        errEl.textContent = res?.message || 'Pagamento registrado, mas o check-in falhou. Tente de novo.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+
+    // Check-out: pagamento parcial mantém o check-out bloqueado
     if (due > 0) {
-      confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
-      openPayModal(payCtx.id, cmd, payCtx.btn);
+      confirmBtn.disabled = false; confirmBtn.textContent = origLabel;
+      openPayModal(payCtx.id, cmd, payCtx.btn, 'checkout');
       DS.toast(`Pagamento de ${fmtBRL(amount)} registrado — ainda faltam ${fmtBRL(due)}.`, 'warn');
       return;
     }
 
     const res = await apiFetch(`/api/reservations/${payCtx.id}/checkout`, { method: 'PATCH' });
-    confirmBtn.disabled = false; confirmBtn.textContent = '✓ Receber e fazer check-out';
+    confirmBtn.disabled = false; confirmBtn.textContent = origLabel;
     if (res?.success) {
       DS.toast('Pagamento recebido e check-out registrado.', 'ok');
       closePayModal(false);
       loadData();
     } else {
       errEl.textContent = res?.message || 'Pagamento registrado, mas o check-out falhou. Tente de novo.';
+      errEl.style.display = 'block';
+    }
+  });
+
+  // Check-in: "Cobrar no check-out" — registra a escolha na reserva e libera o check-in.
+  document.getElementById('pay-later').addEventListener('click', async () => {
+    if (!payCtx || payCtx.mode !== 'checkin') return;
+    const errEl = document.getElementById('pay-error');
+    errEl.style.display = 'none';
+    const laterBtn = document.getElementById('pay-later');
+    laterBtn.disabled = true; laterBtn.textContent = 'Registrando…';
+
+    // Anexa a escolha em notes sem sobrescrever o histórico existente.
+    const cur = await apiFetch(`/api/reservations/${payCtx.id}`);
+    const prevNotes = cur?.reservation?.notes || '';
+    const stamp = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const note = `[Front Desk ${stamp}] Check-in com saldo de ${fmtBRL(payCtx.due)} — cobrança definida para o check-out.`;
+    const newNotes = prevNotes ? `${prevNotes}\n${note}` : note;
+    await apiFetch(`/api/reservations/${payCtx.id}`, { method: 'PATCH', body: { notes: newNotes } });
+
+    const res = await apiFetch(`/api/reservations/${payCtx.id}/checkin`, { method: 'PATCH' });
+    laterBtn.disabled = false; laterBtn.textContent = 'Cobrar no check-out';
+    if (res?.success) {
+      DS.toast(`Check-in registrado. Saldo de ${fmtBRL(payCtx.due)} será cobrado no check-out.`, 'ok');
+      closePayModal(false);
+      loadData();
+    } else {
+      errEl.textContent = res?.message || 'Falha ao registrar o check-in.';
       errEl.style.display = 'block';
     }
   });
