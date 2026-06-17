@@ -67,6 +67,18 @@
     .mh-day.is-event-nac .day-name::after { content: '★'; color: var(--gold); font-size: .6rem; display: block; margin-top: 1px; }
     .mh-day.is-event-reg { background: rgba(168,85,247,.12); }
     .mh-day.is-event-reg .day-name::after { content: '◆'; color: #a855f7; font-size: .6rem; display: block; margin-top: 1px; }
+    /* Estadia mínima (special_periods.min_nights >= 2) — cor teal, distinta de ★/◆ */
+    .mh-day[data-date] { cursor: pointer; }
+    .mh-day[data-date]:hover { box-shadow: inset 0 0 0 1px rgba(14,184,164,.55); }
+    .mh-day.is-minstay { box-shadow: inset 0 -3px 0 #0ea5a4; }
+    .minstay-badge {
+      display: inline-block; margin-top: 2px; padding: 0 3px;
+      font-size: .5rem; font-weight: 800; line-height: 1.3; letter-spacing: -.02em;
+      color: #0ea5a4; background: rgba(14,184,164,.15);
+      border: 1px solid rgba(14,184,164,.5); border-radius: 6px; white-space: nowrap;
+    }
+    .wh-day[data-date] { cursor: pointer; }
+    .wh-day .minstay-badge { font-size: .58rem; margin-top: 3px; padding: 1px 4px; }
     .wh-day.is-event-nac { background: rgba(184,134,0,.1); }
     .wh-day.is-event-reg { background: rgba(168,85,247,.12); }
 
@@ -398,7 +410,8 @@
           <div class="legend-sep"></div>
           <div class="legend-item"><span style="font-size:.8rem;color:var(--gold)">★</span>&nbsp;Feriado nacional</div>
           <div class="legend-item"><span style="font-size:.8rem;color:#a855f7">◆</span>&nbsp;Evento regional</div>
-          <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique p/ detalhes · Arraste em vazio p/ nova reserva</div>
+          <div class="legend-item"><span class="minstay-badge">mín 2</span>&nbsp;Estadia mínima</div>
+          <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique no dia (topo) p/ marcar estadia mínima · Arraste em vazio p/ nova reserva</div>
         </div>
         <!-- Calendar area -->
         <div class="cal-scroll" id="cal-scroll">
@@ -591,30 +604,80 @@
     { from: '2027-08-09', to: '2027-08-09', type: 'regional', label: 'Aniversário de Socorro',      desc: 'Feriado municipal — fundação da cidade' },
   ];
 
-  /* Mescla períodos especiais cadastrados no Supabase (special_periods, MM-DD recorrente).
-     Só entra o que ainda não está coberto pela lista fixa acima. */
+  /* special_periods é a FONTE ÚNICA da estadia mínima. Carrega as linhas cruas
+     (para marcar/desmarcar) e projeta os ranges com min_nights >= 2 nos anos
+     visíveis (MM-DD recorrente) para o selo visual. NÃO toca em EVENTS — o
+     calendário de feriados (★/◆) é uma camada separada de contexto. */
+  let SPECIAL_PERIODS_RAW = [];
+  let MINSTAY = []; // [{ from, to, label, minNights, rowId, singleDay }]
+
   async function loadSpecialPeriods() {
     try {
       const { data, error } = await sb.from('special_periods')
-        .select('label, start_md, end_md, min_nights')
+        .select('id, label, start_md, end_md, min_nights, active')
         .eq('active', true);
-      if (error || !data) return;
+      if (error || !data) { SPECIAL_PERIODS_RAW = []; MINSTAY = []; return; }
+      SPECIAL_PERIODS_RAW = data;
+      const out = [];
       [2026, 2027].forEach(y => {
         data.forEach(sp => {
+          if ((sp.min_nights || 0) < 2) return; // min_nights=1 não impõe mínimo → sem selo
           // Label com ano explícito (ex.: "Carnaval 2026") só vale naquele ano —
           // datas móveis mudam e a projeção MM-DD em outro ano seria falsa
           const yearInLabel = (sp.label.match(/\b(20\d{2})\b/) || [])[1];
           if (yearInLabel && Number(yearInLabel) !== y) return;
           const from = `${y}-${sp.start_md}`;
           const to   = sp.end_md < sp.start_md ? `${y + 1}-${sp.end_md}` : `${y}-${sp.end_md}`;
-          const covered = EVENTS.some(e => e.from <= to && from <= e.to);
-          if (!covered) {
-            EVENTS.push({ from, to, type: 'regional', label: sp.label,
-              desc: `Período especial — mínimo ${sp.min_nights || 2} noites` });
-          }
+          out.push({ from, to, label: sp.label, minNights: sp.min_nights || 2,
+            rowId: sp.id, singleDay: sp.start_md === sp.end_md });
         });
       });
-    } catch (e) { console.warn('special_periods não carregado:', e.message); }
+      MINSTAY = out;
+    } catch (e) {
+      console.warn('special_periods não carregado:', e.message);
+      SPECIAL_PERIODS_RAW = []; MINSTAY = [];
+    }
+  }
+
+  /* Período de estadia mínima que cobre a data (ou null). */
+  function minStayForDate(ds) {
+    return MINSTAY.find(p => ds >= p.from && ds <= p.to) || null;
+  }
+
+  /* Marca/desmarca uma data como estadia mínima de 2 noites em special_periods.
+     - data livre → insere linha de 1 dia (MM-DD recorrente, "Alta demanda")
+     - data já marcada (linha de 1 dia) → remove
+     - data dentro de um período de vários dias (feriado) → confirma e remove o período inteiro */
+  async function toggleMinStay(ds) {
+    const existing = minStayForDate(ds);
+    try {
+      if (existing) {
+        const msg = existing.singleDay
+          ? `Remover a estadia mínima de ${fmtDateBR(ds)}?`
+          : `${fmtDateBR(ds)} faz parte de "${existing.label}".\nRemover a estadia mínima de TODO esse período?`;
+        if (!confirm(msg)) return;
+        const { error } = await sb.from('special_periods').delete().eq('id', existing.rowId);
+        if (error) throw error;
+      } else {
+        const md = ds.slice(5); // 'YYYY-MM-DD' → 'MM-DD'
+        if (!confirm(`Marcar ${fmtDateBR(ds)} (${md}) como estadia mínima de 2 noites?\nVale todo ano (alta demanda).`)) return;
+        const { error } = await sb.from('special_periods')
+          .insert({ label: 'Alta demanda', start_md: md, end_md: md, min_nights: 2, active: true });
+        if (error) throw error;
+      }
+      await loadSpecialPeriods();
+      render();
+    } catch (e) {
+      alert('Não foi possível atualizar a estadia mínima: ' + (e.message || e));
+    }
+  }
+
+  /* Liga o clique de marcar/desmarcar nos cabeçalhos de dia (mês e semana).
+     Os cabeçalhos não têm drag, então não há conflito com criar reserva/travar preço. */
+  function bindMinStayToggle(cont) {
+    cont.querySelectorAll('.mh-day[data-date], .wh-day[data-date]').forEach(cell => {
+      cell.addEventListener('click', () => toggleMinStay(cell.dataset.date));
+    });
   }
 
   /* ── Utility ─────────────────────────────────────────────────────────── */
@@ -846,11 +909,14 @@
       const dow = parseDateLocal(ds).getDay();
       const isWknd = dow === 0 || dow === 6;
       const evs = getEventsForDate(ds);
-      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const ms  = minStayForDate(ds);
+      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event'), ms ? 'is-minstay' : ''].filter(Boolean).join(' ');
       const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
-      html += `<div class="${cls}"${tipAttr}>
+      const msBadge = ms ? `<span class="minstay-badge" data-tip="${escHtml(`Estadia mínima de ${ms.minNights} noites — ${ms.label}`)}">mín ${ms.minNights}</span>` : '';
+      html += `<div class="${cls}" data-date="${ds}"${tipAttr}>
         <div class="day-num">${d}</div>
         <div class="day-name">${DAYS_PT[dow]}</div>
+        ${msBadge}
       </div>`;
     });
 
@@ -1094,6 +1160,9 @@
 
     /* Drag na linha de disponibilidade de uma ala → definir teto de venda */
     bindCapDrag(cont, daysInMonth);
+
+    /* Clique no cabeçalho de dia → marcar/desmarcar estadia mínima */
+    bindMinStayToggle(cont);
   }
 
   function getDayFromX(offsetX, totalWidth, daysInMonth) {
@@ -1367,13 +1436,16 @@
       const dow = dt.getDay();
       const isWknd = dow === 0 || dow === 6;
       const evs = getEventsForDate(ds);
+      const ms  = minStayForDate(ds);
       const evIcon = evs.length ? (evs.some(e => e.type === 'regional') ? ' ◆' : ' ★') : '';
-      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event'), ms ? 'is-minstay' : ''].filter(Boolean).join(' ');
       const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
-      html += `<div class="${cls}"${tipAttr}>
+      const msBadge = ms ? `<span class="minstay-badge" data-tip="${escHtml(`Estadia mínima de ${ms.minNights} noites — ${ms.label}`)}">mín ${ms.minNights}</span>` : '';
+      html += `<div class="${cls}" data-date="${ds}"${tipAttr}>
         <div class="wday-name">${DAYS_PT[dow]}${evIcon}</div>
         <div class="wday-num">${dt.getDate()}</div>
         <div class="wday-month">${MONTHS_PT[dt.getMonth()].slice(0,3)}</div>
+        ${msBadge}
       </div>`;
     });
 
@@ -1435,6 +1507,9 @@
         showNewResvPanel(room?.label || cell.dataset.room, date, addDays(date, 2));
       });
     });
+
+    /* Clique no cabeçalho de dia → marcar/desmarcar estadia mínima */
+    bindMinStayToggle(cont);
   }
 
   /* ── Popover ─────────────────────────────────────────────────────────── */
