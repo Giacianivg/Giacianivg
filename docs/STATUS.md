@@ -34,6 +34,26 @@ honra esses overrides** — isso foi deixado de fora de propósito porque exige 
 Enquanto isso não for feito: os overrides são apenas a visão operacional do dono no
 calendário; não afetam nenhuma cotação (e a Luna está inativa de qualquer forma).
 
+### 🔗 Pendência amarrada a religar a Luna — DEC-023 / F6 (teto de venda por ala)
+
+A DEC-023 cria o **teto de venda por ala/data** (`ala_inventory_caps`, migration 033;
+view `vw_ala_sellable`). O **calendário já permite definir o teto** (arraste na linha da
+ala em "Disponibilidade — quartos à venda") e o **CRM já respeita** o teto na criação de
+reserva por quarto físico (`create_reservation_atomic`, migration 034). **A Luna AINDA NÃO
+honra o teto** — o caminho legado por ala (`room_type IN ('ALA_A','ALA_B','ALA_C_CASAL')`)
+foi deixado de fora de propósito porque exige tocar arquivos protegidos
+(`services/whatsapp/webhook.js` e/ou `services/luna/system-prompt.js`).
+
+**Antes de religar a Luna, fazer (com OK explícito do Founder + aprovação CTO):**
+1. Incorporar o teto ao caminho legado por ala da cotação/confirmação da Luna.
+2. Reconciliar a contagem de `vw_ala_sellable` para incluir reservas do caminho legado
+   por ala (hoje conta só quartos físicos `A1–C5`, correto enquanto a Luna está inativa).
+3. **Teste obrigatório** provando que a cotação/confirmação atual segue inalterada quando
+   não há teto definido.
+
+Enquanto isso não for feito: o teto é respeitado pelo CRM (reservas por quarto físico),
+mas a Luna (inativa) não o aplicaria no caminho por ala.
+
 ## Fase atual
 
 **Operação do CRM + captação de grupos.** A Fase 1.5 (Motor de Precificação Dinâmica)
