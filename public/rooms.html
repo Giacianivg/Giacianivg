@@ -1004,8 +1004,9 @@
   // ── Load rooms ───────────────────────────────────────────────
   async function loadRooms() {
     setLoading(true);
-    const [res, resvRes] = await Promise.all([
+    const [res, roomsTodayRes, resvRes] = await Promise.all([
       apiFetch('/api/rooms'),
+      apiFetch('/api/occupancy/rooms-today'),
       apiFetch(`/api/reservations?checkin_to=${TODAY_ISO}&limit=500`),
     ]);
     setLoading(false);
@@ -1015,14 +1016,29 @@
     }
     roomsCache = res.rooms || [];
 
-    // Indexa reservas ativas por quarto físico.
-    // checkout >= hoje: no dia do checkout o hóspede ainda ocupa o quarto.
-    // pending incluso: reservas do CRM nascem pending até a confirmação.
+    // DEC-024: status e ocupação vêm da FONTE ÚNICA (/api/occupancy/rooms-today),
+    // que aplica a regra canônica (fronteira de checkout = dia do checkout livre,
+    // fuso BR, status checkedout não ocupa). Mapeia o status canônico para o
+    // vocabulário desta tela: occupied→'blocked' (visual de ocupado),
+    // blocked→'maintenance', available→'available'.
+    const CANON_TO_LOCAL = { available: 'available', occupied: 'blocked', blocked: 'maintenance' };
+    const canonByCode = {};
+    for (const c of (roomsTodayRes?.rooms || [])) canonByCode[c.code] = c;
+
+    // Detalhes da reserva (nome, datas, valores) indexados por id — apenas
+    // ENRIQUECEM o card; a OCUPAÇÃO é decidida pela fonte única, não por data aqui.
+    const resvById = {};
+    for (const r of (resvRes?.reservations || [])) resvById[r.id] = r;
+
     activeResvByRoom = {};
-    for (const r of (resvRes?.reservations || [])) {
-      if (!['pending','deposit_paid','confirmed','checkedin'].includes(r.status)) continue;
-      if (!(r.checkin_date <= TODAY_ISO && r.checkout_date >= TODAY_ISO)) continue;
-      activeResvByRoom[r.room_type] = r;
+    for (const room of roomsCache) {
+      const canon = canonByCode[room.code];
+      if (!canon) continue;                       // ex.: ALA_C_GRUPO mantém on_request
+      room.today_status = CANON_TO_LOCAL[canon.status] || room.today_status;
+      if (canon.status === 'occupied' && canon.reservation_id) {
+        activeResvByRoom[room.code] = resvById[canon.reservation_id]
+          || { id: canon.reservation_id, leads: { name: canon.guest_name } };
+      }
     }
 
     applyFilters();
