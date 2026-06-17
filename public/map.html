@@ -838,6 +838,7 @@
   // ── State ─────────────────────────────────────────────────────────────────
   let roomsData = {};            // code físico (A1..C5) → room object
   let activeResv = {};           // code físico → reserva ativa cobrindo hoje
+  let statusByCode = {};         // code físico → status canônico (DEC-024)
   let productsCache = [];
   let selectedCode = null;
   let selectedPin  = null;
@@ -872,8 +873,10 @@
     dot.classList.add('loading');
     document.getElementById('last-updated').textContent = 'Atualizando...';
 
-    const [roomsRes, resvRes, prodRes] = await Promise.all([
+    const [roomsRes, roomsTodayRes, boardRes, resvRes, prodRes] = await Promise.all([
       apiFetch('/api/rooms'),
+      apiFetch('/api/occupancy/rooms-today'),
+      apiFetch('/api/occupancy/board'),
       apiFetch(`/api/reservations?checkin_to=${TODAY}&limit=500`),
       apiFetch('/api/products'),
     ]);
@@ -884,13 +887,35 @@
     }
     if (prodRes?.success) productsCache = prodRes.products || [];
 
-    // Reservas ativas por quarto físico.
-    // checkout >= hoje: no dia do checkout o hóspede ainda ocupa o quarto.
-    // pending incluso: reservas do CRM nascem pending até a confirmação.
+    // DEC-024: ocupação/status vêm da FONTE ÚNICA. rooms-today dá o status
+    // canônico (occupied/blocked/available); board dá a classificação do dia
+    // (check-in/check-out/in-house) com regra canônica (fronteira de checkout,
+    // exclusão de checkedout, fuso BR). As reservas só enriquecem o painel.
+    const canonByCode = {};
+    for (const c of (roomsTodayRes?.rooms || [])) canonByCode[c.code] = c;
+    const resvById = {};
+    for (const r of (resvRes?.reservations || [])) resvById[r.id] = r;
+
     activeResv = {};
-    for (const r of (resvRes?.reservations || [])) {
-      if (!['pending','deposit_paid','confirmed','checkedin'].includes(r.status)) continue;
-      if (r.checkin_date <= TODAY && r.checkout_date >= TODAY) activeResv[r.room_type] = r;
+    const boardClass = {};
+    const assign = (row, cls) => {
+      boardClass[row.room_type] = cls;
+      activeResv[row.room_type] = resvById[row.reservation_id] || {
+        id: row.reservation_id, leads: { name: row.guest_name },
+        checkin_date: row.checkin_date, checkout_date: row.checkout_date, guests: row.guests,
+      };
+    };
+    // in-house primeiro; check-in/check-out do dia têm prioridade (sobrescrevem)
+    (boardRes?.in_house  || []).forEach(r => assign(r, 'occupied'));
+    (boardRes?.checkins  || []).forEach(r => assign(r, 'checkin'));
+    (boardRes?.checkouts || []).forEach(r => assign(r, 'checkout'));
+
+    // Status efetivo por pin: board > bloqueio (manutenção) > disponível
+    statusByCode = {};
+    for (const code of Object.keys(ROOM_PINS)) {
+      if (boardClass[code]) statusByCode[code] = boardClass[code];
+      else if (canonByCode[code]?.status === 'blocked') statusByCode[code] = 'occupied';
+      else statusByCode[code] = 'available';
     }
 
     applyStatuses();
@@ -907,18 +932,9 @@
     else if (selectedCode) selectRoom(null, selectedCode);
   }
 
-  // Status efetivo de um quarto físico
+  // Status efetivo de um quarto físico (DEC-024: fonte única, já calculado em loadMap)
   function roomStatus(code) {
-    const resv = activeResv[code];
-    if (resv) {
-      if (resv.checkin_date  === TODAY && resv.status !== 'checkedin') return 'checkin';
-      if (resv.checkout_date === TODAY) return 'checkout';
-      return 'occupied';
-    }
-    const room = roomsData[code];
-    if (!room) return 'unknown';
-    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request' };
-    return map[room.today_status] || 'unknown';
+    return statusByCode[code] || 'available';
   }
 
   // ── Apply status to SVG (por quarto físico) ───────────────────────────────
