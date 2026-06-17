@@ -213,6 +213,8 @@
 
     /* Preço travado manual (override absoluto) — prioridade sobre motor/tabela */
     .price-cell.pc-locked { color: var(--gold); font-weight: 800; background: rgba(184,134,0,.12); box-shadow: inset 0 0 0 1px var(--gold); border-radius: 3px; }
+    /* Badge de manutenção/bloqueio na célula de disponibilidade (quartos à venda) */
+    .cap-maint { font-size: .5rem; font-weight: 800; line-height: 1.2; color: #f59e0b; margin-top: 1px; letter-spacing: -.03em; }
     .month-price-canvas[data-price-room] { cursor: crosshair; }
     /* Popup de edição de preço */
     .price-edit-pop { position: fixed; z-index: 330; background: var(--sur1); border: 1px solid var(--calbd); border-radius: var(--r-md); padding: var(--sp-4); width: 250px; box-shadow: 0 8px 32px rgba(0,0,0,.45); }
@@ -1037,6 +1039,7 @@
         const total2   = total;
         const sellable = row ? row.sellable : total2;
         const reserved = row ? row.reserved : 0;
+        const blocked  = row ? (row.blocked || 0) : 0;   // quartos em manutenção/bloqueio
         const cap      = row ? row.cap : total2;
         const hasCap   = row ? row.has_cap : false;
         const evs      = getEventsForDate(ds);
@@ -1044,9 +1047,11 @@
         let cls = 'p-baixa';
         if (sellable === 0) cls = 'p-expensive';      // nada à venda → vermelho
         else if (hasCap)    cls = 'p-alta';            // teto manual ativo → dourado
-        const tip = `Ala ${a.ala} · ${fmtDateBR(ds)}: ${sellable} à venda — teto ${cap}${hasCap ? ' (manual)' : ' (cheio)'} · ${reserved} reservado${reserved !== 1 ? 's' : ''} · total ${total2}`;
+        const maintTip = blocked ? ` · 🔧 ${blocked} em manutenção/bloqueio` : '';
+        const tip = `Ala ${a.ala} · ${fmtDateBR(ds)}: ${sellable} à venda — teto ${cap}${hasCap ? ' (manual)' : ' (cheio)'} · ${reserved} reservado${reserved !== 1 ? 's' : ''}${maintTip} · total ${total2}`;
+        const maintBadge = blocked ? `<span class="cap-maint" title="${escHtml(`${blocked} quarto(s) em manutenção/bloqueio`)}">🔧${blocked}</span>` : '';
         html += `<div class="price-cell cap-cell ${cls}" title="${escHtml(tip)}" style="${evBg}">
-          <span class="pc-final">${sellable}</span>${hasCap ? `<span class="price-base-ref">teto ${cap}</span>` : ''}
+          <span class="pc-final">${sellable}</span>${hasCap ? `<span class="price-base-ref">teto ${cap}</span>` : ''}${maintBadge}
         </div>`;
       });
       html += '</div></div>';

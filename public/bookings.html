@@ -102,6 +102,16 @@
       background: linear-gradient(135deg, rgba(59,130,246,.55) 0%, rgba(59,130,246,.55) 45%, transparent 47%);
     }
 
+    /* Manutenção/bloqueio do quarto no dia: faixa âmbar hachurada com 🔧 (manutenção)
+       ou 🔒 (bloqueio genérico). Lida da fonte única (availability blocked, via
+       /api/occupancy/calendar). pointer-events:none preserva o arraste de criar reserva. */
+    .maint-block {
+      position: absolute; top: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .62rem; z-index: 1; pointer-events: none;
+      background: repeating-linear-gradient(45deg, rgba(234,179,8,.16), rgba(234,179,8,.16) 5px, rgba(234,179,8,.30) 5px, rgba(234,179,8,.30) 10px);
+    }
+
     /* Status colors */
     .status-pending    { background: rgba(234,179,8,.22); color: #ca8a04; border: 1px solid rgba(234,179,8,.35); }
     .status-confirmed  { background: rgba(34,197,94,.2);  color: #16a34a; border: 1px solid rgba(34,197,94,.35); }
@@ -422,6 +432,7 @@ const STATUS_LABEL = {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 let allReservations = [];
+let monthBlocks  = {};     // roomCode → { 'YYYY-MM-DD': block_reason } — manutenção/bloqueio (fonte única)
 let boardData    = null;   // DEC-024: board canônico do dia (/api/occupancy/board)
 let totalRooms   = 20;     // total de quartos físicos ativos (de /api/occupancy/rooms-today)
 let currentView  = 'timeline';
@@ -480,6 +491,14 @@ async function loadAndRender() {
     ]);
     boardData  = board || null;
     totalRooms = (roomsToday?.rooms || []).length || totalRooms;
+
+    // Manutenção/bloqueios do mês (fonte única: availability blocked) → marca 🔧 na timeline
+    const blocksRes = await DS.api(`/api/occupancy/calendar?from=${from}&to=${to}`);
+    monthBlocks = {};
+    for (const row of (blocksRes?.rows || [])) {
+      if (row.status !== 'blocked') continue;
+      (monthBlocks[row.room_code] ||= {})[row.date] = row.block_reason || '';
+    }
 
   } catch(e) {
     document.getElementById('loading-state').innerHTML =
@@ -638,6 +657,17 @@ function renderTimeline() {
         const dayIdx = (co - mStart) / 86400000;
         const gname  = DS.esc(r.leads?.name || '?');
         html += `<div class="checkout-wedge" style="left:${dayIdx/daysInMonth*100}%;width:${1/daysInMonth*100}%" title="Saída ${gname} · libera 14h (dia vendável)"></div>`;
+      }
+
+      // Manutenção/bloqueio do quarto (fonte única: availability blocked). 🔧 quando o
+      // motivo começa por "Manutenção", senão 🔒 (bloqueio genérico). Fora da venda.
+      const roomBlocks = monthBlocks[room.code] || {};
+      for (let bd = 1; bd <= daysInMonth; bd++) {
+        const bds    = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(bd).padStart(2,'0')}`;
+        const reason = roomBlocks[bds];
+        if (reason === undefined) continue;
+        const isMaint = /^manuten/i.test(reason);
+        html += `<div class="maint-block" style="left:${(bd-1)/daysInMonth*100}%;width:${1/daysInMonth*100}%" title="${DS.esc(reason || 'Bloqueado')}">${isMaint ? '🔧' : '🔒'}</div>`;
       }
 
       html += `</div>`;

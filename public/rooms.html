@@ -1428,7 +1428,7 @@
       </div>`).join('');
   }
 
-  document.getElementById('btn-save-maint').addEventListener('click', () => {
+  document.getElementById('btn-save-maint').addEventListener('click', async () => {
     const code     = document.getElementById('maint-code').value;
     const type     = document.getElementById('maint-type').value;
     const priority = document.getElementById('maint-priority').value;
@@ -1443,11 +1443,39 @@
     if (!maintHistory[code]) maintHistory[code] = [];
     maintHistory[code].push(entry);
 
+    // Prioridade "Crítico" bloqueia o quarto DE VERDADE: grava em availability
+    // (status='blocked') via API — fonte única lida por calendar, bookings e pela
+    // disponibilidade ("quartos à venda"). Bloqueio vai de hoje até a data prevista
+    // (inclusive); sem data = só hoje. As demais prioridades seguem como registro.
     if (priority === 'critical') {
-      const idx = roomsCache.findIndex(r => r.code === code);
-      if (idx >= 0) roomsCache[idx].today_status = 'maintenance';
-      updateStats(roomsCache);
-      applyFilters();
+      const lastDay = estimated || TODAY_ISO;        // último dia ainda em manutenção
+      if (lastDay < TODAY_ISO) {
+        showToast('A data prevista não pode ser anterior a hoje.', 'warn');
+        return;
+      }
+      const end = new Date(lastDay + 'T00:00:00');
+      end.setDate(end.getDate() + 1);                // rota bloqueia [from, to) exclusivo
+      const to = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
+      const reason = `Manutenção: ${maintTypeLabel(type)}${note ? ' — ' + note : ''}`;
+
+      const btn = document.getElementById('btn-save-maint');
+      btn.disabled = true; btn.textContent = 'Salvando…';
+      const res = await apiFetch('/api/availability/block', {
+        method: 'PATCH',
+        body: JSON.stringify({ room_type: code, from: TODAY_ISO, to, reason }),
+      });
+      btn.disabled = false; btn.textContent = 'Registrar ocorrência';
+
+      if (!res || res.success === false) {
+        showToast(res?.message || 'Não foi possível bloquear o quarto para manutenção.', 'err');
+        return;
+      }
+
+      renderMaintHistory(code);
+      document.getElementById('maint-note').value = '';
+      showToast(`Quarto ${code} em manutenção até ${fmtDate(lastDay)}.`, 'ok');
+      await loadRooms();   // recarrega o status canônico (fonte única)
+      return;
     }
 
     renderMaintHistory(code);

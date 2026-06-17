@@ -84,7 +84,7 @@ router.get('/', async (req, res) => {
 
   const { data, error } = await supabaseAdmin
     .from('vw_ala_sellable')
-    .select('ala, date, total_rooms, cap, reserved, sellable, has_cap, note')
+    .select('ala, date, total_rooms, cap, reserved, blocked, sellable, has_cap, note')
     .gte('date', fromISO)
     .lte('date', toISO)
     .order('date', { ascending: true })
