@@ -216,6 +216,20 @@ function isFeriado(date, cfg) {
   return findFeriadoRange(date, cfg) !== null;
 }
 
+/**
+ * Estadia mínima (noites) para uma data de check-in — fonte única special_periods.
+ * Datas normais = 1 (diária única); períodos especiais = min_nights cadastrado
+ * (default 2). Usado tanto pela cotação quanto pela criação de reserva no CRM.
+ * @param {string} iso - check-in em 'YYYY-MM-DD'
+ * @returns {number}
+ */
+function getMinNightsForISO(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return 1;
+  const range = findFeriadoRange(new Date(y, m - 1, d), getConfig());
+  return range ? (range.minNights ?? 2) : 1;
+}
+
 function detectSeason(dateStr, cfg) {
   const d = parseDate(dateStr);
   const month = d.getMonth() + 1;
@@ -378,7 +392,7 @@ ${descontoLine}💳 *Total: R$ ${q.totalFinal}*
 Responda *CONFIRMAR* para reservar e nossa equipe finaliza! 🌿`;
 }
 
-module.exports = { calculateQuotation, formatWhatsAppMessage, invalidatePricingCache };
+module.exports = { calculateQuotation, formatWhatsAppMessage, invalidatePricingCache, getMinNightsForISO };
 
 // ─── Pacotes promocionais (generalização do PASCOA_PACKAGE) ──────────────────
 // Compat: getPascoaPackage e PASCOA_PACKAGE mantêm nome e shape de retorno.

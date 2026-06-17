@@ -10,7 +10,7 @@
 const { test, describe, beforeEach } = require('node:test');
 const assert = require('node:assert');
 
-const { calculateQuotation, invalidatePricingCache } = require('../../services/quotation/engine');
+const { calculateQuotation, invalidatePricingCache, getMinNightsForISO } = require('../../services/quotation/engine');
 
 describe('[QUOTATION] estadia mínima — special_periods como fonte única', () => {
   // Garante uso do DEFAULT_CONFIG (espelha os seeds da migration 018).
@@ -61,5 +61,27 @@ describe('[QUOTATION] estadia mínima — special_periods como fonte única', ()
     });
     assert.ok(q.error);
     assert.equal(q.minNights, 2);
+  });
+});
+
+describe('[QUOTATION] getMinNightsForISO — usado pela criação de reserva (CRM)', () => {
+  beforeEach(() => invalidatePricingCache());
+
+  test('data normal → 1', () => {
+    assert.equal(getMinNightsForISO('2026-04-14'), 1);
+  });
+
+  test('feriado (Carnaval) → 2', () => {
+    assert.equal(getMinNightsForISO('2026-02-14'), 2);
+  });
+
+  test('Natal/Réveillon (range cruzando o ano) → 2', () => {
+    assert.equal(getMinNightsForISO('2026-12-31'), 2);
+    assert.equal(getMinNightsForISO('2027-01-01'), 2);
+  });
+
+  test('entrada inválida → 1 (default seguro)', () => {
+    assert.equal(getMinNightsForISO('lixo'), 1);
+    assert.equal(getMinNightsForISO(''), 1);
   });
 });
