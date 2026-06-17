@@ -526,6 +526,8 @@
   let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
   let pricingData     = null; // { settings, quote_base, motorByDate } — preço real do motor
   let overrideCache   = {};   // key `${from}_${to}` → { `${ala}|${date}`: preço travado }
+  let capsCache       = {};   // key `${from}_${to}` → { totals, byKey: { `${ala}|${date}`: row } }
+  let alaTotals       = {};   // { A: 8, B: 7, C: 5 } — total físico por ala (de rooms)
 
   /* ── Constants ───────────────────────────────────────────────────────── */
   const ROOMS = [
@@ -533,6 +535,12 @@
     { code: 'ALA_B',       label: 'Ala B',     sub: '7 bangalôs',  color: '#22c55e', bg: 'rgba(34,197,94,.75)' },
     { code: 'ALA_C_CASAL', label: 'Ala C',     sub: '5 suítes',    color: '#a855f7', bg: 'rgba(168,85,247,.75)' },
     { code: 'ALA_C_GRUPO', label: 'Grupo',     sub: 'Sob consulta', color: '#f97316', bg: 'rgba(249,115,22,.75)' },
+  ];
+  /* Alas com teto de venda editável (DEC-023). Grupo fica de fora (sob consulta). */
+  const CAP_ALAS = [
+    { ala: 'A', label: 'Ala A' },
+    { ala: 'B', label: 'Ala B' },
+    { ala: 'C', label: 'Ala C' },
   ];
   const STATUS_COLORS = {
     confirmed:     'rgba(59,130,246,.8)',
@@ -733,7 +741,22 @@
     return map;
   }
 
-  /* apiFetch só faz GET; este envia PUT/DELETE com corpo JSON. */
+  /* Teto de venda por ala/data (DEC-023). sellable = max(0, cap − reservados). */
+  async function fetchCaps(from, to) {
+    const key = `${from}_${to}`;
+    if (capsCache[key]) return capsCache[key];
+    let resp = null;
+    try { resp = await apiFetch(`/api/availability/caps?from=${from}&to=${to}`); } catch (e) { /* degrada */ }
+    const totals = resp?.totals || {};
+    alaTotals = totals;
+    const byKey = {};
+    (resp?.rows || []).forEach(r => { byKey[`${r.ala}|${r.date}`] = r; });
+    const result = { totals, byKey };
+    capsCache[key] = result;
+    return result;
+  }
+
+  /* apiFetch só faz GET; este envia PUT/DELETE/PATCH com corpo JSON. */
   async function apiSend(method, path, body) {
     if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
     const r = await fetch(path, {
@@ -805,6 +828,7 @@
     updateOccupancy(reservations, from, to);
     await fetchPricingData();
     const roomOverrides = await fetchRoomOverrides(from, to);
+    const caps = await fetchCaps(from, to);
 
     let compData = null;
     if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
@@ -934,6 +958,33 @@
       html += '</div></div>';
     });
 
+    /* Availability caps section — quantos quartos vender por ala (DEC-023) */
+    html += `<div class="month-section">Disponibilidade — quartos à venda<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tx3);font-size:.62rem;margin-left:8px">arraste numa ala p/ definir quantos quartos vender</span></div>`;
+    CAP_ALAS.forEach(a => {
+      const total = caps.totals[a.ala] || 0;
+      html += `<div class="month-price-label">${a.label}<span style="color:var(--tx3);font-weight:400">&nbsp;/${total}</span></div>`;
+      html += `<div class="month-price-canvas" style="min-height:28px" data-cap-ala="${a.ala}"><div class="price-cells">`;
+      days.forEach(d => {
+        const ds       = isoDate(curYear, curMonth, d);
+        const row      = caps.byKey[`${a.ala}|${ds}`];
+        const total2   = total;
+        const sellable = row ? row.sellable : total2;
+        const reserved = row ? row.reserved : 0;
+        const cap      = row ? row.cap : total2;
+        const hasCap   = row ? row.has_cap : false;
+        const evs      = getEventsForDate(ds);
+        const evBg     = evs.length ? (evs.some(e => e.type === 'regional') ? 'background:rgba(168,85,247,.1)' : 'background:rgba(184,134,0,.1)') : '';
+        let cls = 'p-baixa';
+        if (sellable === 0) cls = 'p-expensive';      // nada à venda → vermelho
+        else if (hasCap)    cls = 'p-alta';            // teto manual ativo → dourado
+        const tip = `Ala ${a.ala} · ${fmtDateBR(ds)}: ${sellable} à venda — teto ${cap}${hasCap ? ' (manual)' : ' (cheio)'} · ${reserved} reservado${reserved !== 1 ? 's' : ''} · total ${total2}`;
+        html += `<div class="price-cell cap-cell ${cls}" title="${escHtml(tip)}" style="${evBg}">
+          <span class="pc-final">${sellable}</span>${hasCap ? `<span class="price-base-ref">teto ${cap}</span>` : ''}
+        </div>`;
+      });
+      html += '</div></div>';
+    });
+
     /* Competitor pricing section (visible only when competitorMode=true) */
     if (competitorMode && compData) {
       html += `<div class="month-section" style="display:flex;align-items:center;gap:var(--sp-3)">
@@ -1039,6 +1090,9 @@
 
     /* Drag na linha de preço de uma ala → travar/destravar preço absoluto */
     bindPriceDrag(cont, daysInMonth);
+
+    /* Drag na linha de disponibilidade de uma ala → definir teto de venda */
+    bindCapDrag(cont, daysInMonth);
   }
 
   function getDayFromX(offsetX, totalWidth, daysInMonth) {
@@ -1159,6 +1213,123 @@
     setTimeout(() => {
       document.addEventListener('mousedown', onPriceOutside, true);
       document.addEventListener('keydown', onPriceEsc, true);
+    }, 0);
+  }
+
+  /* ── Definir teto de venda por ala/data (DEC-023) ─────────────────────── */
+  function bindCapDrag(cont, daysInMonth) {
+    let drag = { active: false, ala: null, startDay: 0, endDay: 0 };
+
+    cont.querySelectorAll('.month-price-canvas[data-cap-ala]').forEach(canvas => {
+      const ala = canvas.dataset.capAla;
+      let selEl = null;
+
+      canvas.addEventListener('mousedown', e => {
+        closeCapEdit();
+        cont.querySelectorAll('.month-price-canvas[data-cap-ala] .drag-sel').forEach(el => el.remove());
+        drag = { active: true, ala, startDay: dayFromEvent(e, canvas, daysInMonth), endDay: 0 };
+        selEl = document.createElement('div');
+        selEl.className = 'drag-sel';
+        canvas.appendChild(selEl);
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!drag.active || drag.ala !== ala || !selEl) return;
+        drag.endDay = dayFromEvent(e, canvas, daysInMonth);
+        const s  = Math.min(drag.startDay, drag.endDay);
+        const en = Math.max(drag.startDay, drag.endDay);
+        selEl.style.left  = (s - 1) / daysInMonth * 100 + '%';
+        selEl.style.width = Math.max(1, en - s + 1) / daysInMonth * 100 + '%';
+      });
+
+      canvas.addEventListener('mouseup', e => {
+        if (!drag.active || drag.ala !== ala) return;
+        drag.active = false;
+        if (selEl) { selEl.remove(); selEl = null; }
+        const s  = Math.min(drag.startDay, drag.endDay || drag.startDay);
+        const en = Math.max(drag.startDay, drag.endDay || drag.startDay);
+        const from = isoDate(curYear, curMonth, s);
+        const to   = isoDate(curYear, curMonth, en); // intervalo INCLUSIVO
+        showCapEdit(ala, from, to, e.clientX, e.clientY);
+      });
+    });
+
+    cont.addEventListener('mouseleave', () => {
+      drag.active = false;
+      cont.querySelectorAll('.month-price-canvas[data-cap-ala] .drag-sel').forEach(el => el.remove());
+    });
+  }
+
+  let _capEditEl = null;
+  function closeCapEdit() {
+    if (_capEditEl) { _capEditEl.remove(); _capEditEl = null; }
+    document.removeEventListener('mousedown', onCapOutside, true);
+    document.removeEventListener('keydown', onCapEsc, true);
+  }
+  function onCapOutside(e) { if (_capEditEl && !_capEditEl.contains(e.target)) closeCapEdit(); }
+  function onCapEsc(e) { if (e.key === 'Escape') closeCapEdit(); }
+
+  function showCapEdit(ala, from, to, x, y) {
+    closeCapEdit();
+    const total = alaTotals[ala] || 0;
+    const dias  = nightsBetween(from, to) + 1; // intervalo inclusivo
+    const pop = document.createElement('div');
+    pop.className = 'price-edit-pop';
+    pop.innerHTML = `
+      <div class="pe-title">Quartos à venda — Ala ${escHtml(ala)}</div>
+      <div class="pe-range">${fmtDateBR(from)} → ${fmtDateBR(to)} · ${dias} dia${dias !== 1 ? 's' : ''} · total da ala: ${total}</div>
+      <label class="pe-label" for="cap-count">Quantos quartos disponíveis (0–${total})</label>
+      <input class="input" type="number" id="cap-count" min="0" max="${total}" step="1" placeholder="${total}">
+      <div id="cap-err" class="pe-err" style="display:none"></div>
+      <div class="pe-actions">
+        <button class="btn btn-primary btn-sm" id="cap-apply">Aplicar</button>
+        <button class="btn btn-secondary btn-sm" id="cap-open">Abrir tudo (${total})</button>
+        <button class="btn btn-secondary btn-sm" id="cap-close-all">Fechar tudo (0)</button>
+        <button class="btn btn-ghost btn-sm" id="cap-cancel">Cancelar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    _capEditEl = pop;
+
+    const pw = 250, ph = pop.offsetHeight || 210;
+    pop.style.left = Math.min(x, window.innerWidth  - pw - 12) + 'px';
+    pop.style.top  = Math.min(y, window.innerHeight - ph - 12) + 'px';
+
+    const inp   = pop.querySelector('#cap-count');
+    const errEl = pop.querySelector('#cap-err');
+    inp.focus();
+    function showErr(m, warn) { errEl.textContent = m; errEl.style.display = 'block'; errEl.style.color = warn ? '#eab308' : '#f87171'; }
+
+    async function applyCount(count) {
+      if (!Number.isInteger(count) || count < 0 || count > total) {
+        return showErr(`Digite um número entre 0 e ${total}.`);
+      }
+      const btns = pop.querySelectorAll('.btn'); btns.forEach(b => b.disabled = true);
+      try {
+        const resp = await apiSend('PATCH', '/api/availability/caps', { ala, from, to, available_count: count });
+        if (!resp?.success) throw new Error(resp?.message || 'Erro ao aplicar');
+        capsCache = {};
+        if (resp.warnings && resp.warnings.length) {
+          // Teto não derruba reserva confirmada — avisa as datas em que cap < reservado
+          const ds = resp.warnings.map(w => `${fmtDateBR(w.date)} (${w.reserved} reserv.)`).join(', ');
+          showErr(`Aplicado. Atenção: já reservado acima do teto em ${ds}. Essas reservas seguem; o teto só limita vendas novas.`, true);
+          renderMonth();
+          pop.querySelector('#cap-apply').textContent = 'OK';
+          btns.forEach(b => { if (b.id === 'cap-cancel' || b.id === 'cap-apply') b.disabled = false; });
+          pop.querySelector('#cap-apply').onclick = closeCapEdit;
+        } else {
+          closeCapEdit(); renderMonth();
+        }
+      } catch (e) { showErr(e.message); btns.forEach(b => b.disabled = false); }
+    }
+
+    pop.querySelector('#cap-cancel').addEventListener('click', closeCapEdit);
+    pop.querySelector('#cap-apply').addEventListener('click', () => applyCount(parseInt(inp.value, 10)));
+    pop.querySelector('#cap-open').addEventListener('click', () => applyCount(total));
+    pop.querySelector('#cap-close-all').addEventListener('click', () => applyCount(0));
+
+    setTimeout(() => {
+      document.addEventListener('mousedown', onCapOutside, true);
+      document.addEventListener('keydown', onCapEsc, true);
     }, 0);
   }
 

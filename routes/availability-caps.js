@@ -7,8 +7,10 @@
  *   GET   /api/availability/caps?from=YYYY-MM-DD&to=YYYY-MM-DD
  *   PATCH /api/availability/caps   body: { ala, from, to, available_count, note? }
  *
- * Semântica de período: [from, to) — checkout/fim EXCLUÍDO (mesma convenção de
- * availability-block.js e da diária da pousada). Datas como YYYY-MM-DD ou DD/MM/YYYY.
+ * Semântica de período: from..to INCLUSIVO (cada dia do calendário recebe o teto),
+ * aceitando dia único (from === to). Mesma convenção do recurso irmão de preço
+ * travado (room_price_overrides), que também é acionado por arraste na linha da ala.
+ * Datas como YYYY-MM-DD ou DD/MM/YYYY.
  *
  * Regra (DEC-023): vender = max(0, cap − reservados_físicos). O teto NUNCA derruba
  * reserva confirmada; quando cap < reservados, a resposta sinaliza em `warnings`.
@@ -17,9 +19,23 @@
 const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
 const { ok, fail, serverError } = require('../services/utils/response');
-const { toDB, dateRange } = require('../services/utils/dates');
+const { toDB } = require('../services/utils/dates');
 
 const router = Router();
+
+// Datas inclusivas from..to (YYYY-MM-DD), em UTC para evitar shift de fuso —
+// mesma convenção de routes/pricing.js (room_price_overrides), o recurso irmão
+// que também é acionado por "arraste na linha da ala" no calendário.
+function inclusiveDateRange(fromISO, toISO) {
+  const out = [];
+  const d = new Date(fromISO + 'T00:00:00Z');
+  const end = new Date(toISO + 'T00:00:00Z');
+  while (d <= end) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return out;
+}
 
 const VALID_ALAS = ['A', 'B', 'C'];
 
@@ -55,8 +71,8 @@ router.get('/', async (req, res) => {
   } catch (e) {
     return fail(res, 'invalid_date', e.message);
   }
-  if (fromISO >= toISO) {
-    return fail(res, 'invalid_range', 'to must be after from');
+  if (fromISO > toISO) {
+    return fail(res, 'invalid_range', 'from must be <= to');
   }
 
   let totals;
@@ -70,7 +86,7 @@ router.get('/', async (req, res) => {
     .from('vw_ala_sellable')
     .select('ala, date, total_rooms, cap, reserved, sellable, has_cap, note')
     .gte('date', fromISO)
-    .lt('date', toISO)
+    .lte('date', toISO)
     .order('date', { ascending: true })
     .order('ala', { ascending: true });
 
@@ -102,8 +118,8 @@ router.patch('/', async (req, res) => {
   } catch (e) {
     return fail(res, 'invalid_date', e.message);
   }
-  if (fromISO >= toISO) {
-    return fail(res, 'invalid_range', 'to must be after from');
+  if (fromISO > toISO) {
+    return fail(res, 'invalid_range', 'from must be <= to');
   }
 
   // Teto não pode exceder o total físico da ala (abrir tudo = total)
@@ -119,7 +135,7 @@ router.patch('/', async (req, res) => {
       `available_count (${count}) não pode exceder o total da ala ${ala} (${total})`);
   }
 
-  const dates = dateRange(fromISO, toISO);
+  const dates = inclusiveDateRange(fromISO, toISO);
   if (dates.length === 0) {
     return fail(res, 'empty_range', 'período não contém datas');
   }
@@ -144,7 +160,7 @@ router.patch('/', async (req, res) => {
     .select('date, reserved, cap')
     .eq('ala', ala)
     .gte('date', fromISO)
-    .lt('date', toISO);
+    .lte('date', toISO);
 
   if (sellErr) return serverError(res, sellErr);
 
