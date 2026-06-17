@@ -664,7 +664,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-title" id="modal-maint-title">Manutenção</div>
-        <div class="modal-sub" id="modal-maint-sub">Registrar ocorrência de manutenção</div>
+        <div class="modal-sub" id="modal-maint-sub">Bloqueia o quarto para vendas no período informado</div>
       </div>
       <button class="btn btn-ghost btn-icon" data-close="modal-maint">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -672,6 +672,10 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="maint-code">
+      <div id="maint-active-banner" style="display:none;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-4);padding:var(--sp-3);background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:var(--r-md);color:var(--gold);font-size:.875rem">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <span id="maint-active-text">Em manutenção</span>
+      </div>
       <div class="field-group">
         <label class="field-label" for="maint-type">Tipo de ocorrência</label>
         <select class="input" id="maint-type">
@@ -687,7 +691,7 @@
         <select class="input" id="maint-priority">
           <option value="normal">Normal</option>
           <option value="urgent">Urgente</option>
-          <option value="critical">Crítico — bloquear quarto</option>
+          <option value="critical">Crítico</option>
         </select>
       </div>
       <div class="field-group">
@@ -697,6 +701,7 @@
       <div class="field-group">
         <label class="field-label" for="maint-estimated">Previsão de conclusão</label>
         <input class="input" type="date" id="maint-estimated">
+        <p class="field-hint">Último dia em manutenção. Vazio = bloqueia somente hoje.</p>
       </div>
       <div style="margin-top:var(--sp-5)">
         <div style="font-size:.875rem;font-weight:600;color:var(--tx2);margin-bottom:var(--sp-3);display:flex;align-items:center;gap:var(--sp-2)">
@@ -710,6 +715,10 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-maint">Fechar</button>
+      <button class="btn btn-secondary" id="btn-end-maint" style="display:none;border-color:rgba(34,197,94,.4);color:var(--ok)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Encerrar manutenção
+      </button>
       <button class="btn btn-primary" id="btn-save-maint" style="background:var(--gold);border-color:var(--gold);color:#000">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
         Registrar ocorrência
@@ -977,6 +986,7 @@
   let currentView = 'grid';
   let pendingDeleteCode = null;
   let maintHistory = {};
+  let maintBlockRange = null;  // { from, to } ISO do bloqueio de manutenção ativo do quarto aberto (to exclusivo)
   let activeResvByRoom = {};   // room code → reserva ativa cobrindo hoje
   let productsCache = [];
   let comandaCtx = null;       // { reservation, totals } da comanda aberta
@@ -1240,7 +1250,7 @@
               <div class="room-mc-name">${esc(r.name)}</div>
               <div class="room-mc-svg">${roomSVG(s)}</div>
               <div class="room-mc-foot">
-                <span class="room-mc-st ${s}">${resv ? 'Ocupado' : statusLabel(s)}</span>
+                <span class="room-mc-st ${s}">${resv ? 'Ocupado' : (s === 'maintenance' ? '🔧 ' + statusLabel(s) : statusLabel(s))}</span>
                 <span style="font-size:.65rem;color:var(--tx3)">
                   <span title="Frigobar: ${FRIG_LABEL[r.frigobar_status || 'ok']}">${FRIG_ICON[r.frigobar_status || 'ok']}</span>
                   ${r.max_guests ? r.max_guests + 'px' : ''}
@@ -1396,7 +1406,7 @@
   });
 
   // ── Maintenance modal ────────────────────────────────────────
-  function openMaintModal(code, name) {
+  async function openMaintModal(code, name) {
     document.getElementById('maint-code').value          = code;
     document.getElementById('modal-maint-title').textContent = `Manutenção — ${name || code}`;
     document.getElementById('maint-type').value     = 'cleaning';
@@ -1405,6 +1415,43 @@
     document.getElementById('maint-estimated').value = '';
     renderMaintHistory(code);
     openModal('modal-maint');
+    await refreshMaintState(code);
+  }
+
+  // Lê o estado real de manutenção do quarto da FONTE ÚNICA (availability blocked
+  // via /api/occupancy/calendar). Mostra o banner "em manutenção até DD/MM" e o
+  // botão "Encerrar manutenção"; guarda o período para o unblock.
+  async function refreshMaintState(code) {
+    const banner = document.getElementById('maint-active-banner');
+    const endBtn = document.getElementById('btn-end-maint');
+    maintBlockRange = null;
+    banner.style.display = 'none';
+    endBtn.style.display = 'none';
+
+    const to = addDaysISO(TODAY_ISO, 730);   // janela de 2 anos à frente
+    const res = await apiFetch(`/api/occupancy/calendar?from=${TODAY_ISO}&to=${to}`);
+    // ignora se o modal já foi fechado/trocado de quarto enquanto carregava
+    if (document.getElementById('maint-code').value !== code) return;
+    if (!res || res.success === false) return;
+
+    const blocked = (res.rows || [])
+      .filter(r => r.room_code === code && r.status === 'blocked' && r.date >= TODAY_ISO)
+      .map(r => r.date)
+      .sort();
+    if (!blocked.length) return;
+
+    const lastDay = blocked[blocked.length - 1];
+    maintBlockRange = { from: blocked[0], to: addDaysISO(lastDay, 1) };  // to exclusivo
+    document.getElementById('maint-active-text').textContent =
+      `🔧 Em manutenção até ${fmtDate(lastDay)} — fora das vendas no período.`;
+    banner.style.display = 'flex';
+    endBtn.style.display = '';
+  }
+
+  function addDaysISO(iso, n) {
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
   function renderMaintHistory(code) {
@@ -1443,44 +1490,60 @@
     if (!maintHistory[code]) maintHistory[code] = [];
     maintHistory[code].push(entry);
 
-    // Prioridade "Crítico" bloqueia o quarto DE VERDADE: grava em availability
-    // (status='blocked') via API — fonte única lida por calendar, bookings e pela
-    // disponibilidade ("quartos à venda"). Bloqueio vai de hoje até a data prevista
-    // (inclusive); sem data = só hoje. As demais prioridades seguem como registro.
-    if (priority === 'critical') {
-      const lastDay = estimated || TODAY_ISO;        // último dia ainda em manutenção
-      if (lastDay < TODAY_ISO) {
-        showToast('A data prevista não pode ser anterior a hoje.', 'warn');
-        return;
-      }
-      const end = new Date(lastDay + 'T00:00:00');
-      end.setDate(end.getDate() + 1);                // rota bloqueia [from, to) exclusivo
-      const to = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')}`;
-      const reason = `Manutenção: ${maintTypeLabel(type)}${note ? ' — ' + note : ''}`;
+    // Registrar manutenção GRAVA bloqueio real em availability (status='blocked')
+    // via API — FONTE ÚNICA lida por calendar, bookings e pela disponibilidade
+    // ("quartos à venda"). Bloqueio vai de hoje até a previsão (inclusive); sem
+    // previsão = só hoje. Persiste no banco: sobrevive ao recarregar a página.
+    const lastDay = estimated || TODAY_ISO;          // último dia ainda em manutenção
+    if (lastDay < TODAY_ISO) {
+      showToast('A data prevista não pode ser anterior a hoje.', 'warn');
+      return;
+    }
+    const to = addDaysISO(lastDay, 1);               // rota bloqueia [from, to) exclusivo
+    const reason = `Manutenção: ${maintTypeLabel(type)}${note ? ' — ' + note : ''}`;
 
-      const btn = document.getElementById('btn-save-maint');
-      btn.disabled = true; btn.textContent = 'Salvando…';
-      const res = await apiFetch('/api/availability/block', {
-        method: 'PATCH',
-        body: JSON.stringify({ room_type: code, from: TODAY_ISO, to, reason }),
-      });
-      btn.disabled = false; btn.textContent = 'Registrar ocorrência';
+    const btn = document.getElementById('btn-save-maint');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const res = await apiFetch('/api/availability/block', {
+      method: 'PATCH',
+      body: JSON.stringify({ room_type: code, from: TODAY_ISO, to, reason }),
+    });
+    btn.disabled = false; btn.textContent = 'Registrar ocorrência';
 
-      if (!res || res.success === false) {
-        showToast(res?.message || 'Não foi possível bloquear o quarto para manutenção.', 'err');
-        return;
-      }
-
-      renderMaintHistory(code);
-      document.getElementById('maint-note').value = '';
-      showToast(`Quarto ${code} em manutenção até ${fmtDate(lastDay)}.`, 'ok');
-      await loadRooms();   // recarrega o status canônico (fonte única)
+    if (!res || res.success === false) {
+      showToast(res?.message || 'Não foi possível bloquear o quarto para manutenção.', 'err');
       return;
     }
 
     renderMaintHistory(code);
     document.getElementById('maint-note').value = '';
-    showToast(`Ocorrência registrada para ${code}.`, 'ok');
+    showToast(`Quarto ${code} em manutenção até ${fmtDate(lastDay)}.`, 'ok');
+    await loadRooms();                 // recarrega o status canônico (fonte única)
+    await refreshMaintState(code);     // atualiza banner + botão "Encerrar"
+  });
+
+  // Encerrar manutenção: libera (unblock) o período bloqueado do quarto. Só mexe
+  // em linhas status='blocked' (a rota preserva 'reserved'). Volta para as vendas.
+  document.getElementById('btn-end-maint').addEventListener('click', async () => {
+    const code = document.getElementById('maint-code').value;
+    if (!maintBlockRange) return;
+
+    const btn = document.getElementById('btn-end-maint');
+    btn.disabled = true;
+    const res = await apiFetch('/api/availability/unblock', {
+      method: 'PATCH',
+      body: JSON.stringify({ room_type: code, from: maintBlockRange.from, to: maintBlockRange.to }),
+    });
+    btn.disabled = false;
+
+    if (!res || res.success === false) {
+      showToast(res?.message || 'Não foi possível encerrar a manutenção.', 'err');
+      return;
+    }
+
+    showToast(`Manutenção do quarto ${code} encerrada.`, 'ok');
+    await loadRooms();
+    await refreshMaintState(code);
   });
 
   // ── Delete modal ─────────────────────────────────────────────
