@@ -542,16 +542,17 @@
     { ala: 'B', label: 'Ala B' },
     { ala: 'C', label: 'Ala C' },
   ];
+  // DEC-024: grafia canônica do banco — checkedin/checkedout (sem underscore)
   const STATUS_COLORS = {
-    confirmed:     'rgba(59,130,246,.8)',
-    deposit_paid:  'rgba(168,85,247,.8)',
-    checked_in:    'rgba(34,197,94,.85)',
-    checked_out:   'rgba(148,163,184,.55)',
-    pending:       'rgba(234,179,8,.7)',
+    confirmed:    'rgba(59,130,246,.8)',
+    deposit_paid: 'rgba(168,85,247,.8)',
+    checkedin:    'rgba(34,197,94,.85)',
+    checkedout:   'rgba(148,163,184,.55)',
+    pending:      'rgba(234,179,8,.7)',
   };
   const STATUS_LABELS = {
-    confirmed: 'Confirmado', deposit_paid: 'Sinal pago', checked_in: 'Hospedado',
-    checked_out: 'Finalizado', pending: 'Pendente', cancelled: 'Cancelado',
+    confirmed: 'Confirmado', deposit_paid: 'Sinal pago', checkedin: 'Hospedado',
+    checkedout: 'Finalizado', pending: 'Pendente', cancelled: 'Cancelado',
   };
   const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
