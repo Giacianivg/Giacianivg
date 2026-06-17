@@ -40,14 +40,16 @@ const DEFAULT_CONFIG = {
   discount7PlusPct: 10,
   discount14PlusPct: 15,
   petFeePerDay: 20,
+  // minNights espelha special_periods.min_nights (seeds = 2). É a fonte única
+  // da estadia mínima: datas fora destes ranges aceitam diária única (mínimo 1).
   feriadoRanges: [
-    { startMd: '02-13', endMd: '02-18', label: 'Carnaval 2026' },
-    { startMd: '03-28', endMd: '04-06', label: 'Semana Santa/Páscoa 2026' },
-    { startMd: '06-04', endMd: '06-07', label: 'EBAA/Corpus Christi 2026' },
-    { startMd: '09-05', endMd: '09-07', label: 'Independência 2026' },
-    { startMd: '10-10', endMd: '10-12', label: 'Aparecida 2026' },
-    { startMd: '11-20', endMd: '11-22', label: 'Consciência Negra 2026' },
-    { startMd: '12-24', endMd: '01-02', label: 'Natal/Réveillon' },
+    { startMd: '02-13', endMd: '02-18', label: 'Carnaval 2026',            minNights: 2 },
+    { startMd: '03-28', endMd: '04-06', label: 'Semana Santa/Páscoa 2026', minNights: 2 },
+    { startMd: '06-04', endMd: '06-07', label: 'EBAA/Corpus Christi 2026', minNights: 2 },
+    { startMd: '09-05', endMd: '09-07', label: 'Independência 2026',       minNights: 2 },
+    { startMd: '10-10', endMd: '10-12', label: 'Aparecida 2026',           minNights: 2 },
+    { startMd: '11-20', endMd: '11-22', label: 'Consciência Negra 2026',   minNights: 2 },
+    { startMd: '12-24', endMd: '01-02', label: 'Natal/Réveillon',          minNights: 2 },
   ],
   packages: [{
     nome: 'Escapada Romântica Páscoa',
@@ -88,7 +90,7 @@ async function fetchPricingConfig() {
     // dados a resolver com o Founder; aqui preservamos o comportamento atual.
     supabaseAdmin.from('rooms').select('code, base_price_baixa, base_price_media').in('code', QUOTABLE_CODES),
     supabaseAdmin.from('settings').select('key, value').in('key', PRICING_KEYS),
-    supabaseAdmin.from('special_periods').select('label, start_md, end_md').eq('active', true),
+    supabaseAdmin.from('special_periods').select('label, start_md, end_md, min_nights').eq('active', true),
     supabaseAdmin.from('packages').select('name, description, start_date, end_date, nights, max_guests, price, includes').eq('active', true),
   ]);
 
@@ -120,6 +122,7 @@ async function fetchPricingConfig() {
   if (!periodsRes.error && periodsRes.data?.length) {
     cfg.feriadoRanges = periodsRes.data.map(p => ({
       startMd: p.start_md, endMd: p.end_md, label: p.label,
+      minNights: Number.isFinite(p.min_nights) ? p.min_nights : 2,
     }));
   }
 
@@ -198,14 +201,19 @@ function calcNights(entrada, saida) {
 
 // ─── Lógica de temporada/preço (lê do config) ───────────────────────────────
 
-function isFeriado(date, cfg) {
+/** Retorna o período especial (special_periods) que cobre a data, ou null. */
+function findFeriadoRange(date, cfg) {
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
   const md = `${mm}-${dd}`;
-  return cfg.feriadoRanges.some(({ startMd, endMd }) => {
+  return cfg.feriadoRanges.find(({ startMd, endMd }) => {
     if (startMd <= endMd) return md >= startMd && md <= endMd;
     return md >= startMd || md <= endMd; // cruza virada do ano
-  });
+  }) || null;
+}
+
+function isFeriado(date, cfg) {
+  return findFeriadoRange(date, cfg) !== null;
 }
 
 function detectSeason(dateStr, cfg) {
@@ -259,26 +267,19 @@ function calculateQuotation(params) {
 
   const numPessoas = parseInt(pessoas);
 
-  // Validacao de minimo de noites — apenas em feriados/eventos especiais
+  // Validação de mínimo de noites — fonte única: special_periods.min_nights.
+  // Datas normais aceitam diária única (mínimo 1). O mínimo de 2+ noites vale
+  // só nas datas de um período especial e respeita o min_nights cadastrado.
   const entradaDate = parseDate(data_entrada);
-  const entradaSeason = detectSeason(data_entrada, cfg);
-  const isFeriadoStart = entradaSeason === 'feriado';
-  const minNights = isFeriadoStart ? 2 : 1;
+  const feriadoRange = findFeriadoRange(entradaDate, cfg);
+  const minNights = feriadoRange ? (feriadoRange.minNights ?? 2) : 1;
 
   if (nights < minNights) {
-    // Identifica qual evento exige o mínimo
-    const feriadoInfo = cfg.feriadoRanges.find(({ startMd, endMd }) => {
-      const mm = String(entradaDate.getMonth() + 1).padStart(2, '0');
-      const dd = String(entradaDate.getDate()).padStart(2, '0');
-      const md = `${mm}-${dd}`;
-      if (startMd <= endMd) return md >= startMd && md <= endMd;
-      return md >= startMd || md <= endMd;
-    });
-    const reason = feriadoInfo?.label || 'este período especial';
+    const reason = feriadoRange?.label || 'este período especial';
     return {
-      error: `Para ${reason}, nossa estadia mínima é de 2 noites`,
+      error: `Para ${reason}, nossa estadia mínima é de ${minNights} noites`,
       minNights,
-      suggestion: `Posso montar a cotação para 2 noites?`,
+      suggestion: `Posso montar a cotação para ${minNights} noites?`,
     };
   }
 
