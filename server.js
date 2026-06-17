@@ -202,6 +202,7 @@ app.use('/api/availability/block',         require('./routes/availability-block'
 app.use('/api/availability/unblock',       require('./routes/availability-unblock'));
 app.use('/api/availability/caps',          require('./routes/availability-caps'));
 app.use('/api/availability',               require('./routes/availability'));
+app.use('/api/occupancy',                  require('./routes/occupancy'));
 app.use('/api/proposals',                  require('./routes/proposals'));
 app.use('/api/reservations/confirm',       require('./routes/reservations-confirm'));
 app.use('/api/reservations',               require('./routes/reservations'));
