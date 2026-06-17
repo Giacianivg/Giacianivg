@@ -91,6 +91,17 @@
     }
     .resv-bar:hover { filter: brightness(1.2); transform: scaleY(1.06); }
 
+    /* Marcador de saída (check-out): triângulo diagonal sup-esquerdo na célula do
+       dia de saída — sinal operacional "liberando 14h / preparar quarto". Fica
+       ACIMA da barra de entrada (z-index 3) cobrindo só o canto, então no turnover
+       vê-se saída (canto) + entrada (resto) = split diagonal. pointer-events:none
+       preserva o clique na barra. NÃO altera disponibilidade — o dia segue vendável. */
+    .checkout-wedge {
+      position: absolute; top: 0; bottom: 0;
+      z-index: 3; pointer-events: none;
+      background: linear-gradient(135deg, rgba(59,130,246,.55) 0%, rgba(59,130,246,.55) 45%, transparent 47%);
+    }
+
     /* Status colors */
     .status-pending    { background: rgba(234,179,8,.22); color: #ca8a04; border: 1px solid rgba(234,179,8,.35); }
     .status-confirmed  { background: rgba(34,197,94,.2);  color: #16a34a; border: 1px solid rgba(34,197,94,.35); }
@@ -612,6 +623,21 @@ function renderTimeline() {
         const sc    = `status-${r.status}`;
         html += `<div class="resv-bar ${sc}" style="left:${leftPct}%;width:calc(${widPct}% - 2px)"
           data-id="${r.id}" title="${name} · ${r.checkin_date} → ${r.checkout_date}${isLegacyAla ? ' (reserva por ala — quarto a definir)' : ''}">${name}</div>`;
+      }
+
+      // Marcadores de saída (check-out): triângulo diagonal na célula do dia de
+      // saída. Sinal operacional — o quarto está sendo liberado/preparado (14h),
+      // mas o dia segue VENDÁVEL (não muda disponibilidade). Quando há entrada no
+      // mesmo dia/quarto, a barra de entrada preenche o resto → split saída/entrada.
+      const mStart = new Date(curYear, curMonth, 1);
+      const mEnd   = new Date(curYear, curMonth+1, 1);
+      for (const r of roomResvs) {
+        if (r.status === 'cancelled') continue;
+        const co = new Date(r.checkout_date + 'T00:00:00');
+        if (co < mStart || co >= mEnd) continue;
+        const dayIdx = (co - mStart) / 86400000;
+        const gname  = DS.esc(r.leads?.name || '?');
+        html += `<div class="checkout-wedge" style="left:${dayIdx/daysInMonth*100}%;width:${1/daysInMonth*100}%" title="Saída ${gname} · libera 14h (dia vendável)"></div>`;
       }
 
       html += `</div>`;
