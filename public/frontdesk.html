@@ -526,36 +526,52 @@
   }
 
   /* ── Load all data ───────────────────────────────────────────────────── */
+  // DEC-024: check-ins/outs/in-house e status dos quartos vêm da FONTE ÚNICA
+  // (/api/occupancy), com regra canônica (fronteira de checkout, exclusão de
+  // checkedout, fuso BR, saldo real). Não há mais derivação local divergente.
   async function loadData() {
-    const [checkinRes, recentRes, roomsRes, alertsRes, upcomingRes] = await Promise.all([
-      apiFetch(`/api/reservations?checkin_from=${TODAY}&checkin_to=${TODAY}&limit=50`),
-      apiFetch(`/api/reservations?checkin_from=${addDays(TODAY,-45)}&checkin_to=${TODAY}&limit=200`),
-      apiFetch('/api/rooms'),
+    const [board, roomsTodayRes, alertsRes, upcomingRes] = await Promise.all([
+      apiFetch('/api/occupancy/board'),
+      apiFetch('/api/occupancy/rooms-today'),
       apiFetch('/api/alerts').catch(() => null),
       apiFetch(`/api/reservations?checkin_from=${addDays(TODAY,1)}&checkin_to=${addDays(TODAY,7)}&limit=50`),
     ]);
 
-    // Check-ins today
-    const checkins = (checkinRes?.reservations || []).filter(r => r.status !== 'cancelled');
-    // Check-outs today (filter from recent)
-    const checkouts = (recentRes?.reservations || []).filter(r =>
-      r.checkout_date === TODAY && r.status !== 'cancelled');
+    const checkins  = (board?.checkins  || []).map(mapBoardRow);
+    const checkouts = (board?.checkouts || []).map(mapBoardRow);
+    const roomsToday = roomsTodayRes?.rooms || [];
 
     renderCheckins(checkins);
     renderCheckouts(checkouts);
-    renderRooms(roomsRes?.rooms || []);
+    renderRooms(roomsToday);
     renderAlerts(alertsRes, checkins, checkouts);
     renderUpcoming(upcomingRes?.reservations || []);
-    renderStats(checkins, checkouts, roomsRes?.rooms || []);
+    renderStats(checkins, checkouts, roomsToday);
+  }
+
+  // Converte uma linha do board canônico no formato esperado pelos cards.
+  // balance_amount = saldo REAL (total+consumo−sinal−pagamentos); total = room_total.
+  function mapBoardRow(b) {
+    return {
+      id:             b.reservation_id,
+      status:         b.status,
+      leads:          { name: b.guest_name },
+      checkin_date:   b.checkin_date,
+      checkout_date:  b.checkout_date,
+      guests:         b.guests,
+      room_type:      b.room_type,
+      balance_amount: b.balance_due,
+      total_amount:   b.room_total,
+    };
   }
 
   /* ── Stats ───────────────────────────────────────────────────────────── */
+  // rooms vêm de /api/occupancy/rooms-today: status canônico available|occupied|blocked
   function renderStats(checkins, checkouts, rooms) {
-    // /api/rooms retorna os quartos físicos individuais (A1–C5) desde a migration 012
     const totalPins = rooms.length;
     let freeCount = 0, occCount = 0;
     rooms.forEach(r => {
-      if (r.today_status === 'available') freeCount += 1;
+      if (r.status === 'available') freeCount += 1;
       else occCount += 1;
     });
     const occPct = totalPins > 0 ? Math.round(occCount / totalPins * 100) : 0;
@@ -843,15 +859,15 @@
       return;
     }
 
+    // DEC-024: status canônico de /api/occupancy/rooms-today
     const statusCfg = {
       available: { dot: '#22c55e', label: 'Disponível' },
-      blocked:   { dot: '#ef4444', label: 'Ocupado'    },
-      partial:   { dot: '#eab308', label: 'Parcial'    },
-      on_request:{ dot: '#6366f1', label: 'Sob consulta'},
+      occupied:  { dot: '#3b82f6', label: 'Ocupado'    },
+      blocked:   { dot: '#ef4444', label: 'Bloqueado'  },
     };
 
     el.innerHTML = rooms.map(r => {
-      const cfg = statusCfg[r.today_status] || { dot: '#94a3b8', label: 'Sem dados' };
+      const cfg = statusCfg[r.status] || { dot: '#94a3b8', label: 'Sem dados' };
       return `<div class="room-status-item">
         <div class="room-dot" style="background:${cfg.dot}"></div>
         <div class="room-name-col">

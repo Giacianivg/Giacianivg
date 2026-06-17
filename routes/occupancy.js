@@ -28,7 +28,7 @@ function todayBR() {
 router.get('/board', async (req, res) => {
   const { data, error } = await supabaseAdmin
     .from('vw_today_board')
-    .select('reservation_id, room_type, checkin_date, checkout_date, status, guests, guest_name, balance_due, is_checkin_today, is_checkout_today, is_in_house');
+    .select('reservation_id, room_type, checkin_date, checkout_date, status, guests, guest_name, room_total, charges_total, balance_due, is_checkin_today, is_checkout_today, is_in_house');
 
   if (error) return serverError(res, error);
 
