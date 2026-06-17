@@ -200,6 +200,7 @@ app.use('/api/conversations',              require('./routes/conversations'));
 app.use('/api/availability/calendar',      require('./routes/availability-calendar'));
 app.use('/api/availability/block',         require('./routes/availability-block'));
 app.use('/api/availability/unblock',       require('./routes/availability-unblock'));
+app.use('/api/availability/caps',          require('./routes/availability-caps'));
 app.use('/api/availability',               require('./routes/availability'));
 app.use('/api/proposals',                  require('./routes/proposals'));
 app.use('/api/reservations/confirm',       require('./routes/reservations-confirm'));
