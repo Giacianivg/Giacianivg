@@ -411,6 +411,8 @@ const STATUS_LABEL = {
 // ─── State ───────────────────────────────────────────────────────────────────
 
 let allReservations = [];
+let boardData    = null;   // DEC-024: board canônico do dia (/api/occupancy/board)
+let totalRooms   = 20;     // total de quartos físicos ativos (de /api/occupancy/rooms-today)
 let currentView  = 'timeline';
 let curYear, curMonth; // 0-based month
 let searchDebounce = null;
@@ -460,6 +462,14 @@ async function loadAndRender() {
     const ids = new Set(allReservations.map(r => r.id));
     extra.forEach(r => { if (!ids.has(r.id)) allReservations.push(r); });
 
+    // DEC-024: KPIs de HOJE vêm da fonte única (sempre hoje, independe do mês visto)
+    const [board, roomsToday] = await Promise.all([
+      DS.api('/api/occupancy/board'),
+      DS.api('/api/occupancy/rooms-today'),
+    ]);
+    boardData  = board || null;
+    totalRooms = (roomsToday?.rooms || []).length || totalRooms;
+
   } catch(e) {
     document.getElementById('loading-state').innerHTML =
       `<div style="color:var(--err);padding:var(--sp-4)">Erro ao carregar: ${DS.esc(e.message)}</div>`;
@@ -474,13 +484,12 @@ async function loadAndRender() {
 // ─── KPIs ────────────────────────────────────────────────────────────────────
 
 function renderKPIs() {
-  const today = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
-  const checkins  = allReservations.filter(r => r.checkin_date  === today && ['confirmed','pending'].includes(r.status));
-  const checkouts = allReservations.filter(r => r.checkout_date === today && ['checkedin','confirmed'].includes(r.status));
-  // ocupado = reserva ativa cobrindo a data de hoje (não apenas check-in já registrado)
-  const occupied  = allReservations.filter(r =>
-    r.checkin_date <= today && r.checkout_date > today &&
-    ['confirmed','checkedin'].includes(r.status));
+  // DEC-024: chegando/saindo/ocupados de HOJE vêm do board canônico (fuso BR,
+  // exclui checkedout, fronteira de checkout correta) — sempre hoje, mesmo
+  // navegando entre meses.
+  const checkins  = boardData?.checkins  || [];
+  const checkouts = boardData?.checkouts || [];
+  const occupied  = boardData?.in_house  || [];
 
   // Revenue: confirmed + checkedin + checkedout this month
   const monStart = `${curYear}-${String(curMonth+1).padStart(2,'0')}-01`;
@@ -493,17 +502,17 @@ function renderKPIs() {
     <div class="kpi-card">
       <div class="kpi-label">Chegando hoje</div>
       <div class="kpi-value t-ok">${checkins.length}</div>
-      <div class="kpi-sub">${checkins.map(r=>DS.esc(r.leads?.name||r.room_type)).join(', ')||'Nenhum'}</div>
+      <div class="kpi-sub">${checkins.map(r=>DS.esc(r.guest_name||r.room_type)).join(', ')||'Nenhum'}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Saindo hoje</div>
       <div class="kpi-value t-royal">${checkouts.length}</div>
-      <div class="kpi-sub">${checkouts.map(r=>DS.esc(r.leads?.name||r.room_type)).join(', ')||'Nenhum'}</div>
+      <div class="kpi-sub">${checkouts.map(r=>DS.esc(r.guest_name||r.room_type)).join(', ')||'Nenhum'}</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Quartos ocupados</div>
-      <div class="kpi-value">${occupied.length}<span style="font-size:.9rem;color:var(--tx3);font-weight:400"> /22</span></div>
-      <div class="kpi-sub">${Math.round(occupied.length/22*100)}% ocupação agora</div>
+      <div class="kpi-value">${occupied.length}<span style="font-size:.9rem;color:var(--tx3);font-weight:400"> /${totalRooms}</span></div>
+      <div class="kpi-sub">${totalRooms ? Math.round(occupied.length/totalRooms*100) : 0}% ocupação agora</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Receita do mês</div>
