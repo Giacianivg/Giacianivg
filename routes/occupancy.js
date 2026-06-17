@@ -14,15 +14,11 @@
 const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
 const { ok, fail, serverError } = require('../services/utils/response');
+const { todayBR, totalPaid } = require('../services/occupancy/rules');
 
 const router = Router();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// "Hoje" em America/Sao_Paulo como YYYY-MM-DD (en-CA dá o formato ISO de data)
-function todayBR() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-}
 
 // GET /api/occupancy/board — board canônico do dia
 router.get('/board', async (req, res) => {
@@ -131,7 +127,7 @@ router.get('/checkouts', async (req, res) => {
 
   const checkouts = (resv || []).map(r => {
     const b = balById[r.id] || {};
-    const paid = Number(b.deposit_paid || 0) + Number(b.payments_confirmed || 0);
+    const paid = totalPaid(b);
     return {
       reservation_id: r.id,
       room_type:      r.room_type,
