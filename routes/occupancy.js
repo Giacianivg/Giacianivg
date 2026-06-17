@@ -97,4 +97,53 @@ router.get('/rooms-today', async (req, res) => {
   return ok(res, { date: today, rooms: list });
 });
 
+// GET /api/occupancy/checkouts?days=1|7|30 — histórico de check-outs realizados
+// Lê o MESMO registro canônico (reservations.status='checkedout' + checkout_at) e o
+// saldo da vw_reservation_balance. Ordenado do mais recente para o mais antigo.
+router.get('/checkouts', async (req, res) => {
+  const daysMap = { 1: 1, 7: 7, 30: 30 };
+  const days = daysMap[Number(req.query.days)] || 7;
+
+  // Janela em fuso BR (UTC-3): início = hoje − (days−1) à meia-noite BR.
+  const start = new Date(todayBR() + 'T00:00:00-03:00');
+  start.setDate(start.getDate() - (days - 1));
+  const cutoffISO = start.toISOString();
+
+  const { data: resv, error } = await supabaseAdmin
+    .from('reservations')
+    .select('id, room_type, checkout_date, checkout_at, leads!fk_res_lead(name)')
+    .eq('status', 'checkedout')
+    .gte('checkout_at', cutoffISO)
+    .order('checkout_at', { ascending: false });
+
+  if (error) return serverError(res, error);
+
+  const ids = (resv || []).map(r => r.id);
+  const balById = {};
+  if (ids.length) {
+    const { data: bals, error: bErr } = await supabaseAdmin
+      .from('vw_reservation_balance')
+      .select('reservation_id, room_total, charges_total, deposit_paid, payments_confirmed')
+      .in('reservation_id', ids);
+    if (bErr) return serverError(res, bErr);
+    for (const b of (bals || [])) balById[b.reservation_id] = b;
+  }
+
+  const checkouts = (resv || []).map(r => {
+    const b = balById[r.id] || {};
+    const paid = Number(b.deposit_paid || 0) + Number(b.payments_confirmed || 0);
+    return {
+      reservation_id: r.id,
+      room_type:      r.room_type,
+      guest_name:     r.leads?.name || null,
+      checkout_date:  r.checkout_date,
+      checkout_at:    r.checkout_at,
+      total_paid:     paid,
+      total:          Number(b.room_total || 0) + Number(b.charges_total || 0),
+    };
+  });
+
+  return ok(res, { days, count: checkouts.length, checkouts });
+});
+
 module.exports = router;

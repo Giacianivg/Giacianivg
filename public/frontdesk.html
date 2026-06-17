@@ -143,6 +143,11 @@
     .upcoming-table tr:last-child td { border-bottom: none; }
     .upcoming-table tr:hover td { background: var(--sur2); }
     .upcoming-table td:first-child { font-weight: 700; color: var(--tx1); }
+    /* Filtro segmentado (Check-outs realizados) */
+    .seg { display: flex; gap: 2px; background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); padding: 2px; }
+    .seg-btn { padding: 3px 10px; border: none; background: none; color: var(--tx3); font-size: .72rem; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    .seg-btn.active { background: var(--royal-bg); color: var(--royal-l); }
+    .co-paid-ref { color: var(--tx3); font-weight: 400; font-size: .72rem; }
     .date-col { white-space: nowrap; }
     .days-badge { display: inline-block; background: var(--royal-bg); color: var(--royal-l); font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 9999px; }
     .today-badge { display: inline-block; background: rgba(234,179,8,.15); color: #eab308; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 9999px; }
@@ -353,6 +358,34 @@
         </div>
       </div>
 
+      <!-- Check-outs realizados (histórico — fonte única DEC-024) -->
+      <div class="upcoming-section" style="margin-top:var(--sp-3)">
+        <div class="upcoming-header">
+          <div class="upcoming-title">🚪 Check-outs realizados</div>
+          <div class="seg" id="co-filter">
+            <button class="seg-btn" data-days="1">Hoje</button>
+            <button class="seg-btn active" data-days="7">7 dias</button>
+            <button class="seg-btn" data-days="30">30 dias</button>
+          </div>
+        </div>
+        <div id="checkouts-done-body">
+          <table class="upcoming-table">
+            <thead>
+              <tr>
+                <th>Hóspede</th>
+                <th>Quarto</th>
+                <th class="date-col">Check-out</th>
+                <th>Hora</th>
+                <th>Total pago</th>
+              </tr>
+            </thead>
+            <tbody id="checkouts-done-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -469,6 +502,7 @@
   }
 
   const ROOM_LABELS = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_1:'Ala C', ALA_C_2:'Ala C', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
+  let coDays = 7; // filtro da seção "Check-outs realizados" (1 | 7 | 30)
   const STATUS_LABELS = { confirmed:'Confirmado', deposit_paid:'Sinal pago', checkedin:'Hospedado', checkedout:'Finalizado', checked_in:'Hospedado', checked_out:'Finalizado', pending:'Pendente', cancelled:'Cancelada' };
   const STATUS_COLORS = { confirmed:'#3b82f6', deposit_paid:'#a855f7', checkedin:'#22c55e', checkedout:'#94a3b8', checked_in:'#22c55e', checked_out:'#94a3b8', pending:'#eab308', cancelled:'#ef4444' };
 
@@ -547,6 +581,7 @@
     renderAlerts(alertsRes, checkins, checkouts);
     renderUpcoming(upcomingRes?.reservations || []);
     renderStats(checkins, checkouts, roomsToday);
+    loadCheckoutsDone(coDays);
   }
 
   // Converte uma linha do board canônico no formato esperado pelos cards.
@@ -963,6 +998,47 @@
       </tr>`;
     }).join('');
   }
+
+  /* ── Check-outs realizados (histórico — /api/occupancy/checkouts) ──────── */
+  function fmtTimeBR(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtDateFromTs(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+
+  async function loadCheckoutsDone(days) {
+    const tbody = document.getElementById('checkouts-done-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando...</td></tr>';
+    const resp = await apiFetch(`/api/occupancy/checkouts?days=${days}`);
+    const items = resp?.checkouts || [];
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Nenhum check-out no período</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(c => {
+      const name = c.guest_name || 'Hóspede';
+      const ref  = (Number(c.total) > Number(c.total_paid))
+        ? ` <span class="co-paid-ref">de ${fmtBRL(c.total)}</span>` : '';
+      return `<tr onclick="window.location.href='bookings.html?id=${c.reservation_id}'" style="cursor:pointer">
+        <td>${escHtml(name)}</td>
+        <td>${ROOM_LABELS[c.room_type] || escHtml(c.room_type)}</td>
+        <td class="date-col">${fmtDateFromTs(c.checkout_at)}</td>
+        <td>${fmtTimeBR(c.checkout_at)}</td>
+        <td>${fmtBRL(c.total_paid)}${ref}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('co-filter')?.addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    coDays = Number(btn.dataset.days);
+    document.querySelectorAll('#co-filter .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    loadCheckoutsDone(coDays);
+  });
 
   function timeAgo(isoStr) {
     const diff = Math.floor((Date.now() - new Date(isoStr)) / 60000);
