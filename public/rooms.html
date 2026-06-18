@@ -258,11 +258,23 @@
     }
     .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
     .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
-    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
+    /* min-height:0 é essencial num flex column: sem ele o body não encolhe abaixo
+       do conteúdo, a comanda longa estoura os 90vh e o overflow:hidden do .modal
+       corta o rodapé (Fechar/Checkout) para fora da tela. */
+    .modal-body  { padding: var(--sp-5); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .modal-foot  {
       padding: var(--sp-4) var(--sp-5);
       border-top: 1px solid var(--bdr1);
       display: flex; gap: var(--sp-2); justify-content: flex-end;
+      flex-wrap: wrap; flex-shrink: 0;
+    }
+    /* Mobile: modal vira folha de baixo (bottom sheet), rodapé fixo e botões
+       que ocupam a largura para ficarem fáceis de tocar. */
+    @media (max-width: 600px) {
+      .modal-overlay { align-items: flex-end; }
+      .modal, .modal.modal-lg { max-width: 100%; max-height: 92vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+      .modal-foot { justify-content: stretch; }
+      .modal-foot .btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
     }
     .field-group  { margin-bottom: var(--sp-4); }
     .field-label  { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
