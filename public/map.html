@@ -229,8 +229,10 @@
     .modal-head { padding: var(--sp-5) var(--sp-5) var(--sp-4); border-bottom: 1px solid var(--bdr1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
     .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
     .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
-    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
-    .modal-foot  { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; }
+    /* min-height:0 essencial: sem ele o body não encolhe abaixo do conteúdo e o
+       modal longo (PDV/comanda) estoura os 90vh, cortando o rodapé fora da tela. */
+    .modal-body  { padding: var(--sp-5); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .modal-foot  { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; flex-shrink: 0; }
     .cmd-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
     .cmd-table th { text-align: left; padding: 6px 8px; color: var(--tx3); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--bdr1); }
     .cmd-table td { padding: 6px 8px; border-bottom: 1px solid var(--bdr0); color: var(--tx2); }
@@ -246,6 +248,13 @@
 
     @media (max-width: 640px) {
       .map-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    /* Mobile: modal vira folha de baixo (bottom sheet), rodapé fixo, botões largos. */
+    @media (max-width: 600px) {
+      .modal-overlay { align-items: flex-end; }
+      .modal { max-width: 100%; max-height: 92vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+      .modal-foot { justify-content: stretch; }
+      .modal-foot .btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
     }
   </style>
 </head>
