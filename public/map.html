@@ -787,6 +787,7 @@
 
 <script src="design-system/u.js"></script>
 <script src="design-system/checkout-guard.js"></script>
+<script src="design-system/checkout-flow.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1148,14 +1149,21 @@
 
     document.getElementById('map-swap-room')?.addEventListener('click', () => openSwapModal(code, resv));
 
-    // Check-out guardado: mesmo fluxo/popup das outras telas; trava de saldo no banco.
+    // Check-out: MESMO fluxo completo do rooms/bookings (módulo CheckoutFlow) —
+    // contagem de frigobar + trava de saldo/popup de pagamento + voucher.
     document.getElementById('map-do-checkout')?.addEventListener('click', async () => {
-      const done = await CheckoutGuard.run({ id: resv.id, apiFetch: cgApiFetch, toast: DS.toast });
-      if (done) {
-        DS.toast('Checkout registrado.', 'ok');
-        document.getElementById('room-detail').classList.remove('show');
-        loadMap();
-      }
+      const { done, voucher } = await CheckoutFlow.run({
+        reservationId: resv.id,
+        roomCode:  code,
+        guestName: resv.leads?.name || '',
+        apiFetch:  cgApiFetch,
+        toast:     DS.toast,
+      });
+      if (!done) return;
+      DS.toast('Checkout registrado.', 'ok');
+      if (voucher?.download_url) window.open(voucher.download_url, '_blank');
+      document.getElementById('room-detail').classList.remove('show');
+      loadMap();
     });
 
     document.getElementById('map-charge-add')?.addEventListener('click', async () => {

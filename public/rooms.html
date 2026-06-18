@@ -878,37 +878,7 @@
 </div>
 
 <!-- ── Modal: Contagem do frigobar no checkout ────────────────── -->
-<div class="modal-overlay" id="modal-fb-checkout">
-  <div class="modal" style="max-width:540px">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">🧊 Contagem do frigobar</div>
-        <div class="modal-sub" id="fbc-sub">Informe o que o hóspede consumiu — será lançado na comanda</div>
-      </div>
-      <button class="btn btn-ghost btn-icon" data-close="modal-fb-checkout">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <table class="cmd-table">
-        <thead><tr><th>Item</th><th style="text-align:right">No frigobar</th><th style="text-align:right">Consumido</th></tr></thead>
-        <tbody id="fbc-items"></tbody>
-      </table>
-      <div class="field-group" style="margin-top:var(--sp-4)">
-        <label class="field-label">Itens restantes após o checkout</label>
-        <div style="display:flex;gap:var(--sp-4)">
-          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="keep" checked> Deixar no frigobar</label>
-          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="return"> Devolver ao estoque/bar</label>
-        </div>
-      </div>
-      <div id="fbc-error" style="color:var(--err);font-size:.78rem;display:none"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-secondary" data-close="modal-fb-checkout">Cancelar</button>
-      <button class="btn btn-primary" id="fbc-continue" style="background:var(--gold);border-color:var(--gold);color:#000">Lançar e continuar checkout</button>
-    </div>
-  </div>
-</div>
+<!-- Modal de contagem do frigobar agora é auto-injetado por checkout-flow.js -->
 
 <!-- ── Modal: Trocar quarto ───────────────────────────────────── -->
 <div class="modal-overlay" id="modal-swap">
@@ -941,6 +911,7 @@
 
 <script src="design-system/u.js"></script>
 <script src="design-system/checkout-guard.js"></script>
+<script src="design-system/checkout-flow.js"></script>
 <script>
 (function () {
   'use strict';
@@ -1003,7 +974,6 @@
   let productsCache = [];
   let comandaCtx = null;       // { reservation, totals } da comanda aberta
   let frigobarCode = null;     // quarto com o modal de frigobar aberto
-  let fbCheckoutItems = [];    // itens do frigobar na contagem de checkout
   // (entrada de estoque foi movida para map.html — Mercearia/Bar)
   const TODAY_ISO = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
   const FRIG_ICON  = { ok: '✅', manutencao: '🔧', sem_frigobar: '➖' };
@@ -1784,123 +1754,28 @@
     }
   });
 
-  // ── Checkout: contagem do frigobar → comanda → checkout → voucher ──
+  // ── Checkout: fluxo COMPLETO compartilhado (design-system/checkout-flow.js) ──
+  // Contagem do frigobar + trava de saldo/pagamento + voucher vivem no módulo
+  // CheckoutFlow, usado também por map e bookings. A página só faz toast de
+  // sucesso, abre o voucher e recarrega — exatamente como o finishCheckout fazia.
   document.getElementById('btn-do-checkout').addEventListener('click', async () => {
     if (!comandaCtx) return;
-    const { roomCode } = comandaCtx;
-
-    // Etapa 1: se o frigobar tem itens, conta o consumo antes de fechar
-    const fb = await apiFetch(`/api/rooms/${roomCode}/frigobar`);
-    fbCheckoutItems = (fb?.items || []).filter(i => Number(i.quantity) > 0);
-
-    if (fbCheckoutItems.length) {
-      document.getElementById('fbc-sub').textContent =
-        `${roomCode} · ${comandaCtx.reservation.leads?.name || ''} — consumido será lançado na comanda`;
-      document.getElementById('fbc-items').innerHTML = fbCheckoutItems.map(i => `<tr>
-        <td style="color:var(--tx1)">${esc(i.products?.name || '—')}</td>
-        <td style="text-align:right">${Number(i.quantity)} ${esc(i.products?.unit || '')}</td>
-        <td style="text-align:right">
-          <input class="input" type="number" min="0" max="${Number(i.quantity)}" value="0"
-            data-fbc-product="${i.products?.id}" style="width:70px;padding:4px 8px;font-size:.8rem;text-align:right">
-        </td>
-      </tr>`).join('');
-      document.getElementById('fbc-error').style.display = 'none';
-      openModal('modal-fb-checkout');
-      return;
-    }
-
-    finishCheckout();
-  });
-
-  document.getElementById('fbc-continue').addEventListener('click', async () => {
-    const errEl = document.getElementById('fbc-error');
-    errEl.style.display = 'none';
-    const btn = document.getElementById('fbc-continue');
-    btn.disabled = true; btn.textContent = 'Lançando…';
-
-    try {
-      // Lança consumos do frigobar na comanda (baixa o frigobar via trigger)
-      for (const input of document.querySelectorAll('[data-fbc-product]')) {
-        const qty = parseFloat(input.value) || 0;
-        if (qty <= 0) continue;
-        const max = parseFloat(input.max) || 0;
-        if (qty > max) throw new Error(`Consumido maior que o disponível no frigobar (máx ${max}).`);
-        const r = await apiFetch('/api/room-charges', {
-          method: 'POST',
-          body: JSON.stringify({
-            reservation_id: comandaCtx.reservation.id,
-            product_id:     input.dataset.fbcProduct,
-            quantity:       qty,
-            room_code:      comandaCtx.roomCode,
-            from_frigobar:  true,
-            staff_note:     'Contagem do frigobar no checkout',
-          }),
-        });
-        if (!r?.success) throw new Error(r?.message || 'Erro ao lançar consumo do frigobar.');
-      }
-
-      // Restantes: devolver ao estoque central, se escolhido
-      const rest = document.querySelector('[name="fbc-rest"]:checked')?.value;
-      if (rest === 'return') {
-        const fb = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar`);
-        for (const item of (fb?.items || [])) {
-          if (Number(item.quantity) <= 0) continue;
-          const r = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar/unload`, {
-            method: 'POST',
-            body: JSON.stringify({ product_id: item.products?.id, quantity: Number(item.quantity) }),
-          });
-          if (!r?.success) throw new Error(r?.message || 'Erro ao devolver itens ao estoque.');
-        }
-      }
-
-      await refreshComanda();           // comanda agora inclui o consumo do frigobar
-      closeModal('modal-fb-checkout');
-      finishCheckout();
-    } catch (e) {
-      errEl.textContent = e.message;
-      errEl.style.display = 'block';
-    } finally {
-      btn.disabled = false; btn.textContent = 'Lançar e continuar checkout';
-    }
-  });
-
-  async function finishCheckout() {
-    const { reservation: r, charges, totals, roomCode } = comandaCtx;
-    if (!confirm(`Fazer checkout de ${r.leads?.name || 'hóspede'} (${roomCode})?\nTotal da comanda: ${fmtBRL(totals.grand_total)}`)) return;
-
     const btn = document.getElementById('btn-do-checkout');
     btn.disabled = true; btn.textContent = 'Processando…';
-
-    // 1. Check-out guardado: a trava de saldo é no banco (RPC). Se houver
-    //    saldo, o CheckoutGuard abre o popup e só finaliza após receber.
-    const done = await CheckoutGuard.run({ id: r.id, apiFetch: cgApiFetch, toast: showToast });
-    if (!done) { btn.disabled = false; btn.textContent = '🚪 Fazer checkout'; return; }
-
-    // 2. Gera voucher final com diárias + consumos
-    const consumosTxt = charges.length
-      ? 'Consumos: ' + charges.map(c => `${Number(c.quantity)}x ${c.products?.name} (${fmtBRL(c.total)})`).join(', ')
-      : 'Sem consumos lançados';
-    const voucher = await apiFetch('/api/vouchers', {
-      method: 'POST',
-      body: JSON.stringify({
-        reservation_id: r.id,
-        guest_name:   r.leads?.name || 'Hóspede',
-        room_type:    roomCode,
-        check_in:     r.checkin_date,
-        check_out:    r.checkout_date,
-        guests:       r.guests || 1,
-        source:       'direct',
-        total_amount: totals.grand_total,
-        notes:        `Checkout. Diárias ${fmtBRL(totals.room_total)} + consumos ${fmtBRL(totals.charges_total)}. ${consumosTxt}`,
-      }),
+    const { done, voucher } = await CheckoutFlow.run({
+      reservationId: comandaCtx.reservation.id,
+      roomCode:      comandaCtx.roomCode,
+      guestName:     comandaCtx.reservation.leads?.name || '',
+      apiFetch:      cgApiFetch,
+      toast:         showToast,
     });
-
     btn.disabled = false; btn.textContent = '🚪 Fazer checkout';
+    if (!done) return;
     closeModal('modal-comanda');
     showToast('Checkout registrado.', 'ok');
     if (voucher?.download_url) window.open(voucher.download_url, '_blank');
     loadRooms();
-  }
+  });
 
   // ══ FRIGOBAR DO QUARTO ═══════════════════════════════════════
   async function openFrigobar(code) {

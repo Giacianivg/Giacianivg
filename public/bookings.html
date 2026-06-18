@@ -384,6 +384,8 @@
 
 <div id="toast-container"></div>
 <script src="design-system/u.js"></script>
+<script src="design-system/checkout-guard.js"></script>
+<script src="design-system/checkout-flow.js"></script>
 <script>
 'use strict';
 
@@ -868,6 +870,22 @@ function buildActionButtons(r) {
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
+// Adapter para CheckoutFlow/CheckoutGuard: precisa do JSON mesmo em HTTP não-ok
+// (ex.: 422 balance_due), ao contrário do DS.api que lança. Mesmo contrato do
+// cgApiFetch do rooms/map (body como objeto → serializado).
+async function cgApiFetch(path, opts = {}) {
+  const token = await DS.getToken();
+  if (!token) { window.location.href = 'login.html'; return null; }
+  let body = opts.body;
+  if (body && typeof body === 'object') body = JSON.stringify(body);
+  const res = await fetch(path, {
+    ...opts, body,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+  });
+  if (res.status === 401) { window.location.href = 'login.html'; return null; }
+  return res.json();
+}
+
 async function handleAction(action, id) {
   if (action === 'detail') {
     const r = allReservations.find(x => x.id===id);
@@ -883,10 +901,28 @@ async function handleAction(action, id) {
     if (!confirm('Cancelar esta reserva?')) return;
   }
 
+  // Check-out: MESMO fluxo do rooms/map (módulo compartilhado CheckoutFlow) —
+  // contagem de frigobar + trava de saldo/popup de pagamento + voucher.
+  if (action === 'checkout') {
+    const r = allReservations.find(x => x.id === id) || openReservation;
+    const { done, voucher } = await CheckoutFlow.run({
+      reservationId: id,
+      roomCode:  r?.room_type || null,
+      guestName: r?.leads?.name || '',
+      apiFetch:  cgApiFetch,
+      toast:     DS.toast,
+    });
+    if (!done) return;
+    DS.toast('Checkout registrado.', 'ok');
+    if (voucher?.download_url) window.open(voucher.download_url, '_blank');
+    await loadAndRender();
+    if (openReservation?.id === id) closeDrawer();
+    return;
+  }
+
   const endpoints = {
     confirm:  { method:'PATCH', url:`/api/reservations/${id}`, body:{ status:'confirmed' } },
     checkin:  { method:'PATCH', url:`/api/reservations/${id}/checkin` },
-    checkout: { method:'PATCH', url:`/api/reservations/${id}/checkout` },
     cancel:   { method:'PATCH', url:`/api/reservations/${id}`, body:{ status:'cancelled' } },
   };
 
