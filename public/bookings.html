@@ -91,17 +91,6 @@
     }
     .resv-bar:hover { filter: brightness(1.2); transform: scaleY(1.06); }
 
-    /* Marcador de saída (check-out): triângulo diagonal sup-esquerdo na célula do
-       dia de saída — sinal operacional "liberando 14h / preparar quarto". Fica
-       ACIMA da barra de entrada (z-index 3) cobrindo só o canto, então no turnover
-       vê-se saída (canto) + entrada (resto) = split diagonal. pointer-events:none
-       preserva o clique na barra. NÃO altera disponibilidade — o dia segue vendável. */
-    .checkout-wedge {
-      position: absolute; top: 0; bottom: 0;
-      z-index: 3; pointer-events: none;
-      background: linear-gradient(135deg, rgba(59,130,246,.55) 0%, rgba(59,130,246,.55) 45%, transparent 47%);
-    }
-
     /* Manutenção/bloqueio do quarto no dia: faixa âmbar hachurada com 🔧 (manutenção)
        ou 🔒 (bloqueio genérico). Lida da fonte única (availability blocked, via
        /api/occupancy/calendar). pointer-events:none preserva o arraste de criar reserva. */
@@ -632,8 +621,19 @@ function renderTimeline() {
         const visEnd   = Math.min(co, monthEnd);
         if (visStart >= visEnd) continue;
 
-        const startDay = (visStart - monthStart) / 86400000;
-        const spanDays = (visEnd - visStart)   / 86400000;
+        let startDay = (visStart - monthStart) / 86400000;
+        let spanDays = (visEnd - visStart)   / 86400000;
+
+        // Semântica de hotel: check-in 14h, check-out 12h. A barra começa no MEIO
+        // da célula de entrada e termina no MEIO da célula de saída — assim no
+        // turnover (saída + entrada no mesmo dia) a metade da manhã fica com quem
+        // sai e a da tarde com quem entra, encontrando-se no meio da célula. Só
+        // desloca quando a borda real cai dentro do mês visível; senão a reserva
+        // vem de / segue para outro mês e a barra encosta na borda do calendário.
+        // NÃO altera disponibilidade — o dia de saída segue vendável.
+        if (ci >= monthStart) { startDay += 0.5; spanDays -= 0.5; }
+        if (co <  monthEnd)   { spanDays += 0.5; }
+
         const leftPct  = startDay / daysInMonth * 100;
         const widPct   = spanDays / daysInMonth * 100;
 
@@ -642,21 +642,6 @@ function renderTimeline() {
         const sc    = `status-${r.status}`;
         html += `<div class="resv-bar ${sc}" style="left:${leftPct}%;width:calc(${widPct}% - 2px)"
           data-id="${r.id}" title="${name} · ${r.checkin_date} → ${r.checkout_date}${isLegacyAla ? ' (reserva por ala — quarto a definir)' : ''}">${name}</div>`;
-      }
-
-      // Marcadores de saída (check-out): triângulo diagonal na célula do dia de
-      // saída. Sinal operacional — o quarto está sendo liberado/preparado (14h),
-      // mas o dia segue VENDÁVEL (não muda disponibilidade). Quando há entrada no
-      // mesmo dia/quarto, a barra de entrada preenche o resto → split saída/entrada.
-      const mStart = new Date(curYear, curMonth, 1);
-      const mEnd   = new Date(curYear, curMonth+1, 1);
-      for (const r of roomResvs) {
-        if (r.status === 'cancelled') continue;
-        const co = new Date(r.checkout_date + 'T00:00:00');
-        if (co < mStart || co >= mEnd) continue;
-        const dayIdx = (co - mStart) / 86400000;
-        const gname  = DS.esc(r.leads?.name || '?');
-        html += `<div class="checkout-wedge" style="left:${dayIdx/daysInMonth*100}%;width:${1/daysInMonth*100}%" title="Saída ${gname} · libera 14h (dia vendável)"></div>`;
       }
 
       // Manutenção/bloqueio do quarto (fonte única: availability blocked). 🔧 quando o
