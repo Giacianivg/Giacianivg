@@ -203,13 +203,9 @@
     const charges = cmd.charges || [];
     const totals = cmd.totals || {};
 
-    // 3. Confirmação (idêntica ao rooms)
-    const ok = window.confirm(
-      `Fazer checkout de ${r.leads?.name || 'hóspede'} (${roomCode || r.room_type})?\n` +
-      `Total da comanda: ${fmt(totals.grand_total)}`);
-    if (!ok) return { done: false, voucher: null };
-
-    // 4. CheckoutGuard: trava de saldo no banco + popup de pagamento + finalização
+    // 3. CheckoutGuard: trava de saldo no banco + popup de pagamento + finalização.
+    // (Sem confirm() nativo: as 3 telas vão direto ao fluxo de pagamento — a
+    // confirmação real é o popup de saldo/pagamento do CheckoutGuard.)
     const done = await window.CheckoutGuard.run({ id: reservationId, apiFetch, toast });
     if (!done) return { done: false, voucher: null };
 
