@@ -150,6 +150,13 @@
     .tl-line.done { background: #22c55e; }
     .tl-label { font-size: .6rem; color: var(--tx3); text-align: center; }
     .payment-row { display: flex; justify-content: space-between; padding: var(--sp-2) 0; border-bottom: 1px solid var(--bdr0); font-size: .78rem; }
+    /* Lista de consumos no painel (mesma leitura canônica do rooms.html) */
+    .cmd-line { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); padding: 5px 0; border-bottom: 1px solid var(--bdr0); }
+    .cmd-line:last-child { border-bottom: none; }
+    .cmd-line .it  { font-size: .78rem; color: var(--tx1); font-weight: 600; }
+    .cmd-line .qt  { font-size: .68rem; color: var(--tx3); margin-top: 1px; }
+    .cmd-line .tot { font-size: .8rem; color: var(--tx1); font-weight: 700; text-align: right; white-space: nowrap; }
+    .cmd-empty { font-size: .76rem; color: var(--tx3); font-style: italic; }
     .notes-textarea { width: 100%; box-sizing: border-box; min-height: 72px; padding: var(--sp-2); background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx1); font-size: .8rem; resize: vertical; font-family: inherit; }
     .drawer-actions { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); flex-wrap: wrap; flex-shrink: 0; }
     .drawer-actions .act-btn { flex: 1; justify-content: center; text-align: center; display: flex; }
@@ -931,7 +938,8 @@ function openDrawer(r) {
   // Details
   const total   = parseFloat(r.total_amount||0);
   const deposit = parseFloat(r.deposit_amount||0);
-  const balance = parseFloat(r.balance_amount||(total-deposit));
+  // Saldo NÃO é calculado aqui — vem do endpoint canônico da comanda
+  // (diárias + consumos − sinal − pagamentos), hidratado async logo abaixo.
 
   const detailsHtml = `
     <div class="drawer-section">
@@ -953,11 +961,15 @@ function openDrawer(r) {
       <div class="drawer-row"><span class="drawer-key">Canal</span><span class="drawer-val">${CHANNEL_LABEL[r.channel]||r.channel||'—'}</span></div>
       <div class="drawer-row"><span class="drawer-key">🚗 Placa</span><span class="drawer-val">${DS.esc(r.vehicle_plate||'—')}</span></div>
     </div>
-    <div class="drawer-section">
+    <div class="drawer-section" id="drawer-consumos">
+      <div class="drawer-section-title">Consumos</div>
+      <div class="cmd-empty">Carregando…</div>
+    </div>
+    <div class="drawer-section" id="drawer-fin">
       <div class="drawer-section-title">Financeiro</div>
-      <div class="drawer-row"><span class="drawer-key">Total</span><span class="drawer-val" style="color:var(--gold);font-family:var(--f-serif)">${DS.cur(total)}</span></div>
+      <div class="drawer-row"><span class="drawer-key">Total (diárias)</span><span class="drawer-val" style="color:var(--gold);font-family:var(--f-serif)">${DS.cur(total)}</span></div>
       <div class="drawer-row"><span class="drawer-key">Sinal pago</span><span class="drawer-val" style="color:#22c55e">${DS.cur(deposit)}</span></div>
-      <div class="drawer-row"><span class="drawer-key">Saldo</span><span class="drawer-val" style="color:${balance>0?'#f59e0b':'var(--tx3)'}">${DS.cur(balance)}</span></div>
+      <div class="drawer-row"><span class="drawer-key">Saldo a receber</span><span class="drawer-val" style="color:var(--tx3)">calculando…</span></div>
     </div>
     <div class="drawer-section">
       <div class="drawer-section-title">Notas</div>
@@ -966,6 +978,7 @@ function openDrawer(r) {
     </div>`;
 
   document.getElementById('drawer-body').innerHTML = detailsHtml;
+  hydrateDrawerFinance(r, total, deposit);
   document.getElementById('btn-save-notes').addEventListener('click', async () => {
     const notes = document.getElementById('drawer-notes').value;
     await handleAction('edit_notes', r.id); // handled below
@@ -984,6 +997,62 @@ function openDrawer(r) {
 
   document.getElementById('drawer').classList.add('open');
   document.getElementById('drawer-overlay').style.display = 'block';
+}
+
+// Saldo real do painel = fonte ÚNICA da comanda (mesma que rooms.html/frontdesk
+// consomem): diárias + consumos − sinal − pagamentos. Não recalcula nada aqui.
+async function hydrateDrawerFinance(r, total, deposit) {
+  let cmd = null;
+  try { cmd = await DS.api(`/api/room-charges/comanda/${r.id}`); }
+  catch (e) { cmd = null; }
+
+  const consEl = document.getElementById('drawer-consumos');
+  const finEl  = document.getElementById('drawer-fin');
+  // Drawer pode ter fechado ou trocado de reserva enquanto buscava
+  if (!consEl || !finEl || openReservation?.id !== r.id) return;
+
+  // Falha de rede: não inventa consumos; cai no saldo de diária − sinal e avisa
+  if (!cmd || !cmd.success) {
+    consEl.innerHTML = `<div class="drawer-section-title">Consumos</div>`
+      + `<div class="cmd-empty">Não foi possível carregar os consumos.</div>`;
+    const fb = total - deposit;
+    finEl.innerHTML = `<div class="drawer-section-title">Financeiro</div>`
+      + finRow('Total (diárias)', DS.cur(total), 'color:var(--gold);font-family:var(--f-serif)')
+      + finRow('Sinal pago', DS.cur(deposit), 'color:#22c55e')
+      + finRow('Saldo a receber', DS.cur(fb), `color:${fb>0?'#f59e0b':'var(--tx3)'}`);
+    return;
+  }
+
+  const charges = cmd.charges || [];
+  const t = cmd.totals || {};
+
+  // Seção Consumos — item, qtd × unitário, total (igual rooms.html)
+  if (charges.length === 0) {
+    consEl.innerHTML = `<div class="drawer-section-title">Consumos</div><div class="cmd-empty">Nenhum consumo</div>`;
+  } else {
+    consEl.innerHTML = `<div class="drawer-section-title">Consumos</div>` + charges.map(c => {
+      const nome = DS.esc(c.products?.name || 'Item');
+      const qt   = Number(c.quantity || 0);
+      const unit = Number(c.unit_price || 0);
+      const tot  = Number(c.total || 0);
+      return `<div class="cmd-line"><div><div class="it">${nome}</div><div class="qt">${qt} × ${DS.cur(unit)}</div></div><div class="tot">${DS.cur(tot)}</div></div>`;
+    }).join('');
+  }
+
+  // Seção Financeiro — saldo canônico
+  let rows = finRow('Total (diárias)', DS.cur(t.room_total ?? total), 'color:var(--gold);font-family:var(--f-serif)')
+    + finRow('Consumos', DS.cur(t.charges_total ?? 0), 'color:var(--tx1)')
+    + finRow('Sinal pago', DS.cur(t.deposit_paid ?? deposit), 'color:#22c55e');
+  if (Number(t.payments_confirmed || 0) > 0) {
+    rows += finRow('Pagamentos recebidos', DS.cur(t.payments_confirmed), 'color:#22c55e');
+  }
+  const bal = Number(t.balance_due ?? (total - deposit));
+  rows += finRow('Saldo a receber', DS.cur(bal), `color:${bal>0?'#f59e0b':'var(--tx3)'};font-weight:800`);
+  finEl.innerHTML = `<div class="drawer-section-title">Financeiro</div>` + rows;
+}
+
+function finRow(k, v, style = '') {
+  return `<div class="drawer-row"><span class="drawer-key">${k}</span><span class="drawer-val" style="${style}">${v}</span></div>`;
 }
 
 function buildDrawerActions(r) {
