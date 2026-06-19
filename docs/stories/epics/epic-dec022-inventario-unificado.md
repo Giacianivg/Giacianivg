@@ -3,6 +3,12 @@
 > **Status:** 🟡 Backlog — RUMO APROVADO, EXECUÇÃO ADIADA (Founder, 2026-06-16).
 > Nenhuma story deve sair de `Draft` sem nova aprovação N1/N2.
 > Referência de decisão: `ai-os/data/decision-history/DEC-022.md` (origem: DEC-021 P5).
+>
+> 🔒 **BLOQUEIO DEC-025 (site/reserva online, 2026-06-18):** a reserva online entra pelo
+> caminho físico já cap-guardado (migration 034), seguro **enquanto a Luna estiver inativa**.
+> A **F6** (cap-guard no caminho legado por ala — story DEC022 a criar) **DEVE estar fechada
+> ANTES de religar a Luna** se houver reserva online ativa; caso contrário Luna × site podem
+> colidir no mesmo quarto. Não religar a Luna sem fechar a F6.
 
 ## Objetivo
 
