@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>O que fazer no Circuito das Águas Paulista | Pousada Luz da Lua</title>
+  <meta name="description" content="Guia do Circuito das Águas Paulista a partir de Socorro: aventura, águas termais, Caminho do Café, vinícolas e compras nas 6 cidades — Socorro, Águas de Lindóia, Serra Negra, Lindóia, Amparo e Monte Alegre do Sul.">
+  <link rel="canonical" href="https://pousadaluzdaluasp.com.br/landing/circuito.html">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="O que fazer no Circuito das Águas Paulista">
+  <meta property="og:description" content="Aventura em Socorro, águas termais, Caminho do Café e vinícolas — tudo a poucos km da Pousada Luz da Lua.">
+  <meta property="og:image" content="https://pousadaluzdaluasp.com.br/landing/assets/aerea.jpg">
+
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'clean';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="../design-system/t.css">
+  <link rel="stylesheet" href="../design-system/c.css">
+  <link rel="stylesheet" href="../design-system/l.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TouristDestination",
+    "name": "Circuito das Águas Paulista",
+    "description": "Região turística de São Paulo com seis municípios: Socorro, Águas de Lindóia, Serra Negra, Lindóia, Amparo e Monte Alegre do Sul.",
+    "url": "https://pousadaluzdaluasp.com.br/landing/circuito.html",
+    "touristType": ["Aventura", "Águas termais", "Gastronomia", "Compras", "Religioso", "Natureza"],
+    "includesAttraction": [
+      { "@type": "TouristAttraction", "name": "Parque dos Monjolinhos", "addressLocality": "Socorro" },
+      { "@type": "TouristAttraction", "name": "Aquática American Park", "addressLocality": "Águas de Lindóia" },
+      { "@type": "TouristAttraction", "name": "Teleférico e Cristo Redentor", "addressLocality": "Serra Negra" }
+    ]
+  }
+  </script>
+
+  <style>
+    .circ-hero {
+      position: relative; min-height: 48vh; display: flex; align-items: flex-end;
+      background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
+      color: #fff; padding: var(--sp-12) var(--sp-8);
+    }
+    .circ-hero-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
+    .circ-hero h1 { font-family: var(--f-serif); font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.12; margin-bottom: var(--sp-3); }
+    .circ-hero p { opacity: .9; max-width: 620px; line-height: 1.6; }
+    .breadcrumb { font-size: .875rem; opacity: .8; margin-bottom: var(--sp-4); }
+    .breadcrumb a { color: #fff; text-decoration: underline; }
+
+    /* Barra de filtros */
+    .filter-bar {
+      position: sticky; top: 0; z-index: var(--z-above); background: var(--bg1);
+      border-bottom: 1px solid var(--bdr); padding: var(--sp-4) var(--sp-8);
+      display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center;
+    }
+    .filter-btn {
+      padding: 6px 16px; border-radius: var(--r-full); border: 1px solid var(--bdr2);
+      background: var(--sur1); color: var(--tx2); font-size: .875rem; cursor: pointer;
+      transition: all var(--t-fast);
+    }
+    .filter-btn:hover { border-color: var(--royal); color: var(--tx1); }
+    .filter-btn.active { background: var(--royal); border-color: var(--royal); color: #fff; }
+
+    .city-section { max-width: 1100px; margin: 0 auto; padding: var(--sp-12) var(--sp-8); }
+    .city-head { margin-bottom: var(--sp-6); }
+    .city-head h2 { font-family: var(--f-serif); font-size: clamp(1.5rem, 3vw, 2rem); color: var(--tx1); }
+    .city-head .city-tag { color: var(--royal); font-weight: 600; font-size: .9375rem; }
+    .city-head .city-dist { color: var(--tx3); font-size: .875rem; margin-top: 4px; }
+    .city-head p { color: var(--tx2); line-height: 1.65; margin-top: var(--sp-3); max-width: 760px; }
+
+    .attr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4); margin-top: var(--sp-5); }
+    .attr-card {
+      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--r-lg);
+      padding: var(--sp-5); transition: box-shadow var(--t-fast), transform var(--t-fast);
+    }
+    .attr-card:hover { box-shadow: var(--sh-md); transform: translateY(-2px); }
+    .attr-card .attr-cat { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 10px; border-radius: var(--r-full); background: var(--royal-bg); color: var(--royal); margin-bottom: var(--sp-3); }
+    .attr-card h3 { font-size: 1.0625rem; color: var(--tx1); margin-bottom: var(--sp-2); }
+    .attr-card p { font-size: .9rem; color: var(--tx2); line-height: 1.55; }
+    .attr-card .soon { display: inline-block; margin-top: var(--sp-2); font-size: .75rem; font-weight: 600; color: var(--warn); }
+    .attr-card.hidden { display: none; }
+    .city-section.empty { display: none; }
+
+    .circ-cta { background: var(--bg1); text-align: center; padding: var(--sp-16) var(--sp-8); border-top: 1px solid var(--bdr); }
+    .circ-cta h2 { font-family: var(--f-serif); font-size: 1.75rem; color: var(--tx1); margin-bottom: var(--sp-3); }
+    .circ-cta p { color: var(--tx2); margin-bottom: var(--sp-6); }
+    .note { font-size: .8125rem; color: var(--tx3); text-align: center; padding: 0 var(--sp-8) var(--sp-10); max-width: 760px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="landing-nav">
+  <a href="index.html" style="display:flex;align-items:center;gap:var(--sp-3);text-decoration:none">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+    <span style="font-family:var(--f-serif);font-weight:600;color:var(--tx1);font-size:.9375rem">Luz da Lua</span>
+  </a>
+  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+    <a href="index.html#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Acomodações</a>
+    <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-primary btn-sm">WhatsApp</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<header class="circ-hero">
+  <div class="circ-hero-inner">
+    <div class="breadcrumb"><a href="index.html">Início</a> › O que fazer</div>
+    <h1>O que fazer no Circuito das Águas</h1>
+    <p>Seis cidades, poucos quilômetros entre elas. Use a Pousada Luz da Lua como base e monte seu roteiro: aventura, águas termais, café, vinho e compras.</p>
+  </div>
+</header>
+
+<!-- Filtros -->
+<div class="filter-bar" id="filterBar">
+  <button class="filter-btn active" data-cat="all">Tudo</button>
+  <button class="filter-btn" data-cat="aventura">🤸 Aventura</button>
+  <button class="filter-btn" data-cat="termas">💧 Águas termais</button>
+  <button class="filter-btn" data-cat="cafe-vinho">☕ Café & Vinho</button>
+  <button class="filter-btn" data-cat="compras">🛍️ Compras</button>
+  <button class="filter-btn" data-cat="natureza">🏞️ Natureza</button>
+  <button class="filter-btn" data-cat="religioso">⛪ Religioso</button>
+  <button class="filter-btn" data-cat="familia">👨‍👩‍👧 Família</button>
+</div>
+
+<main id="cities">
+
+  <!-- SOCORRO -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Capital Nacional do Turismo de Aventura</div>
+      <h2>Socorro</h2>
+      <div class="city-dist">Porta de entrada do Circuito · base da pousada</div>
+      <p>Referência nacional em aventura e turismo acessível, às margens do Rio do Peixe. Rafting, arvorismo, tirolesas, rapel, voo livre e cachoeiras em parques com estrutura completa — além do centro histórico e das compras de malhas.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="aventura"><span class="attr-cat">Aventura</span><h3>Parque dos Monjolinhos</h3><p>Arvorismo premiado, tirolesas sobre o rio, boia-cross, off-road, rapel e trilhas. Estrutura com prainha, restaurante e duchas aquecidas. Pet-friendly. Quarta a domingo, 9h–17h30.</p></div>
+      <div class="attr-card" data-cat="aventura"><span class="attr-cat">Aventura</span><h3>Parque dos Sonhos</h3><p>14 atividades em 20 alqueires, com tirolesa de cerca de 1 km ligando SP a MG.</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Pico da Cascavel</h3><p>Cerca de 1.200 m de altitude — pôr do sol e ponto de voo livre (parapente).</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Cachoeiras</h3><p>Monjolinho, Saltinho, dos Sonhos, Rio do Peixe e Véu de Noiva.</p></div>
+      <div class="attr-card" data-cat="compras"><span class="attr-cat">Compras</span><h3>Feira de Malhas</h3><p>Capital da malha: tricô e malhas direto das fábricas, além do centro histórico colonial.</p></div>
+      <div class="attr-card" data-cat="aventura"><span class="attr-cat">Aventura</span><h3>Maior tirolesa do mundo</h3><p>Projeto anunciado de tirolesa de ~3.400 m a partir do Pico da Cascavel.<span class="soon">⏳ Em breve / em construção</span></p></div>
+    </div>
+  </section>
+
+  <!-- ÁGUAS DE LINDÓIA -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Capital Termal do Brasil</div>
+      <h2>Águas de Lindóia</h2>
+      <div class="city-dist">aprox. 30 km de Socorro</div>
+      <p>Famosa pelas águas termais com propriedades terapêuticas. Balneário histórico, parque aquático e mirantes de voo livre.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="termas"><span class="attr-cat">Águas termais</span><h3>Balneário Municipal</h3><p>Inaugurado em 1959 (projeto de Oswaldo Bratke, paisagismo de Burle Marx). Mais de 30 serviços: banhos de imersão, massagens, piscinas de água mineral e ducha escocesa.</p></div>
+      <div class="attr-card" data-cat="familia"><span class="attr-cat">Família</span><h3>Aquática American Park</h3><p>Mais de 134 mil m²: piscina de ondas, áreas temáticas, toboáguas, arvorismo e tirolesa. Day-use, aberto das 10h às 18h.</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Morro do Cruzeiro / Cristo</h3><p>Mirante com Cristo Redentor; Morro Pelado (1.400 m) é ponto de voo livre.</p></div>
+      <div class="attr-card" data-cat="familia"><span class="attr-cat">Família</span><h3>Praça Adhemar de Barros</h3><p>Projeto de Burle Marx, com lago, pedalinho e capivaras.</p></div>
+      <div class="attr-card" data-cat="familia"><span class="attr-cat">Família</span><h3>Resort & parque indoor</h3><p>Expansão de alto padrão anunciada para o complexo aquático.<span class="soon">⏳ Obras previstas 2026–2028</span></p></div>
+    </div>
+  </section>
+
+  <!-- SERRA NEGRA -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Cidade da Saúde</div>
+      <h2>Serra Negra</h2>
+      <div class="city-dist">aprox. 25 km de Socorro</div>
+      <p>Altitude e clima de montanha, forte colonização italiana. Teleférico, Caminho do Café, vinícolas e a capital das compras de malha.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Teleférico & Cristo Redentor</h3><p>Teleférico de 1952 (1.500 m) até o Pico do Fonseca, com Cristo de 18 m. Visita gratuita ao Cristo.</p></div>
+      <div class="attr-card" data-cat="cafe-vinho"><span class="attr-cat">Café & Vinho</span><h3>Rota Turística do Café</h3><p>Cafezais e Mata Atlântica no Bairro da Serra: cafés especiais premiados, Museu do Café, alambiques e empórios.</p></div>
+      <div class="attr-card" data-cat="cafe-vinho"><span class="attr-cat">Café & Vinho</span><h3>Vinícola Família Silotto</h3><p>Vinhos e cachaças em instalações com mais de 140 anos, na estrada para Águas de Lindóia.</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Mirante Alto da Serra</h3><p>1.310 m, letreiro "Eu amo Serra Negra", ponto de asa-delta com vista de 10+ cidades.</p></div>
+      <div class="attr-card" data-cat="compras"><span class="attr-cat">Compras</span><h3>Capital das compras</h3><p>Malhas, lã e couro nas ruas Coronel Pedro Penteado e Sete de Setembro.</p></div>
+      <div class="attr-card" data-cat="cafe-vinho"><span class="attr-cat">Café & Vinho</span><h3>Fontana di Trevi</h3><p>Réplica inaugurada em 2023, parada obrigatória para foto perto da Praça João Zelante.</p></div>
+    </div>
+  </section>
+
+  <!-- LINDÓIA -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Capital Nacional da Água Mineral</div>
+      <h2>Lindóia</h2>
+      <div class="city-dist">aprox. 28 km de Socorro</div>
+      <p>A mais pacata e contemplativa do Circuito (não confundir com Águas de Lindóia). Cercada pela Mantiqueira, clima ameno — ideal para um bate-volta tranquilo.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Grande Lago</h3><p>Caminhadas e esportes náuticos sem motor em meio à serra.</p></div>
+      <div class="attr-card" data-cat="familia"><span class="attr-cat">Família</span><h3>Monumento da Garrafona</h3><p>Cartão-postal na entrada da cidade que engarrafa boa parte da água mineral do Brasil.</p></div>
+    </div>
+  </section>
+
+  <!-- AMPARO -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Capital Histórica · Portal do Circuito</div>
+      <h2>Amparo</h2>
+      <div class="city-dist">aprox. 1h30 de carro</div>
+      <p>Centro histórico com mais de 400 edificações coloniais, turismo rural forte e o Ciclo do Café. Festival de Inverno em julho.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="religioso"><span class="attr-cat">Histórico</span><h3>Centro histórico & Catedral</h3><p>Catedral N. Sra. do Amparo, Estação Ferroviária de 1875 e o Museu Bernardino de Campos.</p></div>
+      <div class="attr-card" data-cat="cafe-vinho"><span class="attr-cat">Café & Vinho</span><h3>Turismo rural</h3><p>Fazenda Atalaia (queijos premiados), fazendas do Ciclo do Café e vinícolas/cachaças.</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Parque Linear Águas do Camanducaia</h3><p>Cerca de 3,1 km de ciclovia e caminhada à beira-rio.</p></div>
+    </div>
+  </section>
+
+  <!-- MONTE ALEGRE DO SUL -->
+  <section class="city-section" data-city>
+    <div class="city-head">
+      <div class="city-tag">Charme italiano no vale</div>
+      <h2>Monte Alegre do Sul</h2>
+      <div class="city-dist">aprox. 1h30 de carro</div>
+      <p>Pequena e charmosa, de colonização italiana, no vale do Rio Camanducaia. Cachaças artesanais, centro histórico e a Festa do Morango em julho.</p>
+    </div>
+    <div class="attr-grid">
+      <div class="attr-card" data-cat="religioso"><span class="attr-cat">Histórico</span><h3>Centro Histórico & Santuário</h3><p>Casarões em taipa de pilão do século XIX e o Santuário do Senhor Bom Jesus.</p></div>
+      <div class="attr-card" data-cat="termas"><span class="attr-cat">Águas termais</span><h3>Balneário Municipal</h3><p>Arquitetura neocolonial dos anos 1940, com águas medicinais.</p></div>
+      <div class="attr-card" data-cat="cafe-vinho"><span class="attr-cat">Café & Vinho</span><h3>Alambiques de cachaça</h3><p>27 alambiques de cachaça e grappa, incluindo a primeira cachaça tridestilada do Brasil.</p></div>
+      <div class="attr-card" data-cat="natureza"><span class="attr-cat">Natureza</span><h3>Cachoeira das Andorinhas</h3><p>Natureza e quedas d'água no distrito de Mostardas.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<p class="note">Distâncias aproximadas — confirme as rotas em um aplicativo de mapas antes de sair. Atrações marcadas como "em breve" são projetos anunciados, ainda não disponíveis para visitação.</p>
+
+<!-- CTA -->
+<section class="circ-cta">
+  <h2>Sua base para explorar tudo isso</h2>
+  <p>Reserve sua estadia na Pousada Luz da Lua e tenha o Circuito das Águas na porta.</p>
+  <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+quero+reservar+e+explorar+o+Circuito+das+%C3%81guas" target="_blank" rel="noopener" class="btn-cta">Reservar pelo WhatsApp</a>
+</section>
+
+<footer class="landing-footer">
+  <div style="max-width:800px;margin:0 auto">
+    <div style="font-family:var(--f-serif);font-size:1rem;font-weight:600;color:var(--tx1);margin-bottom:var(--sp-2)">Pousada Luz da Lua</div>
+    <p style="margin-bottom:var(--sp-2)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
+    <p><a href="https://wa.me/5519998400306" target="_blank" rel="noopener" style="color:var(--royal-l)">(19) 99840-0306</a></p>
+    <p style="margin-top:var(--sp-4);font-size:.75rem;color:var(--tx3)">© 2026 Pousada Luz da Lua · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
+  </div>
+</footer>
+
+<script>
+  // Filtro de atrações por categoria — vanilla, sem dependências.
+  (function () {
+    var bar = document.getElementById('filterBar');
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.attr-card'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.city-section'));
+
+    bar.addEventListener('click', function (e) {
+      var btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      var cat = btn.dataset.cat;
+
+      bar.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.toggle('active', b === btn); });
+
+      cards.forEach(function (c) {
+        c.classList.toggle('hidden', cat !== 'all' && c.dataset.cat !== cat);
+      });
+
+      // Esconde cidades sem nenhuma atração visível no filtro atual.
+      sections.forEach(function (s) {
+        var visible = s.querySelectorAll('.attr-card:not(.hidden)').length;
+        s.classList.toggle('empty', visible === 0);
+      });
+    });
+  })();
+</script>
+
+<script src="../design-system/u.js"></script>
+</body>
+</html>
