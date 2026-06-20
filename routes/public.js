@@ -22,6 +22,7 @@ const { calculateQuotation } = require('../services/quotation/engine');
 const { buildOffers } = require('../services/quotation/public-offers');
 const { normalizeWhatsapp, isValidName, computeDeposit, holdExpiryISO, HOLD_MINUTES } = require('../services/quotation/booking-helpers');
 const { verifyTurnstile, issueAccessToken, verifyAccessToken } = require('../services/security/turnstile');
+const { createPixPayment } = require('../services/payments/mercadopago');
 
 const router = Router();
 
@@ -279,6 +280,63 @@ router.post('/book', requirePublicAccess, async (req, res) => {
     total_amount:       total,
     deposit_amount:     deposit,
     // PIX será adicionado no Bloco 4.
+  }, 201);
+});
+
+// POST /api/public/pix — gera o PIX do sinal de uma reserva online (DEC-025 Bloco 4).
+// ATRÁS DE FEATURE-FLAG: só ativa com PUBLIC_PIX_ENABLED='true' (+ credenciais MP).
+// Com a flag off (default) retorna 503 — testável sem credencial.
+const isPublicPixEnabled = () => process.env.PUBLIC_PIX_ENABLED === 'true';
+
+router.post('/pix', requirePublicAccess, async (req, res) => {
+  if (!isPublicPixEnabled()) {
+    return fail(res, 'pix_unavailable', 'Pagamento online por PIX ainda não está ativo. Finalize pelo WhatsApp.', 503);
+  }
+
+  const reservationId = req.body && req.body.reservation_id;
+  if (!reservationId) return fail(res, 'missing_fields', 'reservation_id é obrigatório.', 422);
+
+  // Reserva precisa existir, ser do site, estar pending e dentro do hold.
+  const { data: r, error: rErr } = await supabaseAdmin
+    .from('reservations')
+    .select('id, status, channel, deposit_amount, hold_expires_at, reservation_number')
+    .eq('id', reservationId).maybeSingle();
+  if (rErr) return serverError(res, rErr);
+  if (!r) return fail(res, 'not_found', 'Reserva não encontrada.', 404);
+  if (r.channel !== 'site' || r.status !== 'pending') {
+    return fail(res, 'not_payable', 'Esta reserva não está disponível para pagamento.', 409);
+  }
+  if (r.hold_expires_at && new Date(r.hold_expires_at) < new Date()) {
+    return fail(res, 'hold_expired', 'O tempo da reserva expirou. Faça uma nova busca.', 409);
+  }
+
+  let pix;
+  try {
+    pix = await createPixPayment({
+      reservationId: r.id,
+      amount:        Number(r.deposit_amount),
+      description:   `Sinal reserva ${r.reservation_number}`,
+    });
+  } catch (e) {
+    return serverError(res, e);
+  }
+
+  const statusMap = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed' };
+  const { data: pay, error: pErr } = await supabaseAdmin.from('payments').insert({
+    reservation_id: r.id, payment_type: 'deposit', amount: Number(r.deposit_amount),
+    method: 'pix', status: statusMap[pix.status] || 'pending',
+    external_id: String(pix.payment_id), qr_code_url: pix.pix_link,
+    pix_copy_paste: pix.pix_qr_code, expires_at: pix.expires_at,
+  }).select('id').single();
+  if (pErr) return serverError(res, pErr);
+
+  return ok(res, {
+    payment_id:   pay.id,
+    mp_id:        pix.payment_id,
+    pix_qr_code:  pix.pix_qr_code,
+    pix_qr_base64: pix.pix_qr_base64,
+    pix_link:     pix.pix_link,
+    expires_at:   pix.expires_at,
   }, 201);
 });
 
