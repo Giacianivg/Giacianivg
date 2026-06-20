@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pré-visualização — Fusão C+A · Luz da Lua</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'DM Sans',system-ui,sans-serif;color:#1b1b1b;background:#0e0e10}
+
+  .ctx{position:sticky;top:0;z-index:50;background:#14141a;color:#e9e9ec;
+       border-bottom:1px solid rgba(255,255,255,.1);padding:10px 22px;
+       display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:13px}
+  .ctx .tag{background:#586B82;color:#fff;font-weight:600;letter-spacing:.04em;
+            padding:3px 9px;border-radius:4px;font-size:11px;text-transform:uppercase}
+  .ctx nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .ctx nav a{color:#cfd2d8;text-decoration:none;padding:4px 11px;border:1px solid rgba(255,255,255,.16);
+             border-radius:999px;font-size:12px;transition:.15s}
+  .ctx nav a:hover{background:rgba(255,255,255,.1);color:#fff}
+
+  /* faixa explicativa: amostra das paletas-mãe */
+  .parents{background:#f4f2ee;color:#26231f;padding:30px 22px;display:flex;gap:30px;
+           justify-content:center;flex-wrap:wrap;align-items:center}
+  .parents .pcol{text-align:center}
+  .parents .ptitle{font-family:'Playfair Display',serif;font-size:14px;font-weight:600;margin-bottom:10px}
+  .parents .row{display:flex;gap:5px;justify-content:center}
+  .parents .sw{width:34px;height:34px;border-radius:5px;border:1px solid rgba(0,0,0,.08)}
+  .parents .plus{font-size:26px;color:#9a948b;font-weight:300}
+
+  .hero{position:relative;min-height:90vh;display:flex;flex-direction:column;
+        background-image:var(--scrim),url('assets/aerea.jpg');
+        background-size:cover;background-position:center;color:#fff;overflow:hidden}
+  .nav{display:flex;align-items:center;gap:26px;padding:22px 40px;position:relative;z-index:2}
+  .nav .brand{display:flex;align-items:center;gap:11px;margin-right:auto}
+  .nav .brand svg{width:30px;height:30px;color:#fff}
+  .nav .brand .t{font-family:'Playfair Display',serif;font-size:21px;font-weight:600;letter-spacing:.01em}
+  .nav .lk{color:rgba(255,255,255,.9);text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.02em}
+  .nav .lk:hover{color:#fff}
+  .nav .cta{background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:6px;
+            font-size:14px;font-weight:600;font-family:inherit;letter-spacing:.02em}
+  .hero-body{flex:1;display:flex;flex-direction:column;justify-content:center;
+             padding:0 40px 60px;max-width:880px;position:relative;z-index:2}
+  .eyebrow{font-size:12.5px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;
+           color:#fff;opacity:.92;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--accent);display:inline-block}
+  .hero h1{font-family:'Playfair Display',serif;font-weight:600;font-size:clamp(2.4rem,5.4vw,4rem);
+           line-height:1.08;letter-spacing:.005em;max-width:14ch;text-shadow:0 2px 22px rgba(0,0,0,.32)}
+  .hero p.sub{font-size:clamp(1rem,1.7vw,1.2rem);line-height:1.62;color:rgba(255,255,255,.92);
+              max-width:50ch;margin-top:22px;text-shadow:0 1px 12px rgba(0,0,0,.3)}
+  .btns{display:flex;gap:14px;margin-top:38px;flex-wrap:wrap}
+  .btn-primary{background:var(--accent);color:#fff;border:none;padding:14px 30px;border-radius:7px;
+               font-size:15px;font-weight:600;font-family:inherit;letter-spacing:.02em}
+  .btn-ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.6);
+             padding:14px 28px;border-radius:7px;font-size:15px;font-weight:500;font-family:inherit;
+             backdrop-filter:blur(3px)}
+  .swatch{position:absolute;left:40px;bottom:26px;z-index:3;display:flex;align-items:center;gap:16px;
+          background:rgba(255,255,255,.93);border-radius:11px;padding:12px 16px;color:#26231f;
+          box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .swatch .label{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;line-height:1.1}
+  .swatch .label small{display:block;font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:500;
+                       letter-spacing:.16em;text-transform:uppercase;color:#9a948b;margin-top:3px}
+  .chips{display:flex;gap:7px}
+  .chip{width:48px;text-align:center}
+  .chip .sw{height:30px;border-radius:5px;border:1px solid rgba(0,0,0,.08)}
+  .chip span{display:block;font-size:9px;letter-spacing:.02em;color:#6a655d;margin-top:4px;font-weight:500}
+  @media(max-width:720px){
+    .nav .lk{display:none}
+    .swatch{position:static;margin:0 16px 20px;flex-direction:column;align-items:flex-start}
+    .hero-body{padding:0 22px 40px}
+  }
+</style>
+</head>
+<body>
+
+<div class="ctx">
+  <span class="tag">Fusão C + A</span>
+  <span>Luar sobre areia — 3 equilíbrios · <strong>não aplicado à produção</strong></span>
+  <nav>
+    <a href="#h1">1 · Luar sobre Areia</a>
+    <a href="#h2">2 · Areia &amp; Ardósia</a>
+    <a href="#h3">3 · Névoa Quente</a>
+  </nav>
+</div>
+
+<div class="parents">
+  <div class="pcol">
+    <div class="ptitle">C · Luar Névoa</div>
+    <div class="row">
+      <div class="sw" style="background:#EEF1F5"></div>
+      <div class="sw" style="background:#293440"></div>
+      <div class="sw" style="background:#73869B"></div>
+      <div class="sw" style="background:#C4CDD7"></div>
+    </div>
+  </div>
+  <div class="plus">+</div>
+  <div class="pcol">
+    <div class="ptitle">A · Areia &amp; Café</div>
+    <div class="row">
+      <div class="sw" style="background:#F3EDE3"></div>
+      <div class="sw" style="background:#37301F"></div>
+      <div class="sw" style="background:#9B6A45"></div>
+      <div class="sw" style="background:#CDBBA4"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ FUSÃO 1 — Luar sobre Areia (frio integral) ════════ -->
+<section class="hero" id="h1" style="--accent:#586B82;--scrim:linear-gradient(rgba(28,36,46,.50),rgba(28,36,46,.50))">
+  <div class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.2 8.2 0 1 1 10 3.6a6.4 6.4 0 0 0 10.5 10.6Z"/></svg>
+      <span class="t">Luz da Lua</span>
+    </div>
+    <a class="lk">Acomodações</a><a class="lk">Experiências</a><a class="lk">Circuito das Águas</a><a class="lk">Contato</a>
+    <button class="cta">Reservar</button>
+  </div>
+  <div class="hero-body">
+    <div class="eyebrow">Socorro · Circuito das Águas Paulista</div>
+    <h1>Um refúgio sereno na Serra da Mantiqueira</h1>
+    <p class="sub">Natureza, piscina e o silêncio das montanhas a 2h30 de São Paulo. O tempo desacelera no Caminho do Café.</p>
+    <div class="btns"><button class="btn-primary">Ver acomodações</button><button class="btn-ghost">Falar no WhatsApp</button></div>
+  </div>
+  <div class="swatch">
+    <div class="label">Luar sobre Areia<small>Fusão 1 · azul-luar protagonista</small></div>
+    <div class="chips">
+      <div class="chip"><div class="sw" style="background:#F3EDE3"></div><span>#F3EDE3</span></div>
+      <div class="chip"><div class="sw" style="background:#293440"></div><span>#293440</span></div>
+      <div class="chip"><div class="sw" style="background:#586B82"></div><span>#586B82</span></div>
+      <div class="chip"><div class="sw" style="background:#CDBBA4"></div><span>#CDBBA4</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ FUSÃO 2 — Areia & Ardósia (azul na atmosfera, CTA quente) ════════ -->
+<section class="hero" id="h2" style="--accent:#9B6A45;--scrim:linear-gradient(rgba(28,36,46,.47),rgba(28,36,46,.47))">
+  <div class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.2 8.2 0 1 1 10 3.6a6.4 6.4 0 0 0 10.5 10.6Z"/></svg>
+      <span class="t">Luz da Lua</span>
+    </div>
+    <a class="lk">Acomodações</a><a class="lk">Experiências</a><a class="lk">Circuito das Águas</a><a class="lk">Contato</a>
+    <button class="cta">Reservar</button>
+  </div>
+  <div class="hero-body">
+    <div class="eyebrow">Socorro · Circuito das Águas Paulista</div>
+    <h1>Um refúgio sereno na Serra da Mantiqueira</h1>
+    <p class="sub">Natureza, piscina e o silêncio das montanhas a 2h30 de São Paulo. O tempo desacelera no Caminho do Café.</p>
+    <div class="btns"><button class="btn-primary">Ver acomodações</button><button class="btn-ghost">Falar no WhatsApp</button></div>
+  </div>
+  <div class="swatch">
+    <div class="label">Areia &amp; Ardósia<small>Fusão 2 · azul atmosfera + CTA argila</small></div>
+    <div class="chips">
+      <div class="chip"><div class="sw" style="background:#F6F1E9"></div><span>#F6F1E9</span></div>
+      <div class="chip"><div class="sw" style="background:#293440"></div><span>#293440</span></div>
+      <div class="chip"><div class="sw" style="background:#9B6A45"></div><span>#9B6A45</span></div>
+      <div class="chip"><div class="sw" style="background:#C4CDD7"></div><span>#C4CDD7</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ FUSÃO 3 — Névoa Quente (meio-termo) ════════ -->
+<section class="hero" id="h3" style="--accent:#6E8095;--scrim:linear-gradient(rgba(34,34,38,.46),rgba(34,34,38,.46))">
+  <div class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.2 8.2 0 1 1 10 3.6a6.4 6.4 0 0 0 10.5 10.6Z"/></svg>
+      <span class="t">Luz da Lua</span>
+    </div>
+    <a class="lk">Acomodações</a><a class="lk">Experiências</a><a class="lk">Circuito das Águas</a><a class="lk">Contato</a>
+    <button class="cta">Reservar</button>
+  </div>
+  <div class="hero-body">
+    <div class="eyebrow">Socorro · Circuito das Águas Paulista</div>
+    <h1>Um refúgio sereno na Serra da Mantiqueira</h1>
+    <p class="sub">Natureza, piscina e o silêncio das montanhas a 2h30 de São Paulo. O tempo desacelera no Caminho do Café.</p>
+    <div class="btns"><button class="btn-primary">Ver acomodações</button><button class="btn-ghost">Falar no WhatsApp</button></div>
+  </div>
+  <div class="swatch">
+    <div class="label">Névoa Quente<small>Fusão 3 · equilíbrio quente/frio</small></div>
+    <div class="chips">
+      <div class="chip"><div class="sw" style="background:#F1EEE8"></div><span>#F1EEE8</span></div>
+      <div class="chip"><div class="sw" style="background:#2B3138"></div><span>#2B3138</span></div>
+      <div class="chip"><div class="sw" style="background:#6E8095"></div><span>#6E8095</span></div>
+      <div class="chip"><div class="sw" style="background:#CDBBA4"></div><span>#CDBBA4</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
