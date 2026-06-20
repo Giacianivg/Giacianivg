@@ -15,10 +15,11 @@
   <meta property="og:locale" content="pt_BR">
   <meta name="twitter:card" content="summary_large_image">
 
-  <script>(function(){var t=localStorage.getItem('ldl-theme')||'clean';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>document.documentElement.setAttribute('data-theme','luar')</script>
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
+  <link rel="stylesheet" href="luar.css">
 
   <!-- SEO: dados estruturados (Schema.org LodgingBusiness) -->
   <script type="application/ld+json">
@@ -372,6 +373,7 @@
   </div>
 </footer>
 
-<script src="../design-system/u.js"></script>
+<!-- u.js NÃO é carregado aqui de propósito: seu initTheme() lê localStorage('ldl-theme')
+     e sobrescreveria o tema "luar" da landing pelo tema do CRM. A landing não usa funções do u.js. -->
 </body>
 </html>

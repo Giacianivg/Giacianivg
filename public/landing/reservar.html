@@ -6,10 +6,11 @@
   <title>Reservar — Disponibilidade e preços | Pousada Luz da Lua</title>
   <meta name="description" content="Consulte disponibilidade e preço real para suas datas na Pousada Luz da Lua, Socorro-SP.">
   <meta name="robots" content="noindex"><!-- página transacional, fora do índice -->
-  <script>(function(){var t=localStorage.getItem('ldl-theme')||'clean';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script>document.documentElement.setAttribute('data-theme','luar')</script>
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
+  <link rel="stylesheet" href="luar.css">
   <style>
     .res-wrap { max-width: 920px; margin: 0 auto; padding: var(--sp-8); }
     .res-head { text-align: center; margin: var(--sp-8) 0; }
@@ -338,6 +339,7 @@
 })();
 </script>
 
-<script src="../design-system/u.js"></script>
+<!-- u.js NÃO é carregado aqui de propósito: seu initTheme() lê localStorage('ldl-theme')
+     e sobrescreveria o tema "luar" da landing pelo tema do CRM. A landing não usa funções do u.js. -->
 </body>
 </html>

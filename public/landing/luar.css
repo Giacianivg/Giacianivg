@@ -1,0 +1,64 @@
+/* luar.css — Tema "Luar sobre Areia" (Fusão C+A) | landing pública
+   ----------------------------------------------------------------------------
+   Tema ISOLADO: remapeia os tokens de cor do design-system (t.css) apenas para
+   a landing pública via [data-theme="luar"]. NÃO altera os temas clean/dark do
+   CRM. Aprovado por Vitor a partir de _preview-CA.html#h1 (2026-06-20).
+
+   Paleta-mãe:  Areia #F3EDE3 · Ardósia #293440 · Azul-luar #586B82 · Areia média #CDBBA4
+   ---------------------------------------------------------------------------- */
+
+:root[data-theme="luar"] {
+  color-scheme: light;
+
+  /* Fundos — areia */
+  --bg0: #F3EDE3;   /* areia base — seções alternadas */
+  --bg1: #FBF7F0;   /* areia clara — cards, seções claras */
+  --bg2: #FFFFFF;
+  --bg3: #EFE8DA;
+
+  /* Superfícies — tinte ardósia translúcido */
+  --sur0: rgba(41,52,64,.02);
+  --sur1: rgba(41,52,64,.045);
+  --sur2: rgba(41,52,64,.08);
+
+  /* Bordas */
+  --bdr:  rgba(41,52,64,.12);
+  --bdr2: rgba(41,52,64,.20);
+
+  /* Texto — ardósia / cinza-quente */
+  --tx1: #293440;   /* títulos / texto forte */
+  --tx2: #54616F;   /* corpo */
+  --tx3: #8B8475;   /* auxiliar (notas) */
+
+  /* Accent — azul-luar substitui o royal vibrante */
+  --royal:    #586B82;   /* CTAs, bordas ativas (cor aprovada) */
+  --royal-l:  #4E6076;   /* links / hover — mais escuro p/ legibilidade sobre areia */
+  --midnight: #293440;   /* ardósia — início dos gradientes escuros */
+
+  --royal-bg:  rgba(88,107,130,.12);
+  --royal-bdr: rgba(88,107,130,.34);
+
+  /* Dourado discreto / terroso — estrelas de avaliação e destaques numéricos */
+  --gold: #B8924A;
+
+  /* Inputs (não usados na landing, mantidos por consistência) */
+  --input-bg:  #FFFFFF;
+  --input-bdr: rgba(41,52,64,.20);
+  --input-focus-bdr: var(--royal);
+
+  --skeleton-base:    rgba(41,52,64,.05);
+  --skeleton-shimmer: rgba(41,52,64,.10);
+}
+
+/* ── Overrides de elementos com cor hardcoded em l.css ─────────────────────── */
+
+/* Barra de navegação: vidro de areia (em vez de branco) */
+:root[data-theme="luar"] .landing-nav {
+  background: rgba(247,243,236,.85);
+}
+
+/* Scrim do hero: véu ardósia → azul-luar (paleta luar), mais escuro à esquerda
+   onde fica o texto, garantindo legibilidade do branco sobre a foto. */
+:root[data-theme="luar"] .landing-hero-overlay {
+  background: linear-gradient(135deg, rgba(28,36,46,.72) 0%, rgba(88,107,130,.45) 100%);
+}
