@@ -12,9 +12,9 @@
 
    Convenções:
    - --ldl-*    → paleta base nomeada (os ÚNICOS valores hex; tudo deriva daqui)
-   - --bg*/--tx*/--royal*/--gold → tokens do design-system que t/c/l.css e as
-     páginas JÁ consomem; aqui são reapontados para a paleta luar
-   - --accent/--surface/--space-*/--fz-*/... → camada semântica da landing
+   - --bg*, --tx*, --royal*, --gold: tokens do design-system que t, c, l.css e as
+     páginas JA consomem; aqui sao reapontados para a paleta luar
+   - --accent, --surface, --space-N, --fz-N, etc.: camada semantica da landing
 
    Paleta-mãe (aprovada em _preview-CA.html#h1):
      Areia #F3EDE3 · Ardósia #293440 · Azul-luar #586B82 · Areia média #CDBBA4

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="luar">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +15,6 @@
   <meta property="og:locale" content="pt_BR">
   <meta name="twitter:card" content="summary_large_image">
 
-  <script>document.documentElement.setAttribute('data-theme','luar')</script>
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
@@ -52,87 +51,88 @@
   </script>
 
   <style>
-    /* ── Bloco 1 — estilos scoped (tokens do design-system) ───────────────── */
+    /* ── Bloco 1 — estilos scoped (tokens da landing: tokens.css) ──────────── */
     .landing-hero { min-height: 92vh; }
     .hero-title {
-      font-family: var(--f-serif);
-      font-size: clamp(2.25rem, 5vw, 3.75rem);
-      font-weight: 700; color: #fff; line-height: 1.12;
-      margin-bottom: var(--sp-4); text-shadow: 0 2px 16px rgba(0,0,0,.45);
+      font-family: var(--font-serif);
+      font-size: var(--fz-display);
+      font-weight: var(--fw-bold); color: #fff; line-height: var(--lh-tight);
+      letter-spacing: var(--ls-tight);
+      margin-bottom: var(--space-sm); text-shadow: 0 2px 16px rgba(0,0,0,.45);
     }
     .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.25rem); color: rgba(255,255,255,.88);
-      margin-bottom: var(--sp-8); line-height: 1.6; max-width: 600px;
+      font-size: var(--fz-body-lg); color: rgba(255,255,255,.88);
+      margin-bottom: var(--space-lg); line-height: var(--lh-normal); max-width: 600px;
     }
-    .amenity-list { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-8); }
+    .amenity-list { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg); }
     .amenity-pill {
-      padding: 5px 14px; border-radius: var(--r-full);
+      padding: 5px 14px; border-radius: var(--radius-pill);
       background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
-      color: rgba(255,255,255,.92); font-size: .875rem; backdrop-filter: blur(4px);
+      color: rgba(255,255,255,.92); font-size: var(--fz-body-sm); backdrop-filter: blur(4px);
     }
     .rooms-section { background: var(--bg0); }
     .steps-section { background: var(--bg1); }
-    .section-subtitle { font-size: 1.0625rem; color: var(--tx2); text-align: center; margin-bottom: var(--sp-8); }
-    .price-note { font-size: .8125rem; color: var(--tx3); margin-top: 4px; }
+    .section-subtitle { font-size: var(--fz-body-lg); color: var(--tx2); text-align: center; margin-bottom: var(--space-lg); }
+    .price-note { font-size: var(--fz-caption); color: var(--tx3); margin-top: var(--space-2xs); }
 
     /* Faixa de proposta de valor (5 segundos) */
     .valueprop { background: var(--bg1); border-bottom: 1px solid var(--bdr); }
     .valueprop-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: var(--sp-6); padding: var(--sp-10) var(--sp-8); max-width: 1100px; margin: 0 auto; text-align: center;
+      gap: var(--space-md); padding: var(--space-xl) var(--space-lg); max-width: 1100px; margin: 0 auto; text-align: center;
     }
     .vp-item .vp-ico { font-size: 1.75rem; }
-    .vp-item .vp-t { font-weight: 600; color: var(--tx1); margin-top: var(--sp-2); }
-    .vp-item .vp-d { font-size: .9375rem; color: var(--tx2); margin-top: 4px; }
+    .vp-item .vp-t { font-weight: var(--fw-semibold); color: var(--tx1); margin-top: var(--space-xs); }
+    .vp-item .vp-d { font-size: var(--fz-body-sm); color: var(--tx2); margin-top: var(--space-2xs); }
 
     /* Split (sobre / história) */
     .split {
-      display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-10);
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl);
       align-items: center; max-width: 1100px; margin: 0 auto;
     }
-    .split img, .split .photo-ph { width: 100%; height: 380px; object-fit: cover; border-radius: var(--r-xl); box-shadow: var(--sh-md); }
-    .split h2 { font-family: var(--f-serif); font-size: clamp(1.75rem, 3vw, 2.25rem); color: var(--tx1); margin-bottom: var(--sp-4); }
-    .split p { color: var(--tx2); line-height: 1.7; margin-bottom: var(--sp-4); }
-    @media (max-width: 760px){ .split { grid-template-columns: 1fr; gap: var(--sp-6); } .split img, .split .photo-ph { height: 260px; } }
+    .split img, .split .photo-ph { width: 100%; height: 380px; object-fit: cover; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+    .split h2 { font-family: var(--font-serif); font-size: var(--fz-h2); color: var(--tx1); margin-bottom: var(--space-sm); }
+    .split p { color: var(--tx2); line-height: var(--lh-relaxed); margin-bottom: var(--space-sm); }
+    @media (max-width: 760px){ .split { grid-template-columns: 1fr; gap: var(--space-md); } .split img, .split .photo-ph { height: 260px; } }
 
     /* Galeria experiência */
     .xp-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: var(--sp-4); max-width: 1100px; margin: 0 auto;
+      gap: var(--space-sm); max-width: 1100px; margin: 0 auto;
     }
-    .xp-card { position: relative; border-radius: var(--r-lg); overflow: hidden; aspect-ratio: 4/3; box-shadow: var(--sh-sm); }
+    .xp-card { position: relative; border-radius: var(--radius-lg); overflow: hidden; aspect-ratio: 4/3; box-shadow: var(--shadow-sm); }
     .xp-card img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t-base); }
     .xp-card:hover img { transform: scale(1.05); }
     .xp-card .xp-cap {
-      position: absolute; left: 0; right: 0; bottom: 0; padding: var(--sp-4);
-      background: linear-gradient(to top, rgba(0,0,0,.7), transparent); color: #fff; font-weight: 600; font-size: .9375rem;
+      position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-sm);
+      background: linear-gradient(to top, rgba(0,0,0,.7), transparent); color: #fff; font-weight: var(--fw-semibold); font-size: var(--fz-body-sm);
     }
 
     /* Bloco teaser do Circuito */
     .circuito-teaser {
       background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
-      color: #fff; text-align: center; padding: var(--sp-16) var(--sp-8);
+      color: #fff; text-align: center; padding: var(--space-2xl) var(--space-lg);
     }
-    .circuito-teaser h2 { font-family: var(--f-serif); font-size: clamp(1.75rem, 3.5vw, 2.5rem); margin-bottom: var(--sp-4); }
-    .circuito-teaser p { opacity: .9; max-width: 640px; margin: 0 auto var(--sp-6); line-height: 1.65; }
-    .city-chips { display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center; margin-bottom: var(--sp-8); }
-    .city-chip { padding: 6px 14px; border-radius: var(--r-full); background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); font-size: .875rem; }
+    .circuito-teaser h2 { font-family: var(--font-serif); font-size: var(--fz-h1); margin-bottom: var(--space-sm); }
+    .circuito-teaser p { opacity: .9; max-width: 640px; margin: 0 auto var(--space-md); line-height: var(--lh-normal); }
+    .city-chips { display: flex; gap: var(--space-xs); flex-wrap: wrap; justify-content: center; margin-bottom: var(--space-lg); }
+    .city-chip { padding: 6px 14px; border-radius: var(--radius-pill); background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); font-size: var(--fz-body-sm); }
 
     /* Prova social */
-    .reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-5); max-width: 1100px; margin: 0 auto; }
-    .review-card { background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--r-lg); padding: var(--sp-6); }
-    .review-stars { color: var(--gold); margin-bottom: var(--sp-3); }
-    .review-card p { color: var(--tx2); line-height: 1.6; font-style: italic; margin-bottom: var(--sp-4); }
-    .review-author { font-weight: 600; color: var(--tx1); font-size: .9375rem; }
+    .reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md); max-width: 1100px; margin: 0 auto; }
+    .review-card { background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--radius-lg); padding: var(--space-md); }
+    .review-stars { color: var(--gold); margin-bottom: var(--space-sm); }
+    .review-card p { color: var(--tx2); line-height: var(--lh-normal); font-style: italic; margin-bottom: var(--space-sm); }
+    .review-author { font-weight: var(--fw-semibold); color: var(--tx1); font-size: var(--fz-body-sm); }
 
-    .cta-section { background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%); padding: var(--sp-16) var(--sp-8); text-align: center; }
+    .cta-section { background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%); padding: var(--space-2xl) var(--space-lg); text-align: center; }
     .cta-section * { color: #fff; }
 
     /* Placeholder de foto (claramente marcado e trocável) */
     .photo-ph {
       display: flex; align-items: center; justify-content: center; flex-direction: column;
       background: repeating-linear-gradient(45deg, var(--bg2), var(--bg2) 12px, var(--bg1) 12px, var(--bg1) 24px);
-      color: var(--tx3); font-size: .8125rem; text-align: center; border: 1px dashed var(--bdr2); gap: 4px; min-height: 100%;
+      color: var(--tx3); font-size: var(--fz-caption); text-align: center; border: 1px dashed var(--bdr2); gap: var(--space-2xs); min-height: 100%;
     }
     .photo-ph .ph-ico { font-size: 1.5rem; opacity: .7; }
     .room-card .photo-ph { aspect-ratio: 3/2; }
@@ -142,11 +142,11 @@
 
 <!-- Nav -->
 <nav class="landing-nav">
-  <a href="#topo" style="display:flex;align-items:center;gap:var(--sp-3);text-decoration:none">
+  <a href="#topo" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-    <span style="font-family:var(--f-serif);font-weight:600;color:var(--tx1);font-size:.9375rem">Luz da Lua</span>
+    <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
-  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+  <div style="display:flex;align-items:center;gap:var(--space-sm)">
     <a href="#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Acomodações</a>
     <a href="circuito.html" class="btn btn-ghost btn-sm" style="color:var(--tx2)">O que fazer</a>
     <a href="reservar.html" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Reservar</a>
@@ -166,7 +166,7 @@
     </div>
     <h1 class="hero-title">Seu refúgio na natureza<br>a 2h30 de São Paulo</h1>
     <p class="hero-sub">Pousada boutique em Socorro com piscina, vista para a serra e hospitalidade de quem recebe bem. Perfeito para casais, famílias e grupos.</p>
-    <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap">
+    <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap">
       <a href="reservar.html" class="btn-cta">Ver disponibilidade e preços</a>
       <a href="circuito.html" class="btn btn-ghost btn-lg" style="color:#fff;border:1px solid rgba(255,255,255,.4)">Descobrir a região</a>
     </div>
@@ -184,7 +184,7 @@
 </section>
 
 <!-- Stats -->
-<section class="landing-section rooms-section" style="background:var(--bg1);padding-top:var(--sp-10);padding-bottom:var(--sp-10)">
+<section class="landing-section rooms-section" style="background:var(--bg1);padding-top:var(--space-xl);padding-bottom:var(--space-xl)">
   <div class="landing-section-inner">
     <div class="stat-grid">
       <div class="stat-item"><div class="stat-value">300+</div><div class="stat-label">Hóspedes recebidos</div></div>
@@ -220,7 +220,7 @@
         <div class="photo-ph"><span class="ph-ico">📷</span>Foto da Ala A em breve</div>
         <div class="room-card-body">
           <div class="room-card-name">Ala A — Casal / Duplo</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Aconchegante, ideal para casais. Acomoda até 3 pessoas.</p>
+          <p style="font-size:var(--fz-body-sm);color:var(--tx2);margin:var(--space-xs) 0 var(--space-sm)">Aconchegante, ideal para casais. Acomoda até 3 pessoas.</p>
           <div class="row-between">
             <div><div class="room-card-price">Consulte valores</div><div class="price-note">disponibilidade em tempo real em breve</div></div>
             <a href="reservar.html" class="btn btn-primary btn-sm">Reservar</a>
@@ -231,7 +231,7 @@
         <img class="room-card-img" src="assets/quarto-ala-b.jpeg" alt="Quarto da Ala B da Pousada Luz da Lua" loading="lazy">
         <div class="room-card-body">
           <div class="room-card-name">Ala B — Superior / Família</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Espaçoso e confortável. Acomoda até 5 pessoas.</p>
+          <p style="font-size:var(--fz-body-sm);color:var(--tx2);margin:var(--space-xs) 0 var(--space-sm)">Espaçoso e confortável. Acomoda até 5 pessoas.</p>
           <div class="row-between">
             <div><div class="room-card-price">Consulte valores</div><div class="price-note">disponibilidade em tempo real em breve</div></div>
             <a href="reservar.html" class="btn btn-primary btn-sm">Reservar</a>
@@ -242,7 +242,7 @@
         <div class="photo-ph"><span class="ph-ico">📷</span>Foto da Ala C em breve</div>
         <div class="room-card-body">
           <div class="room-card-name">Ala C — Família / Grupo</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Para famílias e grupos. Casal: até 8 pessoas · Grupos: sob medida.</p>
+          <p style="font-size:var(--fz-body-sm);color:var(--tx2);margin:var(--space-xs) 0 var(--space-sm)">Para famílias e grupos. Casal: até 8 pessoas · Grupos: sob medida.</p>
           <div class="row-between">
             <div><div class="room-card-price">Sob consulta</div><div class="price-note">grupos customizados</div></div>
             <a href="reservar.html" class="btn btn-primary btn-sm">Consultar</a>
@@ -351,26 +351,26 @@
 
 <!-- CTA final -->
 <section class="cta-section">
-  <h2 style="font-family:var(--f-serif);font-size:2rem;font-weight:700;margin-bottom:var(--sp-3)">Pronto para sua escapada?</h2>
-  <p style="font-size:1.0625rem;opacity:.85;margin-bottom:var(--sp-8)">Fale agora conosco no WhatsApp e garanta sua data.</p>
-  <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta" style="font-size:1.125rem;background:#fff;color:var(--royal)">
+  <h2 style="font-family:var(--font-serif);font-size:var(--fz-h1);font-weight:var(--fw-bold);margin-bottom:var(--space-sm)">Pronto para sua escapada?</h2>
+  <p style="font-size:var(--fz-body-lg);opacity:.85;margin-bottom:var(--space-lg)">Fale agora conosco no WhatsApp e garanta sua data.</p>
+  <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta" style="font-size:var(--fz-body-lg);background:#fff;color:var(--royal)">
     Reservar pelo WhatsApp
   </a>
-  <p style="font-size:.875rem;opacity:.65;margin-top:var(--sp-6)">Resposta em minutos • Disponível todos os dias</p>
+  <p style="font-size:var(--fz-body-sm);opacity:.65;margin-top:var(--space-md)">Resposta em minutos • Disponível todos os dias</p>
 </section>
 
 <footer class="landing-footer">
   <div style="max-width:800px;margin:0 auto">
-    <div style="font-family:var(--f-serif);font-size:1rem;font-weight:600;color:var(--tx1);margin-bottom:var(--sp-2)">Pousada Luz da Lua</div>
-    <p style="margin-bottom:var(--sp-2)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
-    <p style="margin-bottom:var(--sp-2)">
+    <div style="font-family:var(--font-serif);font-size:var(--fz-body);font-weight:var(--fw-semibold);color:var(--tx1);margin-bottom:var(--space-xs)">Pousada Luz da Lua</div>
+    <p style="margin-bottom:var(--space-xs)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
+    <p style="margin-bottom:var(--space-xs)">
       <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" style="color:var(--royal-l)">(19) 99840-0306</a>
     </p>
-    <p style="margin-bottom:var(--sp-4);font-size:.8125rem;color:var(--tx3)">
+    <p style="margin-bottom:var(--space-sm);font-size:var(--fz-caption);color:var(--tx3)">
       Check-in a partir das 14h · Check-out até 12h · Diária de 24h conforme Portaria MTur 28/2025.
       Cancelamento gratuito até 7 dias antes do check-in.
     </p>
-    <p style="font-size:.75rem;color:var(--tx3)">© 2026 Pousada Luz da Lua · Todos os direitos reservados · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
+    <p style="font-size:var(--fz-caption);color:var(--tx3)">© 2026 Pousada Luz da Lua · Todos os direitos reservados · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
   </div>
 </footer>
 

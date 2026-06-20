@@ -1,66 +1,65 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="luar">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reservar — Disponibilidade e preços | Pousada Luz da Lua</title>
   <meta name="description" content="Consulte disponibilidade e preço real para suas datas na Pousada Luz da Lua, Socorro-SP.">
   <meta name="robots" content="noindex"><!-- página transacional, fora do índice -->
-  <script>document.documentElement.setAttribute('data-theme','luar')</script>
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="luar.css">
   <style>
-    .res-wrap { max-width: 920px; margin: 0 auto; padding: var(--sp-8); }
-    .res-head { text-align: center; margin: var(--sp-8) 0; }
-    .res-head h1 { font-family: var(--f-serif); font-size: clamp(1.75rem, 4vw, 2.5rem); color: var(--tx1); margin-bottom: var(--sp-2); }
+    .res-wrap { max-width: 920px; margin: 0 auto; padding: var(--space-lg); }
+    .res-head { text-align: center; margin: var(--space-lg) 0; }
+    .res-head h1 { font-family: var(--font-serif); font-size: var(--fz-h1); color: var(--tx1); letter-spacing: var(--ls-tight); margin-bottom: var(--space-xs); }
     .res-head p { color: var(--tx2); }
 
     .search-card {
-      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--r-xl);
-      padding: var(--sp-6); box-shadow: var(--sh-md);
-      display: grid; grid-template-columns: 1fr 1fr 0.8fr auto; gap: var(--sp-4); align-items: end;
+      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--radius-lg);
+      padding: var(--space-md); box-shadow: var(--shadow-md);
+      display: grid; grid-template-columns: 1fr 1fr 0.8fr auto; gap: var(--space-sm); align-items: end;
     }
-    .field label { display: block; font-size: .8125rem; font-weight: 600; color: var(--tx2); margin-bottom: 6px; }
+    .field label { display: block; font-size: var(--fz-caption); font-weight: var(--fw-semibold); color: var(--tx2); margin-bottom: 6px; }
     .field input, .field select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--input-bdr); border-radius: var(--r-md);
-      background: var(--input-bg); color: var(--tx1); font-size: .9375rem;
+      width: 100%; padding: 10px 12px; border: 1px solid var(--input-bdr); border-radius: var(--radius-md);
+      background: var(--input-bg); color: var(--tx1); font-size: var(--fz-body-sm);
     }
     @media (max-width: 720px){ .search-card { grid-template-columns: 1fr 1fr; } }
 
-    #cf-turnstile { margin: var(--sp-4) auto 0; display: flex; justify-content: center; }
-    .results { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+    #cf-turnstile { margin: var(--space-sm) auto 0; display: flex; justify-content: center; }
+    .results { margin-top: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
     .offer {
-      background: var(--bg0); border: 1px solid var(--bdr); border-radius: var(--r-lg);
-      padding: var(--sp-5); display: flex; justify-content: space-between; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+      background: var(--bg0); border: 1px solid var(--bdr); border-radius: var(--radius-lg);
+      padding: var(--space-md); display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
     }
     .offer.sold { opacity: .6; }
-    .offer-info h3 { font-size: 1.0625rem; color: var(--tx1); margin-bottom: 4px; }
-    .offer-info .meta { font-size: .8125rem; color: var(--tx3); }
-    .offer-info .notice { font-size: .8125rem; color: var(--warn); margin-top: 4px; }
+    .offer-info h3 { font-size: var(--fz-body-lg); color: var(--tx1); margin-bottom: var(--space-2xs); }
+    .offer-info .meta { font-size: var(--fz-caption); color: var(--tx3); }
+    .offer-info .notice { font-size: var(--fz-caption); color: var(--warn); margin-top: var(--space-2xs); }
     .offer-price { text-align: right; }
-    .offer-price .amount { font-size: 1.5rem; font-weight: 700; color: var(--tx1); font-family: var(--f-serif); }
-    .offer-price .per { font-size: .75rem; color: var(--tx3); }
-    .badge-sold { font-size: .75rem; font-weight: 600; color: var(--err); background: var(--err-bg); padding: 3px 10px; border-radius: var(--r-full); }
-    .state { text-align: center; color: var(--tx2); padding: var(--sp-8); }
+    .offer-price .amount { font-size: var(--fz-h3); font-weight: var(--fw-bold); color: var(--tx1); font-family: var(--font-serif); }
+    .offer-price .per { font-size: var(--fz-caption); color: var(--tx3); }
+    .badge-sold { font-size: var(--fz-caption); font-weight: var(--fw-semibold); color: var(--err); background: var(--err-bg); padding: 3px 10px; border-radius: var(--radius-pill); }
+    .state { text-align: center; color: var(--tx2); padding: var(--space-lg); }
     .state.err { color: var(--err); }
-    .group-box { background: var(--royal-bg); border: 1px solid var(--royal-bdr); border-radius: var(--r-lg); padding: var(--sp-5); text-align: center; color: var(--tx1); }
-    .back { display: inline-block; margin-bottom: var(--sp-4); color: var(--royal-l); text-decoration: none; font-size: .875rem; }
+    .group-box { background: var(--royal-bg); border: 1px solid var(--royal-bdr); border-radius: var(--radius-lg); padding: var(--space-md); text-align: center; color: var(--tx1); }
+    .back { display: inline-block; margin-bottom: var(--space-sm); color: var(--royal-l); text-decoration: none; font-size: var(--fz-body-sm); }
 
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: var(--sp-4); z-index: var(--z-modal); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: var(--space-sm); z-index: var(--z-modal); }
     .modal-overlay[hidden] { display: none; }
-    .modal-card { background: var(--sur0); border-radius: var(--r-xl); box-shadow: var(--sh-lg); padding: var(--sp-6); max-width: 440px; width: 100%; position: relative; }
+    .modal-card { background: var(--sur0); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-md); max-width: 440px; width: 100%; position: relative; }
     .modal-close { position: absolute; top: 10px; right: 14px; background: none; border: none; font-size: 1.5rem; color: var(--tx3); cursor: pointer; line-height: 1; }
   </style>
 </head>
 <body>
 
 <nav class="landing-nav">
-  <a href="index.html" style="display:flex;align-items:center;gap:var(--sp-3);text-decoration:none">
+  <a href="index.html" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-    <span style="font-family:var(--f-serif);font-weight:600;color:var(--tx1);font-size:.9375rem">Luz da Lua</span>
+    <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
   <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-primary btn-sm">WhatsApp</a>
 </nav>
@@ -101,31 +100,31 @@
   <div class="modal-card">
     <button class="modal-close" id="bookClose" aria-label="Fechar">×</button>
     <div id="bookStepForm">
-      <h2 style="font-family:var(--f-serif);color:var(--tx1);margin-bottom:4px">Finalizar reserva</h2>
-      <p id="bookSummary" style="color:var(--tx2);font-size:.9rem;margin-bottom:var(--sp-5)"></p>
+      <h2 style="font-family:var(--font-serif);color:var(--tx1);margin-bottom:var(--space-2xs)">Finalizar reserva</h2>
+      <p id="bookSummary" style="color:var(--tx2);font-size:var(--fz-body-sm);margin-bottom:var(--space-md)"></p>
       <form id="bookForm">
-        <div class="field" style="margin-bottom:var(--sp-4)">
+        <div class="field" style="margin-bottom:var(--space-sm)">
           <label for="bkName">Nome completo</label>
           <input type="text" id="bkName" required autocomplete="name">
         </div>
-        <div class="field" style="margin-bottom:var(--sp-4)">
+        <div class="field" style="margin-bottom:var(--space-sm)">
           <label for="bkWhats">WhatsApp (com DDD)</label>
           <input type="tel" id="bkWhats" required placeholder="(19) 99999-9999" autocomplete="tel">
         </div>
-        <div class="field" style="margin-bottom:var(--sp-5)">
+        <div class="field" style="margin-bottom:var(--space-md)">
           <label for="bkEmail">E-mail (opcional)</label>
           <input type="email" id="bkEmail" autocomplete="email">
         </div>
         <button type="submit" class="btn btn-primary" id="bkSubmit" style="width:100%">Reservar e segurar o quarto</button>
-        <p id="bkError" class="state err" style="display:none;padding:var(--sp-3) 0 0"></p>
+        <p id="bkError" class="state err" style="display:none;padding:var(--space-sm) 0 0"></p>
       </form>
     </div>
     <div id="bookStepDone" hidden style="text-align:center">
       <div style="font-size:2rem">✅</div>
-      <h2 style="font-family:var(--f-serif);color:var(--tx1);margin:var(--sp-2) 0">Reserva pré-confirmada!</h2>
+      <h2 style="font-family:var(--font-serif);color:var(--tx1);margin:var(--space-xs) 0">Reserva pré-confirmada!</h2>
       <p id="bookDoneMsg" style="color:var(--tx2);line-height:1.6"></p>
-      <a id="bookDoneWa" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:var(--sp-4)">Finalizar pagamento no WhatsApp</a>
-      <p style="font-size:.75rem;color:var(--tx3);margin-top:var(--sp-4)">O pagamento por PIX direto no site chega em breve.</p>
+      <a id="bookDoneWa" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:var(--space-sm)">Finalizar pagamento no WhatsApp</a>
+      <p style="font-size:var(--fz-caption);color:var(--tx3);margin-top:var(--space-sm)">O pagamento por PIX direto no site chega em breve.</p>
     </div>
   </div>
 </div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="luar">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,6 @@
   <meta property="og:description" content="Aventura em Socorro, águas termais, Caminho do Café e vinícolas — tudo a poucos km da Pousada Luz da Lua.">
   <meta property="og:image" content="https://pousadaluzdaluasp.com.br/landing/assets/aerea.jpg">
 
-  <script>document.documentElement.setAttribute('data-theme','luar')</script>
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
@@ -39,63 +38,63 @@
     .circ-hero {
       position: relative; min-height: 48vh; display: flex; align-items: flex-end;
       background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
-      color: #fff; padding: var(--sp-12) var(--sp-8);
+      color: #fff; padding: var(--space-xl) var(--space-lg);
     }
     .circ-hero-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
-    .circ-hero h1 { font-family: var(--f-serif); font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.12; margin-bottom: var(--sp-3); }
-    .circ-hero p { opacity: .9; max-width: 620px; line-height: 1.6; }
-    .breadcrumb { font-size: .875rem; opacity: .8; margin-bottom: var(--sp-4); }
+    .circ-hero h1 { font-family: var(--font-serif); font-size: var(--fz-h1); line-height: var(--lh-tight); letter-spacing: var(--ls-tight); margin-bottom: var(--space-sm); }
+    .circ-hero p { opacity: .9; max-width: 620px; line-height: var(--lh-normal); }
+    .breadcrumb { font-size: var(--fz-body-sm); opacity: .8; margin-bottom: var(--space-sm); }
     .breadcrumb a { color: #fff; text-decoration: underline; }
 
     /* Barra de filtros */
     .filter-bar {
       position: sticky; top: 0; z-index: var(--z-above); background: var(--bg1);
-      border-bottom: 1px solid var(--bdr); padding: var(--sp-4) var(--sp-8);
-      display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: center;
+      border-bottom: 1px solid var(--bdr); padding: var(--space-sm) var(--space-lg);
+      display: flex; gap: var(--space-xs); flex-wrap: wrap; justify-content: center;
     }
     .filter-btn {
-      padding: 6px 16px; border-radius: var(--r-full); border: 1px solid var(--bdr2);
-      background: var(--sur1); color: var(--tx2); font-size: .875rem; cursor: pointer;
-      transition: all var(--t-fast);
+      padding: 6px 16px; border-radius: var(--radius-pill); border: 1px solid var(--bdr2);
+      background: var(--sur1); color: var(--tx2); font-size: var(--fz-body-sm); cursor: pointer;
+      transition: all var(--motion-fast);
     }
     .filter-btn:hover { border-color: var(--royal); color: var(--tx1); }
     .filter-btn.active { background: var(--royal); border-color: var(--royal); color: #fff; }
 
-    .city-section { max-width: 1100px; margin: 0 auto; padding: var(--sp-12) var(--sp-8); }
-    .city-head { margin-bottom: var(--sp-6); }
-    .city-head h2 { font-family: var(--f-serif); font-size: clamp(1.5rem, 3vw, 2rem); color: var(--tx1); }
-    .city-head .city-tag { color: var(--royal); font-weight: 600; font-size: .9375rem; }
-    .city-head .city-dist { color: var(--tx3); font-size: .875rem; margin-top: 4px; }
-    .city-head p { color: var(--tx2); line-height: 1.65; margin-top: var(--sp-3); max-width: 760px; }
+    .city-section { max-width: 1100px; margin: 0 auto; padding: var(--space-xl) var(--space-lg); }
+    .city-head { margin-bottom: var(--space-md); }
+    .city-head h2 { font-family: var(--font-serif); font-size: var(--fz-h2); color: var(--tx1); }
+    .city-head .city-tag { color: var(--royal); font-weight: var(--fw-semibold); font-size: var(--fz-body-sm); }
+    .city-head .city-dist { color: var(--tx3); font-size: var(--fz-body-sm); margin-top: var(--space-2xs); }
+    .city-head p { color: var(--tx2); line-height: var(--lh-normal); margin-top: var(--space-sm); max-width: 760px; }
 
-    .attr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4); margin-top: var(--sp-5); }
+    .attr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-sm); margin-top: var(--space-md); }
     .attr-card {
-      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--r-lg);
-      padding: var(--sp-5); transition: box-shadow var(--t-fast), transform var(--t-fast);
+      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--radius-lg);
+      padding: var(--space-md); transition: box-shadow var(--motion-fast), transform var(--motion-fast);
     }
-    .attr-card:hover { box-shadow: var(--sh-md); transform: translateY(-2px); }
-    .attr-card .attr-cat { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 10px; border-radius: var(--r-full); background: var(--royal-bg); color: var(--royal); margin-bottom: var(--sp-3); }
-    .attr-card h3 { font-size: 1.0625rem; color: var(--tx1); margin-bottom: var(--sp-2); }
-    .attr-card p { font-size: .9rem; color: var(--tx2); line-height: 1.55; }
-    .attr-card .soon { display: inline-block; margin-top: var(--sp-2); font-size: .75rem; font-weight: 600; color: var(--warn); }
+    .attr-card:hover { box-shadow: var(--shadow-md); transform: translateY(var(--hover-lift)); }
+    .attr-card .attr-cat { display: inline-block; font-size: var(--fz-caption); font-weight: var(--fw-semibold); padding: 2px 10px; border-radius: var(--radius-pill); background: var(--royal-bg); color: var(--royal); margin-bottom: var(--space-sm); }
+    .attr-card h3 { font-size: var(--fz-body-lg); color: var(--tx1); margin-bottom: var(--space-xs); }
+    .attr-card p { font-size: var(--fz-body-sm); color: var(--tx2); line-height: var(--lh-normal); }
+    .attr-card .soon { display: inline-block; margin-top: var(--space-xs); font-size: var(--fz-caption); font-weight: var(--fw-semibold); color: var(--warn); }
     .attr-card.hidden { display: none; }
     .city-section.empty { display: none; }
 
-    .circ-cta { background: var(--bg1); text-align: center; padding: var(--sp-16) var(--sp-8); border-top: 1px solid var(--bdr); }
-    .circ-cta h2 { font-family: var(--f-serif); font-size: 1.75rem; color: var(--tx1); margin-bottom: var(--sp-3); }
-    .circ-cta p { color: var(--tx2); margin-bottom: var(--sp-6); }
-    .note { font-size: .8125rem; color: var(--tx3); text-align: center; padding: 0 var(--sp-8) var(--sp-10); max-width: 760px; margin: 0 auto; }
+    .circ-cta { background: var(--bg1); text-align: center; padding: var(--space-2xl) var(--space-lg); border-top: 1px solid var(--bdr); }
+    .circ-cta h2 { font-family: var(--font-serif); font-size: var(--fz-h2); color: var(--tx1); margin-bottom: var(--space-sm); }
+    .circ-cta p { color: var(--tx2); margin-bottom: var(--space-md); }
+    .note { font-size: var(--fz-caption); color: var(--tx3); text-align: center; padding: 0 var(--space-lg) var(--space-xl); max-width: 760px; margin: 0 auto; }
   </style>
 </head>
 <body>
 
 <!-- Nav -->
 <nav class="landing-nav">
-  <a href="index.html" style="display:flex;align-items:center;gap:var(--sp-3);text-decoration:none">
+  <a href="index.html" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-    <span style="font-family:var(--f-serif);font-weight:600;color:var(--tx1);font-size:.9375rem">Luz da Lua</span>
+    <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
-  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+  <div style="display:flex;align-items:center;gap:var(--space-sm)">
     <a href="index.html#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Acomodações</a>
     <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-primary btn-sm">WhatsApp</a>
   </div>
@@ -235,10 +234,10 @@
 
 <footer class="landing-footer">
   <div style="max-width:800px;margin:0 auto">
-    <div style="font-family:var(--f-serif);font-size:1rem;font-weight:600;color:var(--tx1);margin-bottom:var(--sp-2)">Pousada Luz da Lua</div>
-    <p style="margin-bottom:var(--sp-2)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
+    <div style="font-family:var(--font-serif);font-size:var(--fz-body);font-weight:var(--fw-semibold);color:var(--tx1);margin-bottom:var(--space-xs)">Pousada Luz da Lua</div>
+    <p style="margin-bottom:var(--space-xs)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
     <p><a href="https://wa.me/5519998400306" target="_blank" rel="noopener" style="color:var(--royal-l)">(19) 99840-0306</a></p>
-    <p style="margin-top:var(--sp-4);font-size:.75rem;color:var(--tx3)">© 2026 Pousada Luz da Lua · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
+    <p style="margin-top:var(--space-sm);font-size:var(--fz-caption);color:var(--tx3)">© 2026 Pousada Luz da Lua · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
   </div>
 </footer>
 
