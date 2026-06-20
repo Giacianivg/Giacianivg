@@ -46,6 +46,11 @@
     .state.err { color: var(--err); }
     .group-box { background: var(--royal-bg); border: 1px solid var(--royal-bdr); border-radius: var(--r-lg); padding: var(--sp-5); text-align: center; color: var(--tx1); }
     .back { display: inline-block; margin-bottom: var(--sp-4); color: var(--royal-l); text-decoration: none; font-size: .875rem; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: var(--sp-4); z-index: var(--z-modal); }
+    .modal-overlay[hidden] { display: none; }
+    .modal-card { background: var(--sur0); border-radius: var(--r-xl); box-shadow: var(--sh-lg); padding: var(--sp-6); max-width: 440px; width: 100%; position: relative; }
+    .modal-close { position: absolute; top: 10px; right: 14px; background: none; border: none; font-size: 1.5rem; color: var(--tx3); cursor: pointer; line-height: 1; }
   </style>
 </head>
 <body>
@@ -87,6 +92,40 @@
   <div id="cf-turnstile"></div>
 
   <div class="results" id="results"></div>
+</div>
+
+<!-- Modal de reserva (Bloco 3) -->
+<div class="modal-overlay" id="bookModal" hidden>
+  <div class="modal-card">
+    <button class="modal-close" id="bookClose" aria-label="Fechar">×</button>
+    <div id="bookStepForm">
+      <h2 style="font-family:var(--f-serif);color:var(--tx1);margin-bottom:4px">Finalizar reserva</h2>
+      <p id="bookSummary" style="color:var(--tx2);font-size:.9rem;margin-bottom:var(--sp-5)"></p>
+      <form id="bookForm">
+        <div class="field" style="margin-bottom:var(--sp-4)">
+          <label for="bkName">Nome completo</label>
+          <input type="text" id="bkName" required autocomplete="name">
+        </div>
+        <div class="field" style="margin-bottom:var(--sp-4)">
+          <label for="bkWhats">WhatsApp (com DDD)</label>
+          <input type="tel" id="bkWhats" required placeholder="(19) 99999-9999" autocomplete="tel">
+        </div>
+        <div class="field" style="margin-bottom:var(--sp-5)">
+          <label for="bkEmail">E-mail (opcional)</label>
+          <input type="email" id="bkEmail" autocomplete="email">
+        </div>
+        <button type="submit" class="btn btn-primary" id="bkSubmit" style="width:100%">Reservar e segurar o quarto</button>
+        <p id="bkError" class="state err" style="display:none;padding:var(--sp-3) 0 0"></p>
+      </form>
+    </div>
+    <div id="bookStepDone" hidden style="text-align:center">
+      <div style="font-size:2rem">✅</div>
+      <h2 style="font-family:var(--f-serif);color:var(--tx1);margin:var(--sp-2) 0">Reserva pré-confirmada!</h2>
+      <p id="bookDoneMsg" style="color:var(--tx2);line-height:1.6"></p>
+      <a id="bookDoneWa" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:var(--sp-4)">Finalizar pagamento no WhatsApp</a>
+      <p style="font-size:.75rem;color:var(--tx3);margin-top:var(--sp-4)">O pagamento por PIX direto no site chega em breve.</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -166,14 +205,13 @@
     } else if (o.total_price == null) {
       right = '<div class="offer-price"><span class="per">consultar</span></div>';
     } else {
-      var msg = encodeURIComponent('Olá! Quero reservar ' + o.label + ' de ' + ctx.checkin + ' a ' + ctx.checkout +
-        ' para ' + ctx.guests + ' hóspede(s). Total ' + fmtBRL(o.total_price) + '.');
       right = '<div class="offer-price">' +
         '<div class="amount">' + fmtBRL(o.total_price) + '</div>' +
         '<div class="per">total · ' + o.nights + ' noite' + (o.nights > 1 ? 's' : '') +
           (o.desconto ? ' · ' + o.desconto + '% desc.' : '') + '</div>' +
-        // Bloco 3 trocará este link por reserva online (pending + PIX). Por ora, WhatsApp.
-        '<a href="' + WA + '?text=' + msg + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:8px">Reservar</a>' +
+        // Bloco 3: abre o modal de reserva (pending + hold). PIX entra no Bloco 4.
+        '<button class="btn btn-primary btn-sm book-btn" style="margin-top:8px" ' +
+          'data-room="' + o.room_type + '" data-label="' + o.label + '" data-total="' + o.total_price + '">Reservar</button>' +
         '</div>';
     }
     div.innerHTML = info + right;
@@ -192,9 +230,87 @@
       resultsEl.innerHTML = '<div class="state">Nenhuma acomodação para esses critérios. Tente outras datas.</div>';
       return;
     }
-    var ctx = { checkin: data.checkin, checkout: data.checkout, guests: data.guests };
-    data.offers.forEach(function (o) { resultsEl.appendChild(offerCard(o, ctx)); });
+    lastSearch = { checkin: data.checkin, checkout: data.checkout, guests: data.guests };
+    data.offers.forEach(function (o) { resultsEl.appendChild(offerCard(o, lastSearch)); });
   }
+
+  // ── Reserva (Bloco 3): modal → POST /api/public/book ──────────────────────
+  var lastSearch = null;
+  var modal = document.getElementById('bookModal');
+  var stepForm = document.getElementById('bookStepForm');
+  var stepDone = document.getElementById('bookStepDone');
+  var bookForm = document.getElementById('bookForm');
+  var current = null;
+
+  function openModal(offer) {
+    current = offer;
+    document.getElementById('bookSummary').textContent =
+      offer.label + ' · ' + lastSearch.checkin + ' a ' + lastSearch.checkout + ' · ' +
+      lastSearch.guests + ' hóspede(s) · total ' + fmtBRL(offer.total);
+    stepForm.hidden = false; stepDone.hidden = true;
+    document.getElementById('bkError').style.display = 'none';
+    bookForm.reset();
+    modal.hidden = false;
+  }
+  function closeModal() { modal.hidden = true; current = null; }
+
+  document.getElementById('bookClose').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+  resultsEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('.book-btn');
+    if (!btn) return;
+    openModal({ room_type: btn.dataset.room, label: btn.dataset.label, total: Number(btn.dataset.total) });
+  });
+
+  bookForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!current || !lastSearch) return;
+    var errEl = document.getElementById('bkError');
+    var submitBtn = document.getElementById('bkSubmit');
+    errEl.style.display = 'none';
+    submitBtn.disabled = true; submitBtn.textContent = 'Reservando…';
+
+    ensureAccess()
+      .then(function (tok) {
+        return fetch('/api/public/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-pub-token': tok },
+          body: JSON.stringify({
+            name: document.getElementById('bkName').value,
+            whatsapp: document.getElementById('bkWhats').value,
+            email: document.getElementById('bkEmail').value,
+            room_type: current.room_type,
+            checkin: lastSearch.checkin,
+            checkout: lastSearch.checkout,
+            guests: lastSearch.guests,
+          }),
+        });
+      })
+      .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+      .then(function (res) {
+        submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
+        if (!res.d.success) {
+          if (res.status === 401) accessToken = null;
+          errEl.textContent = res.d.message || 'Não foi possível reservar.';
+          errEl.style.display = 'block';
+          return;
+        }
+        var d = res.d;
+        document.getElementById('bookDoneMsg').innerHTML =
+          'Reserva <strong>' + d.reservation_number + '</strong> segura por <strong>' + d.hold_minutes +
+          ' minutos</strong>.<br>Total ' + fmtBRL(d.total_amount) + ' · sinal de ' + fmtBRL(d.deposit_amount) +
+          ' (30%) para confirmar.';
+        var wmsg = encodeURIComponent('Olá! Fiz a reserva ' + d.reservation_number + ' (' + current.label + ', ' +
+          lastSearch.checkin + ' a ' + lastSearch.checkout + '). Quero pagar o sinal de ' + fmtBRL(d.deposit_amount) + '.');
+        document.getElementById('bookDoneWa').href = WA + '?text=' + wmsg;
+        stepForm.hidden = true; stepDone.hidden = false;
+      })
+      .catch(function (err) {
+        submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
+        errEl.textContent = err.message; errEl.style.display = 'block';
+      });
+  });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
