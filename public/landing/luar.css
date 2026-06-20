@@ -1,60 +1,19 @@
-/* luar.css — Tema "Luar sobre Areia" (Fusão C+A) | landing pública
+/* luar.css — Tema "Luar sobre Areia" (Fusão C+A) | regras de elemento
    ----------------------------------------------------------------------------
-   Tema ISOLADO: remapeia os tokens de cor do design-system (t.css) apenas para
-   a landing pública via [data-theme="luar"]. NÃO altera os temas clean/dark do
-   CRM. Aprovado por Vitor a partir de _preview-CA.html#h1 (2026-06-20).
+   Os TOKENS do tema (cores, tipografia, spacing, radius, shadows, grid,
+   componentes…) vivem em tokens.css — fonte única, carregado ANTES deste.
+   Aqui ficam apenas as regras de ELEMENTO que sobrescrevem cores hardcoded do
+   design-system (l.css) para o tema luar, consumindo os tokens.
 
-   Paleta-mãe:  Areia #F3EDE3 · Ardósia #293440 · Azul-luar #586B82 · Areia média #CDBBA4
+   Ordem nas páginas: t.css → c.css → l.css → tokens.css → luar.css
+   Aprovado por Vitor a partir de _preview-CA.html#h1 (2026-06-20).
    ---------------------------------------------------------------------------- */
 
-:root[data-theme="luar"] {
-  color-scheme: light;
-
-  /* Fundos — areia */
-  --bg0: #F3EDE3;   /* areia base — seções alternadas */
-  --bg1: #FBF7F0;   /* areia clara — cards, seções claras */
-  --bg2: #FFFFFF;
-  --bg3: #EFE8DA;
-
-  /* Superfícies — tinte ardósia translúcido */
-  --sur0: rgba(41,52,64,.02);
-  --sur1: rgba(41,52,64,.045);
-  --sur2: rgba(41,52,64,.08);
-
-  /* Bordas */
-  --bdr:  rgba(41,52,64,.12);
-  --bdr2: rgba(41,52,64,.20);
-
-  /* Texto — ardósia / cinza-quente */
-  --tx1: #293440;   /* títulos / texto forte */
-  --tx2: #54616F;   /* corpo */
-  --tx3: #8B8475;   /* auxiliar (notas) */
-
-  /* Accent — azul-luar substitui o royal vibrante */
-  --royal:    #586B82;   /* CTAs, bordas ativas (cor aprovada) */
-  --royal-l:  #4E6076;   /* links / hover — mais escuro p/ legibilidade sobre areia */
-  --midnight: #293440;   /* ardósia — início dos gradientes escuros */
-
-  --royal-bg:  rgba(88,107,130,.12);
-  --royal-bdr: rgba(88,107,130,.34);
-
-  /* Dourado discreto / terroso — estrelas de avaliação e destaques numéricos */
-  --gold: #B8924A;
-
-  /* Inputs (não usados na landing, mantidos por consistência) */
-  --input-bg:  #FFFFFF;
-  --input-bdr: rgba(41,52,64,.20);
-  --input-focus-bdr: var(--royal);
-
-  --skeleton-base:    rgba(41,52,64,.05);
-  --skeleton-shimmer: rgba(41,52,64,.10);
-}
-
-/* ── Overrides de elementos com cor hardcoded em l.css ─────────────────────── */
-
-/* Barra de navegação: vidro de areia (em vez de branco) */
+/* Barra de navegação: vidro de areia (em vez do branco padrão do l.css) */
 :root[data-theme="luar"] .landing-nav {
-  background: rgba(247,243,236,.85);
+  background: var(--nav-bg);
+  -webkit-backdrop-filter: blur(var(--nav-blur));
+  backdrop-filter: blur(var(--nav-blur));
 }
 
 /* Scrim do hero: véu ardósia → azul-luar (paleta luar), mais escuro à esquerda
