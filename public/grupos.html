@@ -10,24 +10,18 @@
   <link rel="stylesheet" href="design-system/c.css">
   <link rel="stylesheet" href="design-system/l.css">
   <style>
-    .photo-placeholder {
+    .photo-hero {
+      position: relative;
       min-height: 46vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: var(--sp-3);
-      background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
-      border-bottom: 2px dashed rgba(255,255,255,.35);
+      background: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)),
+                  url("img/grupos-aerea.jpg") center/cover no-repeat;
       text-align: center;
       padding: var(--sp-8);
-    }
-    .photo-placeholder-note {
-      font-size: .8125rem;
-      color: rgba(255,255,255,.55);
-      border: 1px dashed rgba(255,255,255,.4);
-      border-radius: var(--r-full);
-      padding: 4px 14px;
     }
     .hero-title {
       font-family: var(--f-serif);
@@ -82,9 +76,8 @@
   </div>
 </nav>
 
-<!-- Hero — substituir o placeholder abaixo por foto da pousada (área externa / grupo reunido) -->
-<header class="photo-placeholder">
-  <span class="photo-placeholder-note">📷 Substituir por foto da pousada</span>
+<!-- Hero — foto aérea da pousada (public/img/grupos-aerea.jpg) -->
+<header class="photo-hero">
   <h1 class="hero-title">Seu grupo reunido<br>na Serra da Mantiqueira</h1>
   <p class="hero-sub">Retiros, confraternizações e celebrações em Socorro-SP, a 2h30 de São Paulo. Estrutura para grupos de 10 a 40+ pessoas, com café da manhã ou meia pensão.</p>
   <a href="orcamento-grupo.html" class="btn-cta" style="margin-top:var(--sp-3)">Quero um orçamento</a>

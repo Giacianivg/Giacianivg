@@ -277,6 +277,37 @@ describe('POST /api/reservations/confirm', () => {
     assert.equal(body.success, true);
     assert.ok(body.reservation_number, 'reservation_number should be present');
   });
+
+  test('Permite diária única (1 noite) em data normal → 201', async () => {
+    const { status, body } = await request('POST', '/api/reservations/confirm', {
+      leadId:        'lead-uuid-001',
+      whatsapp:      '5519999999999',
+      roomType:      'ALA_A',
+      checkin:       '14/04/2026', // terça, fora de período especial
+      checkout:      '15/04/2026', // 1 noite
+      guests:        2,
+      totalAmount:   300,
+      depositAmount: 90,
+    });
+    assert.equal(status, 201);
+    assert.equal(body.success, true);
+  });
+
+  test('Bloqueia 1 noite em feriado (min_nights=2) → 422 min_nights', async () => {
+    const { status, body } = await request('POST', '/api/reservations/confirm', {
+      leadId:        'lead-uuid-001',
+      whatsapp:      '5519999999999',
+      roomType:      'ALA_A',
+      checkin:       '14/02/2026', // Carnaval (min_nights=2)
+      checkout:      '15/02/2026', // 1 noite
+      guests:        2,
+      totalAmount:   400,
+      depositAmount: 120,
+    });
+    assert.equal(status, 422);
+    assert.equal(body.success, false);
+    assert.equal(body.error, 'min_nights');
+  });
 });
 
 // ── Availability Calendar ─────────────────────────────────────────────────────

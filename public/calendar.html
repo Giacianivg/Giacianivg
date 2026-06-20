@@ -67,6 +67,18 @@
     .mh-day.is-event-nac .day-name::after { content: '★'; color: var(--gold); font-size: .6rem; display: block; margin-top: 1px; }
     .mh-day.is-event-reg { background: rgba(168,85,247,.12); }
     .mh-day.is-event-reg .day-name::after { content: '◆'; color: #a855f7; font-size: .6rem; display: block; margin-top: 1px; }
+    /* Estadia mínima (special_periods.min_nights >= 2) — cor teal, distinta de ★/◆ */
+    .mh-day[data-date] { cursor: pointer; }
+    .mh-day[data-date]:hover { box-shadow: inset 0 0 0 1px rgba(14,184,164,.55); }
+    .mh-day.is-minstay { box-shadow: inset 0 -3px 0 #0ea5a4; }
+    .minstay-badge {
+      display: inline-block; margin-top: 2px; padding: 0 3px;
+      font-size: .5rem; font-weight: 800; line-height: 1.3; letter-spacing: -.02em;
+      color: #0ea5a4; background: rgba(14,184,164,.15);
+      border: 1px solid rgba(14,184,164,.5); border-radius: 6px; white-space: nowrap;
+    }
+    .wh-day[data-date] { cursor: pointer; }
+    .wh-day .minstay-badge { font-size: .58rem; margin-top: 3px; padding: 1px 4px; }
     .wh-day.is-event-nac { background: rgba(184,134,0,.1); }
     .wh-day.is-event-reg { background: rgba(168,85,247,.12); }
 
@@ -201,6 +213,8 @@
 
     /* Preço travado manual (override absoluto) — prioridade sobre motor/tabela */
     .price-cell.pc-locked { color: var(--gold); font-weight: 800; background: rgba(184,134,0,.12); box-shadow: inset 0 0 0 1px var(--gold); border-radius: 3px; }
+    /* Badge de manutenção/bloqueio na célula de disponibilidade (quartos à venda) */
+    .cap-maint { font-size: .5rem; font-weight: 800; line-height: 1.2; color: #f59e0b; margin-top: 1px; letter-spacing: -.03em; }
     .month-price-canvas[data-price-room] { cursor: crosshair; }
     /* Popup de edição de preço */
     .price-edit-pop { position: fixed; z-index: 330; background: var(--sur1); border: 1px solid var(--calbd); border-radius: var(--r-md); padding: var(--sp-4); width: 250px; box-shadow: 0 8px 32px rgba(0,0,0,.45); }
@@ -398,7 +412,8 @@
           <div class="legend-sep"></div>
           <div class="legend-item"><span style="font-size:.8rem;color:var(--gold)">★</span>&nbsp;Feriado nacional</div>
           <div class="legend-item"><span style="font-size:.8rem;color:#a855f7">◆</span>&nbsp;Evento regional</div>
-          <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique p/ detalhes · Arraste em vazio p/ nova reserva</div>
+          <div class="legend-item"><span class="minstay-badge">mín 2</span>&nbsp;Estadia mínima</div>
+          <div class="legend-item" style="margin-left:auto;font-size:.72rem;color:var(--tx3)">Clique no dia (topo) p/ marcar estadia mínima · Arraste em vazio p/ nova reserva</div>
         </div>
         <!-- Calendar area -->
         <div class="cal-scroll" id="cal-scroll">
@@ -526,6 +541,8 @@
   let competitorCache = {};  // key → { [date]: { avg, min, max, count } }
   let pricingData     = null; // { settings, quote_base, motorByDate } — preço real do motor
   let overrideCache   = {};   // key `${from}_${to}` → { `${ala}|${date}`: preço travado }
+  let capsCache       = {};   // key `${from}_${to}` → { totals, byKey: { `${ala}|${date}`: row } }
+  let alaTotals       = {};   // { A: 8, B: 7, C: 5 } — total físico por ala (de rooms)
 
   /* ── Constants ───────────────────────────────────────────────────────── */
   const ROOMS = [
@@ -534,16 +551,23 @@
     { code: 'ALA_C_CASAL', label: 'Ala C',     sub: '5 suítes',    color: '#a855f7', bg: 'rgba(168,85,247,.75)' },
     { code: 'ALA_C_GRUPO', label: 'Grupo',     sub: 'Sob consulta', color: '#f97316', bg: 'rgba(249,115,22,.75)' },
   ];
+  /* Alas com teto de venda editável (DEC-023). Grupo fica de fora (sob consulta). */
+  const CAP_ALAS = [
+    { ala: 'A', label: 'Ala A' },
+    { ala: 'B', label: 'Ala B' },
+    { ala: 'C', label: 'Ala C' },
+  ];
+  // DEC-024: grafia canônica do banco — checkedin/checkedout (sem underscore)
   const STATUS_COLORS = {
-    confirmed:     'rgba(59,130,246,.8)',
-    deposit_paid:  'rgba(168,85,247,.8)',
-    checked_in:    'rgba(34,197,94,.85)',
-    checked_out:   'rgba(148,163,184,.55)',
-    pending:       'rgba(234,179,8,.7)',
+    confirmed:    'rgba(59,130,246,.8)',
+    deposit_paid: 'rgba(168,85,247,.8)',
+    checkedin:    'rgba(34,197,94,.85)',
+    checkedout:   'rgba(148,163,184,.55)',
+    pending:      'rgba(234,179,8,.7)',
   };
   const STATUS_LABELS = {
-    confirmed: 'Confirmado', deposit_paid: 'Sinal pago', checked_in: 'Hospedado',
-    checked_out: 'Finalizado', pending: 'Pendente', cancelled: 'Cancelado',
+    confirmed: 'Confirmado', deposit_paid: 'Sinal pago', checkedin: 'Hospedado',
+    checkedout: 'Finalizado', pending: 'Pendente', cancelled: 'Cancelado',
   };
   const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const DAYS_PT   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
@@ -582,30 +606,80 @@
     { from: '2027-08-09', to: '2027-08-09', type: 'regional', label: 'Aniversário de Socorro',      desc: 'Feriado municipal — fundação da cidade' },
   ];
 
-  /* Mescla períodos especiais cadastrados no Supabase (special_periods, MM-DD recorrente).
-     Só entra o que ainda não está coberto pela lista fixa acima. */
+  /* special_periods é a FONTE ÚNICA da estadia mínima. Carrega as linhas cruas
+     (para marcar/desmarcar) e projeta os ranges com min_nights >= 2 nos anos
+     visíveis (MM-DD recorrente) para o selo visual. NÃO toca em EVENTS — o
+     calendário de feriados (★/◆) é uma camada separada de contexto. */
+  let SPECIAL_PERIODS_RAW = [];
+  let MINSTAY = []; // [{ from, to, label, minNights, rowId, singleDay }]
+
   async function loadSpecialPeriods() {
     try {
       const { data, error } = await sb.from('special_periods')
-        .select('label, start_md, end_md, min_nights')
+        .select('id, label, start_md, end_md, min_nights, active')
         .eq('active', true);
-      if (error || !data) return;
+      if (error || !data) { SPECIAL_PERIODS_RAW = []; MINSTAY = []; return; }
+      SPECIAL_PERIODS_RAW = data;
+      const out = [];
       [2026, 2027].forEach(y => {
         data.forEach(sp => {
+          if ((sp.min_nights || 0) < 2) return; // min_nights=1 não impõe mínimo → sem selo
           // Label com ano explícito (ex.: "Carnaval 2026") só vale naquele ano —
           // datas móveis mudam e a projeção MM-DD em outro ano seria falsa
           const yearInLabel = (sp.label.match(/\b(20\d{2})\b/) || [])[1];
           if (yearInLabel && Number(yearInLabel) !== y) return;
           const from = `${y}-${sp.start_md}`;
           const to   = sp.end_md < sp.start_md ? `${y + 1}-${sp.end_md}` : `${y}-${sp.end_md}`;
-          const covered = EVENTS.some(e => e.from <= to && from <= e.to);
-          if (!covered) {
-            EVENTS.push({ from, to, type: 'regional', label: sp.label,
-              desc: `Período especial — mínimo ${sp.min_nights || 2} noites` });
-          }
+          out.push({ from, to, label: sp.label, minNights: sp.min_nights || 2,
+            rowId: sp.id, singleDay: sp.start_md === sp.end_md });
         });
       });
-    } catch (e) { console.warn('special_periods não carregado:', e.message); }
+      MINSTAY = out;
+    } catch (e) {
+      console.warn('special_periods não carregado:', e.message);
+      SPECIAL_PERIODS_RAW = []; MINSTAY = [];
+    }
+  }
+
+  /* Período de estadia mínima que cobre a data (ou null). */
+  function minStayForDate(ds) {
+    return MINSTAY.find(p => ds >= p.from && ds <= p.to) || null;
+  }
+
+  /* Marca/desmarca uma data como estadia mínima de 2 noites em special_periods.
+     - data livre → insere linha de 1 dia (MM-DD recorrente, "Alta demanda")
+     - data já marcada (linha de 1 dia) → remove
+     - data dentro de um período de vários dias (feriado) → confirma e remove o período inteiro */
+  async function toggleMinStay(ds) {
+    const existing = minStayForDate(ds);
+    try {
+      if (existing) {
+        const msg = existing.singleDay
+          ? `Remover a estadia mínima de ${fmtDateBR(ds)}?`
+          : `${fmtDateBR(ds)} faz parte de "${existing.label}".\nRemover a estadia mínima de TODO esse período?`;
+        if (!confirm(msg)) return;
+        const { error } = await sb.from('special_periods').delete().eq('id', existing.rowId);
+        if (error) throw error;
+      } else {
+        const md = ds.slice(5); // 'YYYY-MM-DD' → 'MM-DD'
+        if (!confirm(`Marcar ${fmtDateBR(ds)} (${md}) como estadia mínima de 2 noites?\nVale todo ano (alta demanda).`)) return;
+        const { error } = await sb.from('special_periods')
+          .insert({ label: 'Alta demanda', start_md: md, end_md: md, min_nights: 2, active: true });
+        if (error) throw error;
+      }
+      await loadSpecialPeriods();
+      render();
+    } catch (e) {
+      alert('Não foi possível atualizar a estadia mínima: ' + (e.message || e));
+    }
+  }
+
+  /* Liga o clique de marcar/desmarcar nos cabeçalhos de dia (mês e semana).
+     Os cabeçalhos não têm drag, então não há conflito com criar reserva/travar preço. */
+  function bindMinStayToggle(cont) {
+    cont.querySelectorAll('.mh-day[data-date], .wh-day[data-date]').forEach(cell => {
+      cell.addEventListener('click', () => toggleMinStay(cell.dataset.date));
+    });
   }
 
   /* ── Utility ─────────────────────────────────────────────────────────── */
@@ -733,7 +807,22 @@
     return map;
   }
 
-  /* apiFetch só faz GET; este envia PUT/DELETE com corpo JSON. */
+  /* Teto de venda por ala/data (DEC-023). sellable = max(0, cap − reservados). */
+  async function fetchCaps(from, to) {
+    const key = `${from}_${to}`;
+    if (capsCache[key]) return capsCache[key];
+    let resp = null;
+    try { resp = await apiFetch(`/api/availability/caps?from=${from}&to=${to}`); } catch (e) { /* degrada */ }
+    const totals = resp?.totals || {};
+    alaTotals = totals;
+    const byKey = {};
+    (resp?.rows || []).forEach(r => { byKey[`${r.ala}|${r.date}`] = r; });
+    const result = { totals, byKey };
+    capsCache[key] = result;
+    return result;
+  }
+
+  /* apiFetch só faz GET; este envia PUT/DELETE/PATCH com corpo JSON. */
   async function apiSend(method, path, body) {
     if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
     const r = await fetch(path, {
@@ -805,6 +894,7 @@
     updateOccupancy(reservations, from, to);
     await fetchPricingData();
     const roomOverrides = await fetchRoomOverrides(from, to);
+    const caps = await fetchCaps(from, to);
 
     let compData = null;
     if (competitorMode) compData = await fetchCompetitorMonthData(from, to);
@@ -821,11 +911,14 @@
       const dow = parseDateLocal(ds).getDay();
       const isWknd = dow === 0 || dow === 6;
       const evs = getEventsForDate(ds);
-      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const ms  = minStayForDate(ds);
+      const cls = ['mh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event'), ms ? 'is-minstay' : ''].filter(Boolean).join(' ');
       const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
-      html += `<div class="${cls}"${tipAttr}>
+      const msBadge = ms ? `<span class="minstay-badge" data-tip="${escHtml(`Estadia mínima de ${ms.minNights} noites — ${ms.label}`)}">mín ${ms.minNights}</span>` : '';
+      html += `<div class="${cls}" data-date="${ds}"${tipAttr}>
         <div class="day-num">${d}</div>
         <div class="day-name">${DAYS_PT[dow]}</div>
+        ${msBadge}
       </div>`;
     });
 
@@ -929,6 +1022,36 @@
           : (evs.length ? eventTooltip(evs) : `Tabela: R$${base} (${season === 'alta' ? 'alta temporada' : season === 'media' ? 'fim de semana' : 'dias úteis'})`);
         html += `<div class="price-cell ${cls}" title="${escHtml(tip)}" style="${evBg}">
           <span class="pc-final">R$${final}</span>${showRef ? `<span class="price-base-ref">tab ${base}</span>` : ''}
+        </div>`;
+      });
+      html += '</div></div>';
+    });
+
+    /* Availability caps section — quantos quartos vender por ala (DEC-023) */
+    html += `<div class="month-section">Disponibilidade — quartos à venda<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--tx3);font-size:.62rem;margin-left:8px">arraste numa ala p/ definir quantos quartos vender</span></div>`;
+    CAP_ALAS.forEach(a => {
+      const total = caps.totals[a.ala] || 0;
+      html += `<div class="month-price-label">${a.label}<span style="color:var(--tx3);font-weight:400">&nbsp;/${total}</span></div>`;
+      html += `<div class="month-price-canvas" style="min-height:28px" data-cap-ala="${a.ala}"><div class="price-cells">`;
+      days.forEach(d => {
+        const ds       = isoDate(curYear, curMonth, d);
+        const row      = caps.byKey[`${a.ala}|${ds}`];
+        const total2   = total;
+        const sellable = row ? row.sellable : total2;
+        const reserved = row ? row.reserved : 0;
+        const blocked  = row ? (row.blocked || 0) : 0;   // quartos em manutenção/bloqueio
+        const cap      = row ? row.cap : total2;
+        const hasCap   = row ? row.has_cap : false;
+        const evs      = getEventsForDate(ds);
+        const evBg     = evs.length ? (evs.some(e => e.type === 'regional') ? 'background:rgba(168,85,247,.1)' : 'background:rgba(184,134,0,.1)') : '';
+        let cls = 'p-baixa';
+        if (sellable === 0) cls = 'p-expensive';      // nada à venda → vermelho
+        else if (hasCap)    cls = 'p-alta';            // teto manual ativo → dourado
+        const maintTip = blocked ? ` · 🔧 ${blocked} em manutenção/bloqueio` : '';
+        const tip = `Ala ${a.ala} · ${fmtDateBR(ds)}: ${sellable} à venda — teto ${cap}${hasCap ? ' (manual)' : ' (cheio)'} · ${reserved} reservado${reserved !== 1 ? 's' : ''}${maintTip} · total ${total2}`;
+        const maintBadge = blocked ? `<span class="cap-maint" title="${escHtml(`${blocked} quarto(s) em manutenção/bloqueio`)}">🔧${blocked}</span>` : '';
+        html += `<div class="price-cell cap-cell ${cls}" title="${escHtml(tip)}" style="${evBg}">
+          <span class="pc-final">${sellable}</span>${hasCap ? `<span class="price-base-ref">teto ${cap}</span>` : ''}${maintBadge}
         </div>`;
       });
       html += '</div></div>';
@@ -1039,6 +1162,12 @@
 
     /* Drag na linha de preço de uma ala → travar/destravar preço absoluto */
     bindPriceDrag(cont, daysInMonth);
+
+    /* Drag na linha de disponibilidade de uma ala → definir teto de venda */
+    bindCapDrag(cont, daysInMonth);
+
+    /* Clique no cabeçalho de dia → marcar/desmarcar estadia mínima */
+    bindMinStayToggle(cont);
   }
 
   function getDayFromX(offsetX, totalWidth, daysInMonth) {
@@ -1162,6 +1291,123 @@
     }, 0);
   }
 
+  /* ── Definir teto de venda por ala/data (DEC-023) ─────────────────────── */
+  function bindCapDrag(cont, daysInMonth) {
+    let drag = { active: false, ala: null, startDay: 0, endDay: 0 };
+
+    cont.querySelectorAll('.month-price-canvas[data-cap-ala]').forEach(canvas => {
+      const ala = canvas.dataset.capAla;
+      let selEl = null;
+
+      canvas.addEventListener('mousedown', e => {
+        closeCapEdit();
+        cont.querySelectorAll('.month-price-canvas[data-cap-ala] .drag-sel').forEach(el => el.remove());
+        drag = { active: true, ala, startDay: dayFromEvent(e, canvas, daysInMonth), endDay: 0 };
+        selEl = document.createElement('div');
+        selEl.className = 'drag-sel';
+        canvas.appendChild(selEl);
+      });
+
+      canvas.addEventListener('mousemove', e => {
+        if (!drag.active || drag.ala !== ala || !selEl) return;
+        drag.endDay = dayFromEvent(e, canvas, daysInMonth);
+        const s  = Math.min(drag.startDay, drag.endDay);
+        const en = Math.max(drag.startDay, drag.endDay);
+        selEl.style.left  = (s - 1) / daysInMonth * 100 + '%';
+        selEl.style.width = Math.max(1, en - s + 1) / daysInMonth * 100 + '%';
+      });
+
+      canvas.addEventListener('mouseup', e => {
+        if (!drag.active || drag.ala !== ala) return;
+        drag.active = false;
+        if (selEl) { selEl.remove(); selEl = null; }
+        const s  = Math.min(drag.startDay, drag.endDay || drag.startDay);
+        const en = Math.max(drag.startDay, drag.endDay || drag.startDay);
+        const from = isoDate(curYear, curMonth, s);
+        const to   = isoDate(curYear, curMonth, en); // intervalo INCLUSIVO
+        showCapEdit(ala, from, to, e.clientX, e.clientY);
+      });
+    });
+
+    cont.addEventListener('mouseleave', () => {
+      drag.active = false;
+      cont.querySelectorAll('.month-price-canvas[data-cap-ala] .drag-sel').forEach(el => el.remove());
+    });
+  }
+
+  let _capEditEl = null;
+  function closeCapEdit() {
+    if (_capEditEl) { _capEditEl.remove(); _capEditEl = null; }
+    document.removeEventListener('mousedown', onCapOutside, true);
+    document.removeEventListener('keydown', onCapEsc, true);
+  }
+  function onCapOutside(e) { if (_capEditEl && !_capEditEl.contains(e.target)) closeCapEdit(); }
+  function onCapEsc(e) { if (e.key === 'Escape') closeCapEdit(); }
+
+  function showCapEdit(ala, from, to, x, y) {
+    closeCapEdit();
+    const total = alaTotals[ala] || 0;
+    const dias  = nightsBetween(from, to) + 1; // intervalo inclusivo
+    const pop = document.createElement('div');
+    pop.className = 'price-edit-pop';
+    pop.innerHTML = `
+      <div class="pe-title">Quartos à venda — Ala ${escHtml(ala)}</div>
+      <div class="pe-range">${fmtDateBR(from)} → ${fmtDateBR(to)} · ${dias} dia${dias !== 1 ? 's' : ''} · total da ala: ${total}</div>
+      <label class="pe-label" for="cap-count">Quantos quartos disponíveis (0–${total})</label>
+      <input class="input" type="number" id="cap-count" min="0" max="${total}" step="1" placeholder="${total}">
+      <div id="cap-err" class="pe-err" style="display:none"></div>
+      <div class="pe-actions">
+        <button class="btn btn-primary btn-sm" id="cap-apply">Aplicar</button>
+        <button class="btn btn-secondary btn-sm" id="cap-open">Abrir tudo (${total})</button>
+        <button class="btn btn-secondary btn-sm" id="cap-close-all">Fechar tudo (0)</button>
+        <button class="btn btn-ghost btn-sm" id="cap-cancel">Cancelar</button>
+      </div>`;
+    document.body.appendChild(pop);
+    _capEditEl = pop;
+
+    const pw = 250, ph = pop.offsetHeight || 210;
+    pop.style.left = Math.min(x, window.innerWidth  - pw - 12) + 'px';
+    pop.style.top  = Math.min(y, window.innerHeight - ph - 12) + 'px';
+
+    const inp   = pop.querySelector('#cap-count');
+    const errEl = pop.querySelector('#cap-err');
+    inp.focus();
+    function showErr(m, warn) { errEl.textContent = m; errEl.style.display = 'block'; errEl.style.color = warn ? '#eab308' : '#f87171'; }
+
+    async function applyCount(count) {
+      if (!Number.isInteger(count) || count < 0 || count > total) {
+        return showErr(`Digite um número entre 0 e ${total}.`);
+      }
+      const btns = pop.querySelectorAll('.btn'); btns.forEach(b => b.disabled = true);
+      try {
+        const resp = await apiSend('PATCH', '/api/availability/caps', { ala, from, to, available_count: count });
+        if (!resp?.success) throw new Error(resp?.message || 'Erro ao aplicar');
+        capsCache = {};
+        if (resp.warnings && resp.warnings.length) {
+          // Teto não derruba reserva confirmada — avisa as datas em que cap < reservado
+          const ds = resp.warnings.map(w => `${fmtDateBR(w.date)} (${w.reserved} reserv.)`).join(', ');
+          showErr(`Aplicado. Atenção: já reservado acima do teto em ${ds}. Essas reservas seguem; o teto só limita vendas novas.`, true);
+          renderMonth();
+          pop.querySelector('#cap-apply').textContent = 'OK';
+          btns.forEach(b => { if (b.id === 'cap-cancel' || b.id === 'cap-apply') b.disabled = false; });
+          pop.querySelector('#cap-apply').onclick = closeCapEdit;
+        } else {
+          closeCapEdit(); renderMonth();
+        }
+      } catch (e) { showErr(e.message); btns.forEach(b => b.disabled = false); }
+    }
+
+    pop.querySelector('#cap-cancel').addEventListener('click', closeCapEdit);
+    pop.querySelector('#cap-apply').addEventListener('click', () => applyCount(parseInt(inp.value, 10)));
+    pop.querySelector('#cap-open').addEventListener('click', () => applyCount(total));
+    pop.querySelector('#cap-close-all').addEventListener('click', () => applyCount(0));
+
+    setTimeout(() => {
+      document.addEventListener('mousedown', onCapOutside, true);
+      document.addEventListener('keydown', onCapEsc, true);
+    }, 0);
+  }
+
   /* ══════════════════════════════════════════════════════════════════════
      WEEKLY VIEW
   ══════════════════════════════════════════════════════════════════════ */
@@ -1195,13 +1441,16 @@
       const dow = dt.getDay();
       const isWknd = dow === 0 || dow === 6;
       const evs = getEventsForDate(ds);
+      const ms  = minStayForDate(ds);
       const evIcon = evs.length ? (evs.some(e => e.type === 'regional') ? ' ◆' : ' ★') : '';
-      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event')].filter(Boolean).join(' ');
+      const cls = ['wh-day', ds === TODAY ? 'is-today' : '', isWknd ? 'is-weekend' : '', eventDayCls(evs, 'is-event'), ms ? 'is-minstay' : ''].filter(Boolean).join(' ');
       const tipAttr = evs.length ? ` data-tip="${escHtml(eventTooltip(evs))}"` : '';
-      html += `<div class="${cls}"${tipAttr}>
+      const msBadge = ms ? `<span class="minstay-badge" data-tip="${escHtml(`Estadia mínima de ${ms.minNights} noites — ${ms.label}`)}">mín ${ms.minNights}</span>` : '';
+      html += `<div class="${cls}" data-date="${ds}"${tipAttr}>
         <div class="wday-name">${DAYS_PT[dow]}${evIcon}</div>
         <div class="wday-num">${dt.getDate()}</div>
         <div class="wday-month">${MONTHS_PT[dt.getMonth()].slice(0,3)}</div>
+        ${msBadge}
       </div>`;
     });
 
@@ -1263,6 +1512,9 @@
         showNewResvPanel(room?.label || cell.dataset.room, date, addDays(date, 2));
       });
     });
+
+    /* Clique no cabeçalho de dia → marcar/desmarcar estadia mínima */
+    bindMinStayToggle(cont);
   }
 
   /* ── Popover ─────────────────────────────────────────────────────────── */

@@ -186,6 +186,12 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'pousada-crm-api', ts: Date.now() });
 });
 
+// ── Public site API (DEC-025 Bloco 2) — SEM AUTH ────────────────────────────
+// Endpoints somente-leitura do site institucional (quote/availability/offers).
+// DEVE ser montado ANTES do gate de auth abaixo. Tem rate limiter próprio
+// (store isolado) + Turnstile — ver routes/public.js.
+app.use('/api/public', require('./routes/public'));
+
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
@@ -200,7 +206,9 @@ app.use('/api/conversations',              require('./routes/conversations'));
 app.use('/api/availability/calendar',      require('./routes/availability-calendar'));
 app.use('/api/availability/block',         require('./routes/availability-block'));
 app.use('/api/availability/unblock',       require('./routes/availability-unblock'));
+app.use('/api/availability/caps',          require('./routes/availability-caps'));
 app.use('/api/availability',               require('./routes/availability'));
+app.use('/api/occupancy',                  require('./routes/occupancy'));
 app.use('/api/proposals',                  require('./routes/proposals'));
 app.use('/api/reservations/confirm',       require('./routes/reservations-confirm'));
 app.use('/api/reservations',               require('./routes/reservations'));

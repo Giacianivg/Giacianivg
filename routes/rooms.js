@@ -6,13 +6,17 @@ const { ok, fail, notFound, serverError } = require('../services/utils/response'
 
 const router = Router();
 
+// "Hoje" em America/Sao_Paulo (servidor Vercel roda em UTC) — DEC-024 F2.
+function todayBR() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
 // Helper: get today + next N days availability for given availability_codes
 async function fetchOccupancyWindow(availCodes, days = 30) {
   if (!availCodes || availCodes.length === 0) return {};
 
-  const today = new Date();
-  const from  = today.toISOString().slice(0, 10);
-  const to    = new Date(today.getTime() + days * 86_400_000).toISOString().slice(0, 10);
+  const from = todayBR();
+  const to   = new Date(new Date(from).getTime() + days * 86_400_000).toISOString().slice(0, 10);
 
   const { data, error } = await supabaseAdmin
     .from('availability')
@@ -53,8 +57,7 @@ router.get('/', async (req, res) => {
 
     if (error) return serverError(res, error);
 
-    const today = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const today = todayBR();
 
     // Fetch today's availability for all rooms in one query
     const allCodes = rooms.flatMap(r => r.availability_codes || []);

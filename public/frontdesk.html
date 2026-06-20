@@ -143,6 +143,11 @@
     .upcoming-table tr:last-child td { border-bottom: none; }
     .upcoming-table tr:hover td { background: var(--sur2); }
     .upcoming-table td:first-child { font-weight: 700; color: var(--tx1); }
+    /* Filtro segmentado (Check-outs realizados) */
+    .seg { display: flex; gap: 2px; background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-sm); padding: 2px; }
+    .seg-btn { padding: 3px 10px; border: none; background: none; color: var(--tx3); font-size: .72rem; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    .seg-btn.active { background: var(--royal-bg); color: var(--royal-l); }
+    .co-paid-ref { color: var(--tx3); font-weight: 400; font-size: .72rem; }
     .date-col { white-space: nowrap; }
     .days-badge { display: inline-block; background: var(--royal-bg); color: var(--royal-l); font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 9999px; }
     .today-badge { display: inline-block; background: rgba(234,179,8,.15); color: #eab308; font-size: .7rem; font-weight: 700; padding: 1px 7px; border-radius: 9999px; }
@@ -353,6 +358,34 @@
         </div>
       </div>
 
+      <!-- Check-outs realizados (histórico — fonte única DEC-024) -->
+      <div class="upcoming-section" style="margin-top:var(--sp-3)">
+        <div class="upcoming-header">
+          <div class="upcoming-title">🚪 Check-outs realizados</div>
+          <div class="seg" id="co-filter">
+            <button class="seg-btn" data-days="1">Hoje</button>
+            <button class="seg-btn active" data-days="7">7 dias</button>
+            <button class="seg-btn" data-days="30">30 dias</button>
+          </div>
+        </div>
+        <div id="checkouts-done-body">
+          <table class="upcoming-table">
+            <thead>
+              <tr>
+                <th>Hóspede</th>
+                <th>Quarto</th>
+                <th class="date-col">Check-out</th>
+                <th>Hora</th>
+                <th>Total pago</th>
+              </tr>
+            </thead>
+            <tbody id="checkouts-done-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -361,11 +394,12 @@
 <style>
   .pay-overlay { position: fixed; inset: 0; background: rgba(2,6,12,.8); z-index: 400; display: none; align-items: center; justify-content: center; }
   .pay-overlay.open { display: flex; }
-  .pay-modal { background: var(--bg1, #0D1520); border: 1px solid var(--bdr1); border-radius: var(--r-lg); width: 420px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; }
-  .pay-head { padding: var(--sp-4); border-bottom: 1px solid var(--bdr1); }
+  .pay-modal { background: var(--bg1, #0D1520); border: 1px solid var(--bdr1); border-radius: var(--r-lg); width: 420px; max-width: calc(100vw - 32px); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+  .pay-head { padding: var(--sp-4); border-bottom: 1px solid var(--bdr1); flex-shrink: 0; }
   .pay-title { font-size: 1rem; font-weight: 700; color: var(--tx1); }
   .pay-sub { font-size: .78rem; color: var(--tx3); margin-top: 2px; }
-  .pay-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+  /* flex:1 + min-height:0 → o corpo rola internamente e o rodapé nunca sai da tela. */
+  .pay-body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .pay-row { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--tx2); }
   .pay-row .v { font-weight: 600; color: var(--tx1); }
   .pay-due { border-top: 1px solid var(--bdr1); padding-top: var(--sp-2); font-size: .9rem; }
@@ -374,7 +408,13 @@
   .pay-method { padding: 10px 4px; text-align: center; background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-sm); cursor: pointer; font-size: .8rem; color: var(--tx2); }
   .pay-method.sel { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,.08); font-weight: 700; }
   .pay-input { height: 38px; padding: 0 var(--sp-3); background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-sm); color: var(--tx1); font-size: .9rem; width: 100%; box-sizing: border-box; }
-  .pay-foot { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; }
+  .pay-foot { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; flex-shrink: 0; }
+  @media (max-width: 600px) {
+    .pay-overlay { align-items: flex-end; }
+    .pay-modal { width: 100%; max-width: 100%; max-height: 92vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+    .pay-foot { justify-content: stretch; }
+    .pay-foot .btn { flex: 1 1 auto; justify-content: center; }
+  }
 </style>
 <div class="pay-overlay" id="pay-overlay">
   <div class="pay-modal">
@@ -469,6 +509,7 @@
   }
 
   const ROOM_LABELS = { ALA_A:'Ala A', ALA_B:'Ala B', ALA_C_1:'Ala C', ALA_C_2:'Ala C', ALA_C_CASAL:'Ala C Casal', ALA_C_GRUPO:'Ala C Grupo' };
+  let coDays = 7; // filtro da seção "Check-outs realizados" (1 | 7 | 30)
   const STATUS_LABELS = { confirmed:'Confirmado', deposit_paid:'Sinal pago', checkedin:'Hospedado', checkedout:'Finalizado', checked_in:'Hospedado', checked_out:'Finalizado', pending:'Pendente', cancelled:'Cancelada' };
   const STATUS_COLORS = { confirmed:'#3b82f6', deposit_paid:'#a855f7', checkedin:'#22c55e', checkedout:'#94a3b8', checked_in:'#22c55e', checked_out:'#94a3b8', pending:'#eab308', cancelled:'#ef4444' };
 
@@ -526,36 +567,53 @@
   }
 
   /* ── Load all data ───────────────────────────────────────────────────── */
+  // DEC-024: check-ins/outs/in-house e status dos quartos vêm da FONTE ÚNICA
+  // (/api/occupancy), com regra canônica (fronteira de checkout, exclusão de
+  // checkedout, fuso BR, saldo real). Não há mais derivação local divergente.
   async function loadData() {
-    const [checkinRes, recentRes, roomsRes, alertsRes, upcomingRes] = await Promise.all([
-      apiFetch(`/api/reservations?checkin_from=${TODAY}&checkin_to=${TODAY}&limit=50`),
-      apiFetch(`/api/reservations?checkin_from=${addDays(TODAY,-45)}&checkin_to=${TODAY}&limit=200`),
-      apiFetch('/api/rooms'),
+    const [board, roomsTodayRes, alertsRes, upcomingRes] = await Promise.all([
+      apiFetch('/api/occupancy/board'),
+      apiFetch('/api/occupancy/rooms-today'),
       apiFetch('/api/alerts').catch(() => null),
       apiFetch(`/api/reservations?checkin_from=${addDays(TODAY,1)}&checkin_to=${addDays(TODAY,7)}&limit=50`),
     ]);
 
-    // Check-ins today
-    const checkins = (checkinRes?.reservations || []).filter(r => r.status !== 'cancelled');
-    // Check-outs today (filter from recent)
-    const checkouts = (recentRes?.reservations || []).filter(r =>
-      r.checkout_date === TODAY && r.status !== 'cancelled');
+    const checkins  = (board?.checkins  || []).map(mapBoardRow);
+    const checkouts = (board?.checkouts || []).map(mapBoardRow);
+    const roomsToday = roomsTodayRes?.rooms || [];
 
     renderCheckins(checkins);
     renderCheckouts(checkouts);
-    renderRooms(roomsRes?.rooms || []);
+    renderRooms(roomsToday);
     renderAlerts(alertsRes, checkins, checkouts);
     renderUpcoming(upcomingRes?.reservations || []);
-    renderStats(checkins, checkouts, roomsRes?.rooms || []);
+    renderStats(checkins, checkouts, roomsToday);
+    loadCheckoutsDone(coDays);
+  }
+
+  // Converte uma linha do board canônico no formato esperado pelos cards.
+  // balance_amount = saldo REAL (total+consumo−sinal−pagamentos); total = room_total.
+  function mapBoardRow(b) {
+    return {
+      id:             b.reservation_id,
+      status:         b.status,
+      leads:          { name: b.guest_name },
+      checkin_date:   b.checkin_date,
+      checkout_date:  b.checkout_date,
+      guests:         b.guests,
+      room_type:      b.room_type,
+      balance_amount: b.balance_due,
+      total_amount:   b.room_total,
+    };
   }
 
   /* ── Stats ───────────────────────────────────────────────────────────── */
+  // rooms vêm de /api/occupancy/rooms-today: status canônico available|occupied|blocked
   function renderStats(checkins, checkouts, rooms) {
-    // /api/rooms retorna os quartos físicos individuais (A1–C5) desde a migration 012
     const totalPins = rooms.length;
     let freeCount = 0, occCount = 0;
     rooms.forEach(r => {
-      if (r.today_status === 'available') freeCount += 1;
+      if (r.status === 'available') freeCount += 1;
       else occCount += 1;
     });
     const occPct = totalPins > 0 ? Math.round(occCount / totalPins * 100) : 0;
@@ -843,15 +901,15 @@
       return;
     }
 
+    // DEC-024: status canônico de /api/occupancy/rooms-today
     const statusCfg = {
       available: { dot: '#22c55e', label: 'Disponível' },
-      blocked:   { dot: '#ef4444', label: 'Ocupado'    },
-      partial:   { dot: '#eab308', label: 'Parcial'    },
-      on_request:{ dot: '#6366f1', label: 'Sob consulta'},
+      occupied:  { dot: '#3b82f6', label: 'Ocupado'    },
+      blocked:   { dot: '#ef4444', label: 'Bloqueado'  },
     };
 
     el.innerHTML = rooms.map(r => {
-      const cfg = statusCfg[r.today_status] || { dot: '#94a3b8', label: 'Sem dados' };
+      const cfg = statusCfg[r.status] || { dot: '#94a3b8', label: 'Sem dados' };
       return `<div class="room-status-item">
         <div class="room-dot" style="background:${cfg.dot}"></div>
         <div class="room-name-col">
@@ -947,6 +1005,47 @@
       </tr>`;
     }).join('');
   }
+
+  /* ── Check-outs realizados (histórico — /api/occupancy/checkouts) ──────── */
+  function fmtTimeBR(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtDateFromTs(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+
+  async function loadCheckoutsDone(days) {
+    const tbody = document.getElementById('checkouts-done-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Carregando...</td></tr>';
+    const resp = await apiFetch(`/api/occupancy/checkouts?days=${days}`);
+    const items = resp?.checkouts || [];
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:var(--sp-4)">Nenhum check-out no período</td></tr>';
+      return;
+    }
+    tbody.innerHTML = items.map(c => {
+      const name = c.guest_name || 'Hóspede';
+      const ref  = (Number(c.total) > Number(c.total_paid))
+        ? ` <span class="co-paid-ref">de ${fmtBRL(c.total)}</span>` : '';
+      return `<tr onclick="window.location.href='bookings.html?id=${c.reservation_id}'" style="cursor:pointer">
+        <td>${escHtml(name)}</td>
+        <td>${ROOM_LABELS[c.room_type] || escHtml(c.room_type)}</td>
+        <td class="date-col">${fmtDateFromTs(c.checkout_at)}</td>
+        <td>${fmtTimeBR(c.checkout_at)}</td>
+        <td>${fmtBRL(c.total_paid)}${ref}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('co-filter')?.addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    coDays = Number(btn.dataset.days);
+    document.querySelectorAll('#co-filter .seg-btn').forEach(b => b.classList.toggle('active', b === btn));
+    loadCheckoutsDone(coDays);
+  });
 
   function timeAgo(isoStr) {
     const diff = Math.floor((Date.now() - new Date(isoStr)) / 60000);

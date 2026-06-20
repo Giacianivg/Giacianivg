@@ -258,11 +258,23 @@
     }
     .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
     .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
-    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
+    /* min-height:0 é essencial num flex column: sem ele o body não encolhe abaixo
+       do conteúdo, a comanda longa estoura os 90vh e o overflow:hidden do .modal
+       corta o rodapé (Fechar/Checkout) para fora da tela. */
+    .modal-body  { padding: var(--sp-5); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .modal-foot  {
       padding: var(--sp-4) var(--sp-5);
       border-top: 1px solid var(--bdr1);
       display: flex; gap: var(--sp-2); justify-content: flex-end;
+      flex-wrap: wrap; flex-shrink: 0;
+    }
+    /* Mobile: modal vira folha de baixo (bottom sheet), rodapé fixo e botões
+       que ocupam a largura para ficarem fáceis de tocar. */
+    @media (max-width: 600px) {
+      .modal-overlay { align-items: flex-end; }
+      .modal, .modal.modal-lg { max-width: 100%; max-height: 92vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+      .modal-foot { justify-content: stretch; }
+      .modal-foot .btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
     }
     .field-group  { margin-bottom: var(--sp-4); }
     .field-label  { display: block; font-size: .8125rem; font-weight: 500; color: var(--tx2); margin-bottom: var(--sp-1); }
@@ -664,7 +676,7 @@
     <div class="modal-head">
       <div>
         <div class="modal-title" id="modal-maint-title">Manutenção</div>
-        <div class="modal-sub" id="modal-maint-sub">Registrar ocorrência de manutenção</div>
+        <div class="modal-sub" id="modal-maint-sub">Bloqueia o quarto para vendas no período informado</div>
       </div>
       <button class="btn btn-ghost btn-icon" data-close="modal-maint">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -672,6 +684,10 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="maint-code">
+      <div id="maint-active-banner" style="display:none;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-4);padding:var(--sp-3);background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:var(--r-md);color:var(--gold);font-size:.875rem">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        <span id="maint-active-text">Em manutenção</span>
+      </div>
       <div class="field-group">
         <label class="field-label" for="maint-type">Tipo de ocorrência</label>
         <select class="input" id="maint-type">
@@ -687,7 +703,7 @@
         <select class="input" id="maint-priority">
           <option value="normal">Normal</option>
           <option value="urgent">Urgente</option>
-          <option value="critical">Crítico — bloquear quarto</option>
+          <option value="critical">Crítico</option>
         </select>
       </div>
       <div class="field-group">
@@ -697,6 +713,7 @@
       <div class="field-group">
         <label class="field-label" for="maint-estimated">Previsão de conclusão</label>
         <input class="input" type="date" id="maint-estimated">
+        <p class="field-hint">Último dia em manutenção. Vazio = bloqueia somente hoje.</p>
       </div>
       <div style="margin-top:var(--sp-5)">
         <div style="font-size:.875rem;font-weight:600;color:var(--tx2);margin-bottom:var(--sp-3);display:flex;align-items:center;gap:var(--sp-2)">
@@ -710,6 +727,10 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-secondary" data-close="modal-maint">Fechar</button>
+      <button class="btn btn-secondary" id="btn-end-maint" style="display:none;border-color:rgba(34,197,94,.4);color:var(--ok)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Encerrar manutenção
+      </button>
       <button class="btn btn-primary" id="btn-save-maint" style="background:var(--gold);border-color:var(--gold);color:#000">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
         Registrar ocorrência
@@ -857,37 +878,7 @@
 </div>
 
 <!-- ── Modal: Contagem do frigobar no checkout ────────────────── -->
-<div class="modal-overlay" id="modal-fb-checkout">
-  <div class="modal" style="max-width:540px">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">🧊 Contagem do frigobar</div>
-        <div class="modal-sub" id="fbc-sub">Informe o que o hóspede consumiu — será lançado na comanda</div>
-      </div>
-      <button class="btn btn-ghost btn-icon" data-close="modal-fb-checkout">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <table class="cmd-table">
-        <thead><tr><th>Item</th><th style="text-align:right">No frigobar</th><th style="text-align:right">Consumido</th></tr></thead>
-        <tbody id="fbc-items"></tbody>
-      </table>
-      <div class="field-group" style="margin-top:var(--sp-4)">
-        <label class="field-label">Itens restantes após o checkout</label>
-        <div style="display:flex;gap:var(--sp-4)">
-          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="keep" checked> Deixar no frigobar</label>
-          <label style="font-size:.8125rem;color:var(--tx1);cursor:pointer"><input type="radio" name="fbc-rest" value="return"> Devolver ao estoque/bar</label>
-        </div>
-      </div>
-      <div id="fbc-error" style="color:var(--err);font-size:.78rem;display:none"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-secondary" data-close="modal-fb-checkout">Cancelar</button>
-      <button class="btn btn-primary" id="fbc-continue" style="background:var(--gold);border-color:var(--gold);color:#000">Lançar e continuar checkout</button>
-    </div>
-  </div>
-</div>
+<!-- Modal de contagem do frigobar agora é auto-injetado por checkout-flow.js -->
 
 <!-- ── Modal: Trocar quarto ───────────────────────────────────── -->
 <div class="modal-overlay" id="modal-swap">
@@ -920,6 +911,7 @@
 
 <script src="design-system/u.js"></script>
 <script src="design-system/checkout-guard.js"></script>
+<script src="design-system/checkout-flow.js"></script>
 <script>
 (function () {
   'use strict';
@@ -977,11 +969,11 @@
   let currentView = 'grid';
   let pendingDeleteCode = null;
   let maintHistory = {};
+  let maintBlockRange = null;  // { from, to } ISO do bloqueio de manutenção ativo do quarto aberto (to exclusivo)
   let activeResvByRoom = {};   // room code → reserva ativa cobrindo hoje
   let productsCache = [];
   let comandaCtx = null;       // { reservation, totals } da comanda aberta
   let frigobarCode = null;     // quarto com o modal de frigobar aberto
-  let fbCheckoutItems = [];    // itens do frigobar na contagem de checkout
   // (entrada de estoque foi movida para map.html — Mercearia/Bar)
   const TODAY_ISO = DS.todayISO(); // fuso local — toISOString() (UTC) vira "amanhã" à noite no Brasil
   const FRIG_ICON  = { ok: '✅', manutencao: '🔧', sem_frigobar: '➖' };
@@ -1004,8 +996,9 @@
   // ── Load rooms ───────────────────────────────────────────────
   async function loadRooms() {
     setLoading(true);
-    const [res, resvRes] = await Promise.all([
+    const [res, roomsTodayRes, resvRes] = await Promise.all([
       apiFetch('/api/rooms'),
+      apiFetch('/api/occupancy/rooms-today'),
       apiFetch(`/api/reservations?checkin_to=${TODAY_ISO}&limit=500`),
     ]);
     setLoading(false);
@@ -1015,14 +1008,29 @@
     }
     roomsCache = res.rooms || [];
 
-    // Indexa reservas ativas por quarto físico.
-    // checkout >= hoje: no dia do checkout o hóspede ainda ocupa o quarto.
-    // pending incluso: reservas do CRM nascem pending até a confirmação.
+    // DEC-024: status e ocupação vêm da FONTE ÚNICA (/api/occupancy/rooms-today),
+    // que aplica a regra canônica (fronteira de checkout = dia do checkout livre,
+    // fuso BR, status checkedout não ocupa). Mapeia o status canônico para o
+    // vocabulário desta tela: occupied→'blocked' (visual de ocupado),
+    // blocked→'maintenance', available→'available'.
+    const CANON_TO_LOCAL = { available: 'available', occupied: 'blocked', blocked: 'maintenance' };
+    const canonByCode = {};
+    for (const c of (roomsTodayRes?.rooms || [])) canonByCode[c.code] = c;
+
+    // Detalhes da reserva (nome, datas, valores) indexados por id — apenas
+    // ENRIQUECEM o card; a OCUPAÇÃO é decidida pela fonte única, não por data aqui.
+    const resvById = {};
+    for (const r of (resvRes?.reservations || [])) resvById[r.id] = r;
+
     activeResvByRoom = {};
-    for (const r of (resvRes?.reservations || [])) {
-      if (!['pending','deposit_paid','confirmed','checkedin'].includes(r.status)) continue;
-      if (!(r.checkin_date <= TODAY_ISO && r.checkout_date >= TODAY_ISO)) continue;
-      activeResvByRoom[r.room_type] = r;
+    for (const room of roomsCache) {
+      const canon = canonByCode[room.code];
+      if (!canon) continue;                       // ex.: ALA_C_GRUPO mantém on_request
+      room.today_status = CANON_TO_LOCAL[canon.status] || room.today_status;
+      if (canon.status === 'occupied' && canon.reservation_id) {
+        activeResvByRoom[room.code] = resvById[canon.reservation_id]
+          || { id: canon.reservation_id, leads: { name: canon.guest_name } };
+      }
     }
 
     applyFilters();
@@ -1224,7 +1232,7 @@
               <div class="room-mc-name">${esc(r.name)}</div>
               <div class="room-mc-svg">${roomSVG(s)}</div>
               <div class="room-mc-foot">
-                <span class="room-mc-st ${s}">${resv ? 'Ocupado' : statusLabel(s)}</span>
+                <span class="room-mc-st ${s}">${resv ? 'Ocupado' : (s === 'maintenance' ? '🔧 ' + statusLabel(s) : statusLabel(s))}</span>
                 <span style="font-size:.65rem;color:var(--tx3)">
                   <span title="Frigobar: ${FRIG_LABEL[r.frigobar_status || 'ok']}">${FRIG_ICON[r.frigobar_status || 'ok']}</span>
                   ${r.max_guests ? r.max_guests + 'px' : ''}
@@ -1380,7 +1388,7 @@
   });
 
   // ── Maintenance modal ────────────────────────────────────────
-  function openMaintModal(code, name) {
+  async function openMaintModal(code, name) {
     document.getElementById('maint-code').value          = code;
     document.getElementById('modal-maint-title').textContent = `Manutenção — ${name || code}`;
     document.getElementById('maint-type').value     = 'cleaning';
@@ -1389,6 +1397,43 @@
     document.getElementById('maint-estimated').value = '';
     renderMaintHistory(code);
     openModal('modal-maint');
+    await refreshMaintState(code);
+  }
+
+  // Lê o estado real de manutenção do quarto da FONTE ÚNICA (availability blocked
+  // via /api/occupancy/calendar). Mostra o banner "em manutenção até DD/MM" e o
+  // botão "Encerrar manutenção"; guarda o período para o unblock.
+  async function refreshMaintState(code) {
+    const banner = document.getElementById('maint-active-banner');
+    const endBtn = document.getElementById('btn-end-maint');
+    maintBlockRange = null;
+    banner.style.display = 'none';
+    endBtn.style.display = 'none';
+
+    const to = addDaysISO(TODAY_ISO, 730);   // janela de 2 anos à frente
+    const res = await apiFetch(`/api/occupancy/calendar?from=${TODAY_ISO}&to=${to}`);
+    // ignora se o modal já foi fechado/trocado de quarto enquanto carregava
+    if (document.getElementById('maint-code').value !== code) return;
+    if (!res || res.success === false) return;
+
+    const blocked = (res.rows || [])
+      .filter(r => r.room_code === code && r.status === 'blocked' && r.date >= TODAY_ISO)
+      .map(r => r.date)
+      .sort();
+    if (!blocked.length) return;
+
+    const lastDay = blocked[blocked.length - 1];
+    maintBlockRange = { from: blocked[0], to: addDaysISO(lastDay, 1) };  // to exclusivo
+    document.getElementById('maint-active-text').textContent =
+      `🔧 Em manutenção até ${fmtDate(lastDay)} — fora das vendas no período.`;
+    banner.style.display = 'flex';
+    endBtn.style.display = '';
+  }
+
+  function addDaysISO(iso, n) {
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
 
   function renderMaintHistory(code) {
@@ -1412,7 +1457,7 @@
       </div>`).join('');
   }
 
-  document.getElementById('btn-save-maint').addEventListener('click', () => {
+  document.getElementById('btn-save-maint').addEventListener('click', async () => {
     const code     = document.getElementById('maint-code').value;
     const type     = document.getElementById('maint-type').value;
     const priority = document.getElementById('maint-priority').value;
@@ -1427,16 +1472,60 @@
     if (!maintHistory[code]) maintHistory[code] = [];
     maintHistory[code].push(entry);
 
-    if (priority === 'critical') {
-      const idx = roomsCache.findIndex(r => r.code === code);
-      if (idx >= 0) roomsCache[idx].today_status = 'maintenance';
-      updateStats(roomsCache);
-      applyFilters();
+    // Registrar manutenção GRAVA bloqueio real em availability (status='blocked')
+    // via API — FONTE ÚNICA lida por calendar, bookings e pela disponibilidade
+    // ("quartos à venda"). Bloqueio vai de hoje até a previsão (inclusive); sem
+    // previsão = só hoje. Persiste no banco: sobrevive ao recarregar a página.
+    const lastDay = estimated || TODAY_ISO;          // último dia ainda em manutenção
+    if (lastDay < TODAY_ISO) {
+      showToast('A data prevista não pode ser anterior a hoje.', 'warn');
+      return;
+    }
+    const to = addDaysISO(lastDay, 1);               // rota bloqueia [from, to) exclusivo
+    const reason = `Manutenção: ${maintTypeLabel(type)}${note ? ' — ' + note : ''}`;
+
+    const btn = document.getElementById('btn-save-maint');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const res = await apiFetch('/api/availability/block', {
+      method: 'PATCH',
+      body: JSON.stringify({ room_type: code, from: TODAY_ISO, to, reason }),
+    });
+    btn.disabled = false; btn.textContent = 'Registrar ocorrência';
+
+    if (!res || res.success === false) {
+      showToast(res?.message || 'Não foi possível bloquear o quarto para manutenção.', 'err');
+      return;
     }
 
     renderMaintHistory(code);
     document.getElementById('maint-note').value = '';
-    showToast(`Ocorrência registrada para ${code}.`, 'ok');
+    showToast(`Quarto ${code} em manutenção até ${fmtDate(lastDay)}.`, 'ok');
+    await loadRooms();                 // recarrega o status canônico (fonte única)
+    await refreshMaintState(code);     // atualiza banner + botão "Encerrar"
+  });
+
+  // Encerrar manutenção: libera (unblock) o período bloqueado do quarto. Só mexe
+  // em linhas status='blocked' (a rota preserva 'reserved'). Volta para as vendas.
+  document.getElementById('btn-end-maint').addEventListener('click', async () => {
+    const code = document.getElementById('maint-code').value;
+    if (!maintBlockRange) return;
+
+    const btn = document.getElementById('btn-end-maint');
+    btn.disabled = true;
+    const res = await apiFetch('/api/availability/unblock', {
+      method: 'PATCH',
+      body: JSON.stringify({ room_type: code, from: maintBlockRange.from, to: maintBlockRange.to }),
+    });
+    btn.disabled = false;
+
+    if (!res || res.success === false) {
+      showToast(res?.message || 'Não foi possível encerrar a manutenção.', 'err');
+      return;
+    }
+
+    showToast(`Manutenção do quarto ${code} encerrada.`, 'ok');
+    await loadRooms();
+    await refreshMaintState(code);
   });
 
   // ── Delete modal ─────────────────────────────────────────────
@@ -1665,123 +1754,28 @@
     }
   });
 
-  // ── Checkout: contagem do frigobar → comanda → checkout → voucher ──
+  // ── Checkout: fluxo COMPLETO compartilhado (design-system/checkout-flow.js) ──
+  // Contagem do frigobar + trava de saldo/pagamento + voucher vivem no módulo
+  // CheckoutFlow, usado também por map e bookings. A página só faz toast de
+  // sucesso, abre o voucher e recarrega — exatamente como o finishCheckout fazia.
   document.getElementById('btn-do-checkout').addEventListener('click', async () => {
     if (!comandaCtx) return;
-    const { roomCode } = comandaCtx;
-
-    // Etapa 1: se o frigobar tem itens, conta o consumo antes de fechar
-    const fb = await apiFetch(`/api/rooms/${roomCode}/frigobar`);
-    fbCheckoutItems = (fb?.items || []).filter(i => Number(i.quantity) > 0);
-
-    if (fbCheckoutItems.length) {
-      document.getElementById('fbc-sub').textContent =
-        `${roomCode} · ${comandaCtx.reservation.leads?.name || ''} — consumido será lançado na comanda`;
-      document.getElementById('fbc-items').innerHTML = fbCheckoutItems.map(i => `<tr>
-        <td style="color:var(--tx1)">${esc(i.products?.name || '—')}</td>
-        <td style="text-align:right">${Number(i.quantity)} ${esc(i.products?.unit || '')}</td>
-        <td style="text-align:right">
-          <input class="input" type="number" min="0" max="${Number(i.quantity)}" value="0"
-            data-fbc-product="${i.products?.id}" style="width:70px;padding:4px 8px;font-size:.8rem;text-align:right">
-        </td>
-      </tr>`).join('');
-      document.getElementById('fbc-error').style.display = 'none';
-      openModal('modal-fb-checkout');
-      return;
-    }
-
-    finishCheckout();
-  });
-
-  document.getElementById('fbc-continue').addEventListener('click', async () => {
-    const errEl = document.getElementById('fbc-error');
-    errEl.style.display = 'none';
-    const btn = document.getElementById('fbc-continue');
-    btn.disabled = true; btn.textContent = 'Lançando…';
-
-    try {
-      // Lança consumos do frigobar na comanda (baixa o frigobar via trigger)
-      for (const input of document.querySelectorAll('[data-fbc-product]')) {
-        const qty = parseFloat(input.value) || 0;
-        if (qty <= 0) continue;
-        const max = parseFloat(input.max) || 0;
-        if (qty > max) throw new Error(`Consumido maior que o disponível no frigobar (máx ${max}).`);
-        const r = await apiFetch('/api/room-charges', {
-          method: 'POST',
-          body: JSON.stringify({
-            reservation_id: comandaCtx.reservation.id,
-            product_id:     input.dataset.fbcProduct,
-            quantity:       qty,
-            room_code:      comandaCtx.roomCode,
-            from_frigobar:  true,
-            staff_note:     'Contagem do frigobar no checkout',
-          }),
-        });
-        if (!r?.success) throw new Error(r?.message || 'Erro ao lançar consumo do frigobar.');
-      }
-
-      // Restantes: devolver ao estoque central, se escolhido
-      const rest = document.querySelector('[name="fbc-rest"]:checked')?.value;
-      if (rest === 'return') {
-        const fb = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar`);
-        for (const item of (fb?.items || [])) {
-          if (Number(item.quantity) <= 0) continue;
-          const r = await apiFetch(`/api/rooms/${comandaCtx.roomCode}/frigobar/unload`, {
-            method: 'POST',
-            body: JSON.stringify({ product_id: item.products?.id, quantity: Number(item.quantity) }),
-          });
-          if (!r?.success) throw new Error(r?.message || 'Erro ao devolver itens ao estoque.');
-        }
-      }
-
-      await refreshComanda();           // comanda agora inclui o consumo do frigobar
-      closeModal('modal-fb-checkout');
-      finishCheckout();
-    } catch (e) {
-      errEl.textContent = e.message;
-      errEl.style.display = 'block';
-    } finally {
-      btn.disabled = false; btn.textContent = 'Lançar e continuar checkout';
-    }
-  });
-
-  async function finishCheckout() {
-    const { reservation: r, charges, totals, roomCode } = comandaCtx;
-    if (!confirm(`Fazer checkout de ${r.leads?.name || 'hóspede'} (${roomCode})?\nTotal da comanda: ${fmtBRL(totals.grand_total)}`)) return;
-
     const btn = document.getElementById('btn-do-checkout');
     btn.disabled = true; btn.textContent = 'Processando…';
-
-    // 1. Check-out guardado: a trava de saldo é no banco (RPC). Se houver
-    //    saldo, o CheckoutGuard abre o popup e só finaliza após receber.
-    const done = await CheckoutGuard.run({ id: r.id, apiFetch: cgApiFetch, toast: showToast });
-    if (!done) { btn.disabled = false; btn.textContent = '🚪 Fazer checkout'; return; }
-
-    // 2. Gera voucher final com diárias + consumos
-    const consumosTxt = charges.length
-      ? 'Consumos: ' + charges.map(c => `${Number(c.quantity)}x ${c.products?.name} (${fmtBRL(c.total)})`).join(', ')
-      : 'Sem consumos lançados';
-    const voucher = await apiFetch('/api/vouchers', {
-      method: 'POST',
-      body: JSON.stringify({
-        reservation_id: r.id,
-        guest_name:   r.leads?.name || 'Hóspede',
-        room_type:    roomCode,
-        check_in:     r.checkin_date,
-        check_out:    r.checkout_date,
-        guests:       r.guests || 1,
-        source:       'direct',
-        total_amount: totals.grand_total,
-        notes:        `Checkout. Diárias ${fmtBRL(totals.room_total)} + consumos ${fmtBRL(totals.charges_total)}. ${consumosTxt}`,
-      }),
+    const { done, voucher } = await CheckoutFlow.run({
+      reservationId: comandaCtx.reservation.id,
+      roomCode:      comandaCtx.roomCode,
+      guestName:     comandaCtx.reservation.leads?.name || '',
+      apiFetch:      cgApiFetch,
+      toast:         showToast,
     });
-
     btn.disabled = false; btn.textContent = '🚪 Fazer checkout';
+    if (!done) return;
     closeModal('modal-comanda');
     showToast('Checkout registrado.', 'ok');
     if (voucher?.download_url) window.open(voucher.download_url, '_blank');
     loadRooms();
-  }
+  });
 
   // ══ FRIGOBAR DO QUARTO ═══════════════════════════════════════
   async function openFrigobar(code) {

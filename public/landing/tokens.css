@@ -1,0 +1,251 @@
+/* ============================================================================
+   tokens.css — Design Tokens do tema "Luar sobre Areia" (landing pública)
+   ============================================================================
+   FONTE ÚNICA de tokens da landing. Escopado em :root[data-theme="luar"] para
+   não afetar os temas clean/dark do CRM.
+
+   Ordem de carregamento nas páginas:
+     t.css → c.css → l.css → tokens.css → luar.css
+   (t.css traz o reset/escala-base do design-system; aqui remapeamos e
+    estendemos esses tokens para a identidade da landing; luar.css aplica as
+    regras de elemento que consomem estes tokens.)
+
+   Convenções:
+   - --ldl-*    → paleta base nomeada (os ÚNICOS valores hex; tudo deriva daqui)
+   - --bg*, --tx*, --royal*, --gold: tokens do design-system que t, c, l.css e as
+     páginas JA consomem; aqui sao reapontados para a paleta luar
+   - --accent, --surface, --space-N, --fz-N, etc.: camada semantica da landing
+
+   Paleta-mãe (aprovada em _preview-CA.html#h1):
+     Areia #F3EDE3 · Ardósia #293440 · Azul-luar #586B82 · Areia média #CDBBA4
+   ============================================================================ */
+
+:root[data-theme="luar"] {
+  color-scheme: light;
+
+  /* ==========================================================================
+     1. CORES
+     ========================================================================== */
+
+  /* 1.1 — Paleta base (fonte da verdade: únicos hex do arquivo) */
+  --ldl-sand:        #F3EDE3;  /* areia — fundo base */
+  --ldl-sand-soft:   #FBF7F0;  /* areia clara — cards / seções claras */
+  --ldl-sand-deep:   #EFE8DA;  /* areia profunda — faixas alternadas */
+  --ldl-sand-mid:    #CDBBA4;  /* areia média — apoio / detalhes quentes */
+  --ldl-slate:       #293440;  /* ardósia — texto forte / superfícies escuras */
+  --ldl-slate-soft:  #54616F;  /* ardósia média — corpo de texto */
+  --ldl-slate-mute:  #8B8475;  /* cinza-quente — texto auxiliar / notas */
+  --ldl-moon:        #586B82;  /* azul-luar — ACCENT (CTAs, links, bordas) */
+  --ldl-moon-deep:   #4E6076;  /* azul-luar escuro — hover / links sobre areia */
+  --ldl-gold:        #B8924A;  /* dourado terroso — estrelas / destaque numérico */
+  --ldl-white:       #FFFFFF;
+
+  /* 1.2 — Mapeamento para os tokens do DESIGN-SYSTEM (consumidos por t/c/l.css
+           e pelos estilos inline das páginas). Não renomear: quebraria o reuso. */
+  --bg0: var(--ldl-sand);
+  --bg1: var(--ldl-sand-soft);
+  --bg2: var(--ldl-white);
+  --bg3: var(--ldl-sand-deep);
+
+  --sur0: rgba(41,52,64,.02);
+  --sur1: rgba(41,52,64,.045);
+  --sur2: rgba(41,52,64,.08);
+
+  --bdr:  rgba(41,52,64,.12);
+  --bdr2: rgba(41,52,64,.20);
+
+  --tx1: var(--ldl-slate);
+  --tx2: var(--ldl-slate-soft);
+  --tx3: var(--ldl-slate-mute);
+
+  --royal:    var(--ldl-moon);       /* accent (btn-primary, bordas ativas) */
+  --royal-l:  var(--ldl-moon-deep);  /* links / hover */
+  --midnight: var(--ldl-slate);      /* início dos gradientes escuros */
+
+  --royal-bg:  rgba(88,107,130,.12);
+  --royal-bdr: rgba(88,107,130,.34);
+
+  --gold: var(--ldl-gold);
+
+  --input-bg:  var(--ldl-white);
+  --input-bdr: rgba(41,52,64,.20);
+  --input-focus-bdr: var(--royal);
+
+  --skeleton-base:    rgba(41,52,64,.05);
+  --skeleton-shimmer: rgba(41,52,64,.10);
+
+  /* 1.3 — Camada semântica da landing (aliases legíveis p/ novos componentes) */
+  --accent:         var(--ldl-moon);
+  --accent-strong:  var(--ldl-moon-deep);
+  --accent-soft:    var(--royal-bg);
+  --surface:        var(--bg1);   /* superfície de card */
+  --surface-raised: var(--bg2);   /* superfície elevada (branco) */
+  --border:         var(--bdr);
+  --border-strong:  var(--bdr2);
+  --text-strong:    var(--tx1);
+  --text:           var(--tx2);
+  --text-muted:     var(--tx3);
+  --on-accent:      var(--ldl-white);  /* texto sobre o accent */
+  --on-dark:        var(--ldl-white);  /* texto sobre gradientes ardósia */
+
+  /* ==========================================================================
+     2. TIPOGRAFIA
+     ==========================================================================
+     Famílias herdadas do design-system (t.css): Playfair Display (serif,
+     títulos) + DM Sans (sans, corpo/UI). Aqui definimos a ESCALA. */
+
+  --font-serif: var(--f-serif);  /* 'Playfair Display' — display & headings */
+  --font-sans:  var(--f-sans);   /* 'DM Sans' — corpo, UI, labels */
+
+  /* 2.1 — Escala de tamanhos (clamp = fluido entre mobile e desktop) */
+  --fz-display:  clamp(2.5rem, 5.4vw, 4rem);     /* hero H1 (Playfair) */
+  --fz-h1:       clamp(2rem, 4vw, 3rem);         /* títulos de seção */
+  --fz-h2:       clamp(1.6rem, 3vw, 2.25rem);
+  --fz-h3:       clamp(1.25rem, 2vw, 1.5rem);
+  --fz-body-lg:  1.125rem;   /* 18px — subtítulos / lead */
+  --fz-body:     1rem;       /* 16px — corpo padrão */
+  --fz-body-sm:  0.875rem;   /* 14px — secundário */
+  --fz-caption:  0.75rem;    /* 12px — legendas / notas / eyebrow */
+
+  /* 2.2 — Altura de linha */
+  --lh-tight:    1.1;    /* display / headings grandes */
+  --lh-snug:     1.3;    /* headings menores */
+  --lh-normal:   1.6;    /* corpo de texto */
+  --lh-relaxed:  1.75;   /* blocos longos */
+
+  /* 2.3 — Pesos (limitados aos cortes carregados das fontes) */
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  /* 2.4 — Espaçamento entre letras */
+  --ls-tight:    -0.01em;  /* títulos grandes Playfair */
+  --ls-normal:   0;
+  --ls-wide:     0.04em;   /* botões / labels */
+  --ls-eyebrow:  0.28em;   /* eyebrows uppercase */
+
+  /* ==========================================================================
+     3. SPACING — escala base 8px (sem valores mágicos: sempre usar um token)
+     ==========================================================================
+     base = 8px. --space-2xs (4px) é o único meio-passo permitido. */
+  --space-2xs:  4px;
+  --space-xs:   8px;
+  --space-sm:   16px;
+  --space-md:   24px;
+  --space-lg:   32px;
+  --space-xl:   48px;
+  --space-2xl:  64px;
+  --space-3xl:  96px;
+  --space-4xl:  128px;
+
+  /* ==========================================================================
+     4. RADIUS — poucos níveis, cantos suaves (luxo silencioso, sem exageros)
+     ========================================================================== */
+  --radius-sm:   6px;     /* inputs, chips, pills pequenas */
+  --radius-md:   10px;    /* botões, cards pequenos */
+  --radius-lg:   16px;    /* cards, imagens, painéis */
+  --radius-pill: 999px;   /* botão CTA, amenity-pills */
+
+  /* ==========================================================================
+     5. SHADOWS — discretas, tom ardósia (nunca preto puro), baixa opacidade
+     ========================================================================== */
+  --shadow-xs: 0 1px 2px rgba(41,52,64,.06);
+  --shadow-sm: 0 2px 8px rgba(41,52,64,.08);
+  --shadow-md: 0 8px 24px rgba(41,52,64,.10);
+  --shadow-lg: 0 16px 48px rgba(41,52,64,.12);
+
+  /* ==========================================================================
+     6. GRID & CONTAINER
+     ========================================================================== */
+  --container-max:   1100px;            /* largura máxima do conteúdo */
+  --container-pad:   var(--space-lg);   /* respiro lateral (32px) */
+  --grid-cols:       12;                /* sistema conceitual de 12 colunas */
+  --grid-gap:        var(--space-md);   /* gap padrão entre colunas (24px) */
+  --section-py:      var(--space-3xl);  /* respiro vertical de seção (96px) */
+  --section-py-sm:   var(--space-2xl);  /* idem no mobile (64px) */
+
+  /* ==========================================================================
+     7. BREAKPOINTS (referência)
+     ==========================================================================
+     ATENÇÃO: @media não aceita var() — estes tokens são a FONTE ÚNICA de
+     referência (use os mesmos valores literais nas media queries; úteis também
+     para JS e futuras container queries). Padrão adotado: 768 / 1024. */
+  --bp-mobile:   480px;
+  --bp-tablet:   768px;
+  --bp-desktop:  1024px;
+  --bp-wide:     1280px;
+
+  /* ==========================================================================
+     8. MOTION & HOVER — todo elemento clicável tem transição + feedback
+     ========================================================================== */
+  --motion-fast:  120ms ease;   /* cor / fundo */
+  --motion-base:  200ms ease;   /* elevação / transform */
+  --motion-slow:  350ms ease;   /* aberturas (accordion) */
+  --hover-lift:   -2px;         /* translateY de botões/links */
+  --hover-lift-card: -4px;      /* translateY de cards */
+  --hover-opacity: 0.9;         /* esmaecimento sutil */
+  --focus-ring:   0 0 0 3px var(--accent-soft);  /* anel de foco acessível */
+
+  /* ==========================================================================
+     9. ÍCONES — estilo único: outline, monocromático, traço fino
+     ==========================================================================
+     Padrão visual para TODAS as comodidades. Recomendação: migrar os emojis
+     atuais (🌿🏔️💧🐾…) para SVG outline com estes parâmetros. */
+  --icon-stroke:    1.5;             /* stroke-width fino e uniforme */
+  --icon-size-sm:   18px;
+  --icon-size-md:   24px;
+  --icon-size-lg:   32px;
+  --icon-color:     var(--text);     /* monocromático; usa currentColor */
+
+  /* ==========================================================================
+     10. COMPONENTES
+     ========================================================================== */
+
+  /* 10.1 — Botão (estados: normal / hover / disabled) */
+  --btn-radius:        var(--radius-md);
+  --btn-pad-y:         14px;
+  --btn-pad-x:         30px;
+  --btn-font:          var(--font-sans);
+  --btn-font-size:     var(--fz-body);
+  --btn-font-weight:   var(--fw-semibold);
+  --btn-letter:        var(--ls-wide);
+  /* normal */
+  --btn-bg:            var(--accent);
+  --btn-fg:            var(--on-accent);
+  /* hover */
+  --btn-bg-hover:      var(--accent-strong);
+  --btn-shadow-hover:  var(--shadow-md);
+  --btn-lift-hover:    var(--hover-lift);
+  /* disabled */
+  --btn-disabled-opacity: 0.45;
+  /* nota: .btn-cta (verde-WhatsApp #25D366) é EXCEÇÃO proposital de canal,
+     fora da paleta — definida em l.css, não tokenizada aqui. */
+
+  /* 10.2 — Navbar */
+  --nav-height:   64px;
+  --nav-bg:       rgba(247,243,236,.85);  /* vidro de areia (= sand translúcida) */
+  --nav-blur:     12px;
+  --nav-border:   1px solid var(--border);
+  --nav-link:     var(--text);
+  --nav-link-hover: var(--text-strong);
+
+  /* 10.3 — Card de quarto */
+  --card-radius:        var(--radius-lg);
+  --card-bg:            var(--surface);
+  --card-border:        1px solid var(--border);
+  --card-pad:           var(--space-md);
+  --card-shadow:        var(--shadow-sm);
+  --card-shadow-hover:  var(--shadow-md);
+  --card-lift-hover:    var(--hover-lift-card);
+  --card-img-radius:    var(--radius-lg);
+
+  /* 10.4 — Accordion (FAQ) */
+  --accordion-pad-y:      var(--space-sm);
+  --accordion-pad-x:      var(--space-md);
+  --accordion-border:     1px solid var(--border);
+  --accordion-title:      var(--text-strong);
+  --accordion-title-weight: var(--fw-semibold);
+  --accordion-icon:       var(--accent);
+  --accordion-transition: var(--motion-slow);
+}

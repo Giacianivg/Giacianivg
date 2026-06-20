@@ -152,6 +152,10 @@
    ============================ */
 .main-content {
   flex: 1;
+  /* min-width:0 é o que impede o "site inteiro deslizar pro lado": sem ele um
+     flex item não encolhe abaixo do conteúdo, então uma timeline/calendário
+     largo empurra a página toda em vez de rolar no seu próprio contêiner. */
+  min-width: 0;
   margin-left: 240px;
   min-height: 100vh;
   display: flex;
@@ -499,7 +503,17 @@
   .hamburger { display: flex; }
 
   .topbar { padding: 0 var(--sp-4); }
-  .page-body { padding: var(--sp-4); }
+  /* overflow-x:clip = rede de proteção: corta qualquer estouro horizontal sem
+     virar contêiner de rolagem (não quebra position:sticky como overflow:hidden
+     faria). A tela rola só na vertical; o que é largo de propósito (timeline,
+     calendário, tabelas) rola dentro do próprio componente. */
+  .page-body { padding: var(--sp-4); overflow-x: clip; }
+
+  /* Touch targets — alvos de toque confortáveis no celular. Botões densos de
+     tabela (.btn-sm) ficam em 36px para não estourar a altura das linhas. */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 36px; }
+  .nav-link { min-height: 44px; }
 
   .g2, .g3, .g4, .g2-1, .g3-1, .g1-2 { grid-template-columns: 1fr; }
 

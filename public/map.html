@@ -229,8 +229,10 @@
     .modal-head { padding: var(--sp-5) var(--sp-5) var(--sp-4); border-bottom: 1px solid var(--bdr1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
     .modal-title { font-size: 1.0625rem; font-weight: 700; color: var(--tx1); }
     .modal-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
-    .modal-body  { padding: var(--sp-5); flex: 1; overflow-y: auto; }
-    .modal-foot  { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; }
+    /* min-height:0 essencial: sem ele o body não encolhe abaixo do conteúdo e o
+       modal longo (PDV/comanda) estoura os 90vh, cortando o rodapé fora da tela. */
+    .modal-body  { padding: var(--sp-5); flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .modal-foot  { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--bdr1); display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; flex-shrink: 0; }
     .cmd-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
     .cmd-table th { text-align: left; padding: 6px 8px; color: var(--tx3); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--bdr1); }
     .cmd-table td { padding: 6px 8px; border-bottom: 1px solid var(--bdr0); color: var(--tx2); }
@@ -246,6 +248,13 @@
 
     @media (max-width: 640px) {
       .map-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+    /* Mobile: modal vira folha de baixo (bottom sheet), rodapé fixo, botões largos. */
+    @media (max-width: 600px) {
+      .modal-overlay { align-items: flex-end; }
+      .modal { max-width: 100%; max-height: 92vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+      .modal-foot { justify-content: stretch; }
+      .modal-foot .btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
     }
   </style>
 </head>
@@ -778,6 +787,7 @@
 
 <script src="design-system/u.js"></script>
 <script src="design-system/checkout-guard.js"></script>
+<script src="design-system/checkout-flow.js"></script>
 <script>
 (function () {
   'use strict';
@@ -838,6 +848,7 @@
   // ── State ─────────────────────────────────────────────────────────────────
   let roomsData = {};            // code físico (A1..C5) → room object
   let activeResv = {};           // code físico → reserva ativa cobrindo hoje
+  let statusByCode = {};         // code físico → status canônico (DEC-024)
   let productsCache = [];
   let selectedCode = null;
   let selectedPin  = null;
@@ -872,8 +883,10 @@
     dot.classList.add('loading');
     document.getElementById('last-updated').textContent = 'Atualizando...';
 
-    const [roomsRes, resvRes, prodRes] = await Promise.all([
+    const [roomsRes, roomsTodayRes, boardRes, resvRes, prodRes] = await Promise.all([
       apiFetch('/api/rooms'),
+      apiFetch('/api/occupancy/rooms-today'),
+      apiFetch('/api/occupancy/board'),
       apiFetch(`/api/reservations?checkin_to=${TODAY}&limit=500`),
       apiFetch('/api/products'),
     ]);
@@ -884,13 +897,35 @@
     }
     if (prodRes?.success) productsCache = prodRes.products || [];
 
-    // Reservas ativas por quarto físico.
-    // checkout >= hoje: no dia do checkout o hóspede ainda ocupa o quarto.
-    // pending incluso: reservas do CRM nascem pending até a confirmação.
+    // DEC-024: ocupação/status vêm da FONTE ÚNICA. rooms-today dá o status
+    // canônico (occupied/blocked/available); board dá a classificação do dia
+    // (check-in/check-out/in-house) com regra canônica (fronteira de checkout,
+    // exclusão de checkedout, fuso BR). As reservas só enriquecem o painel.
+    const canonByCode = {};
+    for (const c of (roomsTodayRes?.rooms || [])) canonByCode[c.code] = c;
+    const resvById = {};
+    for (const r of (resvRes?.reservations || [])) resvById[r.id] = r;
+
     activeResv = {};
-    for (const r of (resvRes?.reservations || [])) {
-      if (!['pending','deposit_paid','confirmed','checkedin'].includes(r.status)) continue;
-      if (r.checkin_date <= TODAY && r.checkout_date >= TODAY) activeResv[r.room_type] = r;
+    const boardClass = {};
+    const assign = (row, cls) => {
+      boardClass[row.room_type] = cls;
+      activeResv[row.room_type] = resvById[row.reservation_id] || {
+        id: row.reservation_id, leads: { name: row.guest_name },
+        checkin_date: row.checkin_date, checkout_date: row.checkout_date, guests: row.guests,
+      };
+    };
+    // in-house primeiro; check-in/check-out do dia têm prioridade (sobrescrevem)
+    (boardRes?.in_house  || []).forEach(r => assign(r, 'occupied'));
+    (boardRes?.checkins  || []).forEach(r => assign(r, 'checkin'));
+    (boardRes?.checkouts || []).forEach(r => assign(r, 'checkout'));
+
+    // Status efetivo por pin: board > bloqueio (manutenção) > disponível
+    statusByCode = {};
+    for (const code of Object.keys(ROOM_PINS)) {
+      if (boardClass[code]) statusByCode[code] = boardClass[code];
+      else if (canonByCode[code]?.status === 'blocked') statusByCode[code] = 'occupied';
+      else statusByCode[code] = 'available';
     }
 
     applyStatuses();
@@ -907,18 +942,9 @@
     else if (selectedCode) selectRoom(null, selectedCode);
   }
 
-  // Status efetivo de um quarto físico
+  // Status efetivo de um quarto físico (DEC-024: fonte única, já calculado em loadMap)
   function roomStatus(code) {
-    const resv = activeResv[code];
-    if (resv) {
-      if (resv.checkin_date  === TODAY && resv.status !== 'checkedin') return 'checkin';
-      if (resv.checkout_date === TODAY) return 'checkout';
-      return 'occupied';
-    }
-    const room = roomsData[code];
-    if (!room) return 'unknown';
-    const map = { available: 'available', blocked: 'occupied', partial: 'partial', on_request: 'request' };
-    return map[room.today_status] || 'unknown';
+    return statusByCode[code] || 'available';
   }
 
   // ── Apply status to SVG (por quarto físico) ───────────────────────────────
@@ -1123,14 +1149,21 @@
 
     document.getElementById('map-swap-room')?.addEventListener('click', () => openSwapModal(code, resv));
 
-    // Check-out guardado: mesmo fluxo/popup das outras telas; trava de saldo no banco.
+    // Check-out: MESMO fluxo completo do rooms/bookings (módulo CheckoutFlow) —
+    // contagem de frigobar + trava de saldo/popup de pagamento + voucher.
     document.getElementById('map-do-checkout')?.addEventListener('click', async () => {
-      const done = await CheckoutGuard.run({ id: resv.id, apiFetch: cgApiFetch, toast: DS.toast });
-      if (done) {
-        DS.toast('Checkout registrado.', 'ok');
-        document.getElementById('room-detail').classList.remove('show');
-        loadMap();
-      }
+      const { done, voucher } = await CheckoutFlow.run({
+        reservationId: resv.id,
+        roomCode:  code,
+        guestName: resv.leads?.name || '',
+        apiFetch:  cgApiFetch,
+        toast:     DS.toast,
+      });
+      if (!done) return;
+      DS.toast('Checkout registrado.', 'ok');
+      if (voucher?.download_url) window.open(voucher.download_url, '_blank');
+      document.getElementById('room-detail').classList.remove('show');
+      loadMap();
     });
 
     document.getElementById('map-charge-add')?.addEventListener('click', async () => {

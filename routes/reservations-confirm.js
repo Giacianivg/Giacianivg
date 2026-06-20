@@ -4,6 +4,7 @@ const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
 const { ok, fail, serverError } = require('../services/utils/response');
 const { toDB } = require('../services/utils/dates');
+const { getMinNightsForISO } = require('../services/quotation/engine');
 
 const router = Router();
 
@@ -46,6 +47,18 @@ router.post('/', async (req, res) => {
     checkoutISO = toDB(checkout);
   } catch (e) {
     return fail(res, 'invalid_date', e.message);
+  }
+
+  // Estadia mínima — fonte única special_periods (mesma regra da cotação).
+  // Datas normais aceitam diária única; períodos especiais exigem o min_nights.
+  const nights = Math.round((new Date(checkoutISO) - new Date(checkinISO)) / 86400000);
+  if (nights <= 0) {
+    return fail(res, 'invalid_date', 'Check-out deve ser posterior ao check-in.', 422);
+  }
+  const minNights = getMinNightsForISO(checkinISO);
+  if (nights < minNights) {
+    return fail(res, 'min_nights',
+      `A data de check-in está em um período com estadia mínima de ${minNights} noites.`, 422);
   }
 
   const deposit = pDepositAmount ?? Math.round(Number(pTotalAmount) * 0.30);

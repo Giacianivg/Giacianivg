@@ -38,39 +38,49 @@ async function createPixPayment({ reservationId, amount, description, payerEmail
   }
 
   const data = await res.json();
+  const tx = data.point_of_interaction?.transaction_data || {};
   return {
-    payment_id:  data.id,
-    pix_link:    data.point_of_interaction?.transaction_data?.ticket_url || null,
-    pix_qr_code: data.point_of_interaction?.transaction_data?.qr_code    || null,
-    expires_at:  data.date_of_expiration,
-    status:      data.status,
+    payment_id:     data.id,
+    pix_link:       tx.ticket_url || null,
+    pix_qr_code:    tx.qr_code || null,          // copia-e-cola
+    pix_qr_base64:  tx.qr_code_base64 || null,   // imagem do QR (data URI base64) p/ exibir na tela
+    expires_at:     data.date_of_expiration,
+    status:         data.status,
   };
 }
 
 // ---------------------------------------------------------------------------
-// Validate webhook x-signature header
-// Format: "ts=TIMESTAMP,v1=HASH"
-// HMAC-SHA256(ts + "." + data.id, WEBHOOK_SECRET)
+// Validate webhook x-signature header — formato OFICIAL do Mercado Pago.
+//   header x-signature: "ts=TIMESTAMP,v1=HASH"
+//   manifest:           "id:{data.id};request-id:{x-request-id};ts:{ts};"
+//   v1 = HMAC-SHA256(manifest, WEBHOOK_SECRET)  (data.id em minúsculas)
+// Ref: docs MP "Validar origem da notificação". Testar em sandbox (Bloco 4).
 // ---------------------------------------------------------------------------
-function validateWebhookSignature(signatureHeader, paymentId) {
+function validateWebhookSignature(xSignature, xRequestId, dataId) {
   if (!WEBHOOK_SECRET) {
     console.warn('[mp] MERCADOPAGO_WEBHOOK_SECRET not set — skipping signature validation');
-    return true; // Allow in dev without secret
+    return true; // graceful: dev/sandbox sem secret
   }
-  if (!signatureHeader) return false;
+  if (!xSignature || dataId == null) return false;
 
   const parts = {};
-  for (const part of signatureHeader.split(',')) {
-    const [k, v] = part.split('=');
-    if (k && v) parts[k.trim()] = v.trim();
+  for (const part of String(xSignature).split(',')) {
+    const idx = part.indexOf('=');
+    if (idx > 0) parts[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
   }
-
   const { ts, v1 } = parts;
   if (!ts || !v1) return false;
 
-  const payload  = `${ts}.${paymentId}`;
-  const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(payload).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
+  // data.id em minúsculas; request-id pode faltar em alguns eventos → string vazia.
+  const manifest = `id:${String(dataId).toLowerCase()};request-id:${xRequestId || ''};ts:${ts};`;
+  const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(manifest).digest('hex');
+
+  if (v1.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(v1, 'hex'), Buffer.from(expected, 'hex'));
+  } catch {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

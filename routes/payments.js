@@ -107,11 +107,12 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/payments/webhook — MercadoPago notifications
 router.post('/webhook', async (req, res) => {
-  // Validate signature first
-  const signature = req.headers['x-signature'];
-  const paymentId = req.body?.data?.id;
+  // Validate signature first (formato oficial: x-signature + x-request-id + data.id)
+  const xSignature = req.headers['x-signature'];
+  const xRequestId = req.headers['x-request-id'];
+  const dataId     = req.body?.data?.id || req.query['data.id'];
 
-  if (!validateWebhookSignature(signature, paymentId)) {
+  if (!validateWebhookSignature(xSignature, xRequestId, dataId)) {
     return fail(res, 'invalid_signature', 'Webhook signature validation failed', 401);
   }
 
