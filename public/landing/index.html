@@ -1,207 +1,469 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="luar">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pousada Luz da Lua — Socorro SP</title>
-  <meta name="description" content="Pousada boutique em Socorro-SP. Natureza, conforto e hospitalidade na Serra da Mantiqueira.">
-  <script>(function(){var t=localStorage.getItem('ldl-theme')||'clean';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <title>Pousada Luz da Lua — Pousada em Socorro-SP | Circuito das Águas</title>
+  <meta name="description" content="Pousada boutique em Socorro-SP, na Serra da Mantiqueira. Piscina, natureza e hospitalidade no Circuito das Águas Paulista. A 2h30 de São Paulo. Ideal para casais, famílias e grupos.">
+  <link rel="canonical" href="https://pousadaluzdaluasp.com.br/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Pousada Luz da Lua — Socorro-SP, Circuito das Águas">
+  <meta property="og:description" content="Seu refúgio na Serra da Mantiqueira. Piscina, natureza e conforto no Circuito das Águas Paulista.">
+  <meta property="og:image" content="https://pousadaluzdaluasp.com.br/landing/assets/aerea.jpg">
+  <meta property="og:locale" content="pt_BR">
+  <meta name="twitter:card" content="summary_large_image">
+
   <link rel="stylesheet" href="../design-system/t.css">
   <link rel="stylesheet" href="../design-system/c.css">
   <link rel="stylesheet" href="../design-system/l.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="luar.css">
+  <link rel="stylesheet" href="editorial.css">
+
+  <!-- SEO: dados estruturados (Schema.org LodgingBusiness) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "LodgingBusiness",
+    "name": "Pousada Luz da Lua",
+    "description": "Pousada boutique em Socorro-SP, na Serra da Mantiqueira, no Circuito das Águas Paulista.",
+    "url": "https://pousadaluzdaluasp.com.br/",
+    "image": "https://pousadaluzdaluasp.com.br/landing/assets/aerea.jpg",
+    "telephone": "+55-19-99840-0306",
+    "priceRange": "R$$",
+    "petsAllowed": true,
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Socorro",
+      "addressRegion": "SP",
+      "addressCountry": "BR"
+    },
+    "amenityFeature": [
+      { "@type": "LocationFeatureSpecification", "name": "Piscina", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Café da manhã", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Wi-Fi", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Churrasqueira", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Estacionamento", "value": true },
+      { "@type": "LocationFeatureSpecification", "name": "Pet-friendly", "value": true }
+    ]
+  }
+  </script>
+
   <style>
+    /* ── Estilos scoped do hero (tokens da landing: tokens.css) ─────────────
+       O restante do layout editorial vive em editorial.css. ───────────────── */
     .landing-hero { min-height: 92vh; }
     .hero-title {
-      font-family: var(--f-serif);
-      font-size: clamp(2.25rem, 5vw, 3.5rem);
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.15;
-      margin-bottom: var(--sp-4);
-      text-shadow: 0 2px 12px rgba(0,0,0,.4);
+      font-family: var(--font-serif);
+      font-size: var(--fz-display);
+      font-weight: var(--fw-medium); color: #fff; line-height: var(--lh-tight);
+      letter-spacing: var(--ls-tight);
+      margin-bottom: var(--space-md); text-shadow: 0 2px 24px rgba(0,0,0,.35);
+      max-width: 16ch;
     }
     .hero-sub {
-      font-size: clamp(1rem, 2vw, 1.25rem);
-      color: rgba(255,255,255,.85);
-      margin-bottom: var(--sp-8);
-      line-height: 1.6;
-    }
-    .amenity-list { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-8); }
-    .amenity-pill {
-      padding: 5px 14px;
-      border-radius: var(--r-full);
-      background: rgba(255,255,255,.15);
-      border: 1px solid rgba(255,255,255,.3);
-      color: rgba(255,255,255,.9);
-      font-size: .875rem;
-      backdrop-filter: blur(4px);
+      font-size: var(--fz-body-lg); color: rgba(255,255,255,.9);
+      margin-bottom: var(--space-xl); line-height: var(--lh-normal); max-width: 46ch;
     }
     .rooms-section { background: var(--bg0); }
-    .steps-section { background: var(--bg1); }
-    .cta-section {
-      background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
-      padding: var(--sp-16) var(--sp-8);
-      text-align: center;
-    }
-    .cta-section * { color: #fff; }
-    .section-subtitle { font-size: 1.0625rem; color: var(--tx2); text-align: center; margin-bottom: var(--sp-8); }
-    .price-note { font-size: .875rem; color: var(--tx3); margin-top: 4px; }
   </style>
 </head>
 <body>
 
 <!-- Nav -->
 <nav class="landing-nav">
-  <a href="#" style="display:flex;align-items:center;gap:var(--sp-3);text-decoration:none">
+  <a href="#topo" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
-    <span style="font-family:var(--f-serif);font-weight:600;color:var(--tx1);font-size:.9375rem">Luz da Lua</span>
+    <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
-  <div style="display:flex;align-items:center;gap:var(--sp-3)">
-    <a href="#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Quartos</a>
-    <a href="#como-reservar" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Reservar</a>
-    <a href="https://wa.me/5513981388816" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.004 2C6.479 2 2.003 6.476 2.003 12c0 1.858.488 3.598 1.34 5.103L2 22l5.037-1.32A9.935 9.935 0 0012.004 22C17.528 22 22 17.524 22 12S17.528 2 12.004 2zm0 18.13a8.08 8.08 0 01-4.122-1.128l-.295-.175-3.064.804.82-2.997-.193-.308A8.13 8.13 0 013.87 12c0-4.488 3.653-8.13 8.134-8.13S20.13 7.512 20.13 12s-3.64 8.13-8.126 8.13z"/></svg>
-      Falar no WhatsApp
-    </a>
+  <div style="display:flex;align-items:center;gap:var(--space-sm)">
+    <a href="#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Acomodações</a>
+    <a href="#desacelerar" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Experiência</a>
+    <a href="#regiao" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Região</a>
+    <a href="reservar.html" class="btn btn-primary btn-sm">Reservar</a>
+    <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
   </div>
 </nav>
 
 <!-- Hero -->
-<section class="landing-hero">
-  <img class="landing-hero-img" src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80" alt="Serra da Mantiqueira" loading="eager">
+<section class="landing-hero" id="topo">
+  <img class="landing-hero-img" src="assets/aerea.jpg" alt="Vista aérea da Pousada Luz da Lua em Socorro-SP" loading="eager">
   <div class="landing-hero-overlay"></div>
   <div class="landing-hero-content">
-    <div class="amenity-list">
-      <span class="amenity-pill">🌿 Socorro-SP</span>
-      <span class="amenity-pill">🏔️ Serra da Mantiqueira</span>
-      <span class="amenity-pill">🤿 Voo Livre · Rapel · Cachoeiras</span>
-    </div>
-    <h1 class="hero-title">Seu refúgio na natureza<br>a 2h30 de São Paulo</h1>
-    <p class="hero-sub">Pousada boutique em Socorro com conforto, vista para a serra e atendimento personalizado. Perfeito para casais e grupos.</p>
-    <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap">
-      <a href="https://wa.me/5513981388816?text=Ol%C3%A1%2C+gostaria+de+saber+a+disponibilidade+para+hospedar" target="_blank" rel="noopener" class="btn-cta">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.004 2C6.479 2 2.003 6.476 2.003 12c0 1.858.488 3.598 1.34 5.103L2 22l5.037-1.32A9.935 9.935 0 0012.004 22C17.528 22 22 17.524 22 12S17.528 2 12.004 2zm0 18.13a8.08 8.08 0 01-4.122-1.128l-.295-.175-3.064.804.82-2.997-.193-.308A8.13 8.13 0 013.87 12c0-4.488 3.653-8.13 8.134-8.13S20.13 7.512 20.13 12s-3.64 8.13-8.126 8.13z"/></svg>
-        Consultar disponibilidade
-      </a>
+    <span class="ed-eyebrow ed-fade" style="color:rgba(255,255,255,.9)">Socorro · Serra da Mantiqueira</span>
+    <h1 class="hero-title ed-fade d1">Seu refúgio na natureza, a 2h30 de São Paulo</h1>
+    <p class="hero-sub ed-fade d2">Pousada boutique em Socorro: piscina, vista para a serra e o silêncio das montanhas.</p>
+    <div class="ed-actions ed-fade d3">
+      <a href="reservar.html" class="btn btn-primary btn-lg">Ver disponibilidade e preços</a>
+      <a href="circuito.html" class="ed-link" style="color:#fff">Descobrir a região <span class="ed-arrow">→</span></a>
     </div>
   </div>
 </section>
 
-<!-- Stats -->
-<section class="landing-section rooms-section" style="background:var(--bg1);padding-top:var(--sp-10);padding-bottom:var(--sp-10)">
+<!-- Abertura editorial (statement) -->
+<section class="landing-section landing-section--lg" id="abertura">
+  <div class="ed-statement ed-fade">
+    <span class="ed-eyebrow">A pousada</span>
+    <p class="ed-lead">No coração do Circuito das Águas, onde a Serra da Mantiqueira encontra o silêncio — um refúgio para desacelerar, entre a piscina, a mata e o tempo que não corre.</p>
+  </div>
+</section>
+
+<!-- Seção 3 — Um lugar para desacelerar (imagem full-bleed + texto, sem card) -->
+<section class="landing-section ed-feature-section" id="desacelerar" style="background:var(--bg0)">
   <div class="landing-section-inner">
-    <div class="stat-grid">
-      <div class="stat-item"><div class="stat-value">300+</div><div class="stat-label">Hóspedes satisfeitos</div></div>
-      <div class="stat-item"><div class="stat-value">4.9★</div><div class="stat-label">Avaliação média</div></div>
-      <div class="stat-item"><div class="stat-value">2h30</div><div class="stat-label">De São Paulo</div></div>
-      <div class="stat-item"><div class="stat-value">10+</div><div class="stat-label">Atrações na região</div></div>
+    <div class="ed-feature">
+      <div class="ed-feature__media ed-fade">
+        <img src="assets/ala-b-vista-superior.jpg" alt="Vista superior da Ala B da Pousada Luz da Lua, entre o verde da Serra da Mantiqueira" loading="lazy">
+      </div>
+      <div class="ed-feature__body ed-fade d1">
+        <span class="ed-eyebrow">O refúgio</span>
+        <h2>Um lugar para desacelerar</h2>
+        <p>Aqui o tempo afrouxa. O dia começa devagar — o café na varanda, a serra ainda enrolada em neblina, nenhuma pressa além do convite para respirar fundo.</p>
+        <p>Entre o verde da Mantiqueira e o azul da piscina, cada canto foi pensado para o descanso de verdade: silêncio, ar puro e o céu estrelado de Socorro quando a noite cai.</p>
+        <a href="#experiencia" class="ed-link">Conheça a experiência <span class="ed-arrow">→</span></a>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Quartos -->
+<!-- Seção 4 — Piscina e natureza (full-bleed imersivo) -->
+<section class="ed-immersive" id="piscina" aria-label="Piscina e natureza">
+  <img class="ed-immersive__img" src="assets/piscina-2.jpeg" alt="Piscina da Pousada Luz da Lua ao ar livre, cercada pela natureza da Serra da Mantiqueira" loading="lazy">
+  <div class="ed-immersive__overlay"></div>
+  <div class="ed-immersive__content">
+    <div class="ed-immersive__text ed-fade">
+      <span class="ed-eyebrow">Piscina &amp; natureza</span>
+      <h2>O dia ao ar livre, no compasso da serra</h2>
+      <p>Mergulhe pela manhã, almoce à sombra das árvores, veja o sol baixar atrás da mata. Aqui o lazer não tem agenda — só o sol, a água e o verde da Mantiqueira ao redor.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Seção 5 — Acomodações (galeria editorial, sem card chrome) -->
 <section class="landing-section rooms-section" id="quartos">
   <div class="landing-section-inner">
-    <h2 class="landing-section-title">Acomodações</h2>
-    <p class="section-subtitle">Quartos confortáveis para todos os perfis de viagem</p>
-    <div class="room-grid">
-      <div class="room-card">
-        <img class="room-card-img" src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=75" alt="Ala A" loading="lazy">
-        <div class="room-card-body">
-          <div class="room-card-name">Ala A — Casal/Duplo</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Aconchegante, ideal para casais. Acomoda até 3 pessoas.</p>
-          <div class="row-between">
-            <div><div class="room-card-price">A partir de R$300</div><div class="price-note">/noite</div></div>
-            <a href="https://wa.me/5513981388816?text=Quero+ver+disponibilidade+Ala+A" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Reservar</a>
-          </div>
+    <header class="ed-section-head ed-fade">
+      <span class="ed-eyebrow">Acomodações</span>
+      <h2>Três jeitos de ficar</h2>
+      <p class="ed-section-lead">De um canto para dois ao espaço que cabe a família inteira — todos com o conforto e o silêncio da serra.</p>
+    </header>
+    <div class="ed-rooms">
+      <article class="ed-room ed-fade">
+        <div class="ed-room__media ed-room__media--soon">Foto em breve</div>
+        <h3 class="ed-room__name">Ala A</h3>
+        <p class="ed-room__kind">Casal · até 3 hóspedes</p>
+        <p class="ed-room__desc">Um ninho para dois, com o essencial bem cuidado e a serra na janela.</p>
+        <a href="reservar.html" class="ed-link">Reservar <span class="ed-arrow">→</span></a>
+      </article>
+      <article class="ed-room ed-fade d1">
+        <div class="ed-room__media">
+          <img src="assets/quarto-ala-b.jpeg" alt="Quarto da Ala B da Pousada Luz da Lua" loading="lazy">
         </div>
-      </div>
-      <div class="room-card">
-        <img class="room-card-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=75" alt="Ala B" loading="lazy">
-        <div class="room-card-body">
-          <div class="room-card-name">Ala B — Superior</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Espaçoso e confortável. Acomoda até 5 pessoas.</p>
-          <div class="row-between">
-            <div><div class="room-card-price">A partir de R$300</div><div class="price-note">/noite</div></div>
-            <a href="https://wa.me/5513981388816?text=Quero+ver+disponibilidade+Ala+B" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Reservar</a>
-          </div>
-        </div>
-      </div>
-      <div class="room-card">
-        <img class="room-card-img" src="https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=600&q=75" alt="Ala C" loading="lazy">
-        <div class="room-card-body">
-          <div class="room-card-name">Ala C — Família/Grupo</div>
-          <p style="font-size:.875rem;color:var(--tx2);margin:var(--sp-2) 0 var(--sp-3)">Para famílias e grupos. Casal: até 8px · Grupo: contate-nos.</p>
-          <div class="row-between">
-            <div><div class="room-card-price">Sob consulta</div><div class="price-note">grupos customizados</div></div>
-            <a href="https://wa.me/5513981388816?text=Quero+ver+disponibilidade+Ala+C" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Consultar</a>
-          </div>
-        </div>
-      </div>
+        <h3 class="ed-room__name">Ala B</h3>
+        <p class="ed-room__kind">Família · até 5 hóspedes</p>
+        <p class="ed-room__desc">Espaço para a família inteira respirar, sem abrir mão do conforto.</p>
+        <a href="reservar.html" class="ed-link">Reservar <span class="ed-arrow">→</span></a>
+      </article>
+      <article class="ed-room ed-fade d2">
+        <div class="ed-room__media ed-room__media--soon">Foto em breve</div>
+        <h3 class="ed-room__name">Ala C</h3>
+        <p class="ed-room__kind">Grupos · sob medida</p>
+        <p class="ed-room__desc">Para famílias grandes e grupos — montamos a estadia do seu jeito.</p>
+        <a href="reservar.html" class="ed-link">Consultar <span class="ed-arrow">→</span></a>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- Como reservar -->
-<section class="landing-section steps-section" id="como-reservar">
+<!-- Seção 6 — Região (índice tipográfico; conecta à página do Circuito) -->
+<section class="landing-section ed-region" id="regiao" style="background:var(--bg3)">
   <div class="landing-section-inner">
-    <h2 class="landing-section-title">Como reservar</h2>
-    <p class="section-subtitle">Simples, rápido e pelo WhatsApp</p>
-    <div class="steps-list">
-      <div class="step-item">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <div class="step-title">Entre em contato pelo WhatsApp</div>
-          <div class="step-desc">Envie mensagem com suas datas e número de hóspedes. Nossa assistente Luna responde na hora.</div>
-        </div>
+    <header class="ed-section-head ed-fade">
+      <span class="ed-eyebrow">Arredores</span>
+      <h2>O Circuito das Águas, na porta</h2>
+      <p class="ed-section-lead">Seis cidades a poucos quilômetros umas das outras. Use a pousada como base e monte seu roteiro: aventura, águas termais, o Caminho do Café, vinho e compras.</p>
+    </header>
+    <div class="ed-region__list ed-fade">
+      <div class="ed-region__city">
+        <h3>Socorro</h3>
+        <p class="ed-region__tag">Capital Nacional do Turismo de Aventura</p>
+        <p class="ed-region__dist">Base da pousada</p>
       </div>
-      <div class="step-item">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <div class="step-title">Receba a cotação</div>
-          <div class="step-desc">Luna calcula o valor exato com desconto para estadias longas e confirma disponibilidade.</div>
-        </div>
+      <div class="ed-region__city">
+        <h3>Águas de Lindóia</h3>
+        <p class="ed-region__tag">Capital Termal do Brasil</p>
+        <p class="ed-region__dist">aprox. 30 km</p>
       </div>
-      <div class="step-item">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <div class="step-title">Confirme com 30% de sinal</div>
-          <div class="step-desc">Após confirmação, nossa equipe entra em contato para organizar o pagamento do sinal e garantir sua reserva.</div>
-        </div>
+      <div class="ed-region__city">
+        <h3>Serra Negra</h3>
+        <p class="ed-region__tag">Teleférico, Caminho do Café e vinícolas</p>
+        <p class="ed-region__dist">aprox. 25 km</p>
       </div>
-      <div class="step-item">
-        <div class="step-num">4</div>
-        <div class="step-body">
-          <div class="step-title">Aproveite sua estadia!</div>
-          <div class="step-desc">Chegue e deixe a natureza de Socorro fazer o resto. Check-in a partir das 14h, check-out até 12h.</div>
-        </div>
+      <div class="ed-region__city">
+        <h3>Lindóia</h3>
+        <p class="ed-region__tag">Capital Nacional da Água Mineral</p>
+        <p class="ed-region__dist">aprox. 28 km</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Amparo</h3>
+        <p class="ed-region__tag">Centro histórico e turismo rural</p>
+        <p class="ed-region__dist">aprox. 1h30</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Monte Alegre do Sul</h3>
+        <p class="ed-region__tag">Charme italiano e alambiques de cachaça</p>
+        <p class="ed-region__dist">aprox. 1h30</p>
+      </div>
+    </div>
+    <div class="ed-region__cta ed-fade">
+      <a href="circuito.html" class="ed-link" style="color:var(--accent-strong)">Explorar o Circuito das Águas <span class="ed-arrow">→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- Seção 7 — Café da manhã (mirror: texto-esquerda + imagem-direita) -->
+<section class="landing-section ed-feature-section" id="cafe" style="background:var(--bg0)">
+  <div class="landing-section-inner">
+    <div class="ed-feature ed-feature--mirror">
+      <div class="ed-feature__media ed-fade">
+        <img src="assets/acai.jpeg" alt="Açaí da casa servido na Pousada Luz da Lua" loading="lazy">
+      </div>
+      <div class="ed-feature__body ed-fade d1">
+        <span class="ed-eyebrow">A mesa</span>
+        <h2>As manhãs começam devagar</h2>
+        <p>Café fresco, pães quentes, frutas da estação, bolos caseiros e ovos do jeito que você gosta. O café da manhã é servido com calma — para ninguém ter pressa de levantar.</p>
+        <p>E a cozinha não para por aí: o açaí da casa à tarde, e o cheiro de churrasco na varanda quando o sol baixa atrás da serra.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA -->
-<section class="cta-section">
-  <h2 style="font-family:var(--f-serif);font-size:2rem;font-weight:700;margin-bottom:var(--sp-3)">Pronto para sua escapada?</h2>
-  <p style="font-size:1.0625rem;opacity:.8;margin-bottom:var(--sp-8)">Fale agora com a Luna, nossa assistente inteligente, e garanta sua data.</p>
-  <a href="https://wa.me/5513981388816?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta" style="font-size:1.125rem">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.004 2C6.479 2 2.003 6.476 2.003 12c0 1.858.488 3.598 1.34 5.103L2 22l5.037-1.32A9.935 9.935 0 0012.004 22C17.528 22 22 17.524 22 12S17.528 2 12.004 2zm0 18.13a8.08 8.08 0 01-4.122-1.128l-.295-.175-3.064.804.82-2.997-.193-.308A8.13 8.13 0 013.87 12c0-4.488 3.653-8.13 8.134-8.13S20.13 7.512 20.13 12s-3.64 8.13-8.126 8.13z"/></svg>
-    Reservar agora pelo WhatsApp
-  </a>
-  <p style="font-size:.875rem;opacity:.6;margin-top:var(--sp-6)">Resposta em minutos • Disponível todos os dias</p>
+<!-- Lazer na pousada (galeria de atmosfera; destino do link "Conheça a experiência") -->
+<section class="landing-section" id="experiencia" style="background:var(--bg0)">
+  <div class="landing-section-inner">
+    <header class="ed-section-head ed-fade">
+      <span class="ed-eyebrow">Na pousada</span>
+      <h2>Os dias rendem mais</h2>
+      <p class="ed-section-lead">Entre um mergulho e outro, há sempre o que fazer — ou o prazer de não fazer nada.</p>
+    </header>
+    <div class="ed-amenities ed-fade">
+      <figure class="ed-amenity"><img src="assets/churrasqueira.jpeg" alt="Churrasqueira para hóspedes na Pousada Luz da Lua" loading="lazy"><figcaption>Churrasqueira</figcaption></figure>
+      <figure class="ed-amenity"><img src="assets/fogueira.jpeg" alt="Fogueira nas noites frias da pousada" loading="lazy"><figcaption>Fogueira nas noites frias</figcaption></figure>
+      <figure class="ed-amenity"><img src="assets/salao-jogos.jpeg" alt="Salão de jogos da pousada" loading="lazy"><figcaption>Salão de jogos</figcaption></figure>
+      <figure class="ed-amenity"><img src="assets/parquinho.jpeg" alt="Parquinho para crianças na pousada" loading="lazy"><figcaption>Espaço para as crianças</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- Seção 8 — Depoimentos (carrossel de avaliações curadas; lê reviews.json) -->
+<section class="landing-section" id="depoimentos" style="background:var(--bg0)">
+  <div class="landing-section-inner">
+    <div class="ed-quotes ed-fade" data-reviews-src="reviews.json">
+      <!-- Fallback estático: aparece sem JS/fetch; o JS substitui pelo conjunto curado -->
+      <figure class="ed-quote" id="reviewQuote" aria-live="polite">
+        <div class="ed-quote__stars" aria-hidden="true">★★★★★</div>
+        <blockquote>“Lugar lindo, tranquilo e muito bem cuidado. A piscina e a vista da serra são de tirar o fôlego — voltamos com a alma lavada.”</blockquote>
+        <figcaption>
+          <span class="ed-quote__author">Avaliação ilustrativa</span>
+          <span class="ed-quote__meta">exemplo provisório · substituir por review real do Google</span>
+        </figcaption>
+      </figure>
+      <div class="ed-quotes__nav" hidden>
+        <button class="ed-quotes__btn" type="button" data-dir="prev" aria-label="Avaliação anterior">←</button>
+        <div class="ed-quotes__dots" role="tablist" aria-label="Avaliações"></div>
+        <button class="ed-quotes__btn" type="button" data-dir="next" aria-label="Próxima avaliação">→</button>
+      </div>
+      <div class="ed-quotes__more" hidden>
+        <a class="ed-link" href="#" target="_blank" rel="noopener">Ver todas no Google <span class="ed-arrow">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Seção 9 — FAQ (accordion nativo, acessível) -->
+<section class="landing-section" id="faq" style="background:var(--bg1)">
+  <div class="landing-section-inner">
+    <header class="ed-section-head ed-fade" style="max-width:760px;margin-inline:auto">
+      <span class="ed-eyebrow">Antes de reservar</span>
+      <h2>Perguntas frequentes</h2>
+    </header>
+    <div class="ed-faq ed-fade">
+      <details class="ed-faq__item">
+        <summary>Quais os horários de check-in e check-out?</summary>
+        <div class="ed-faq__answer">Check-in a partir das 14h e check-out até as 12h. Precisa de outro horário? Combine conosco com antecedência que tentamos acomodar.</div>
+      </details>
+      <details class="ed-faq__item">
+        <summary>O café da manhã está incluído?</summary>
+        <div class="ed-faq__answer">Sim. Todas as diárias incluem o café da manhã da casa — pães quentes, frutas, bolos caseiros e ovos feitos na hora.</div>
+      </details>
+      <details class="ed-faq__item">
+        <summary>Posso levar meu pet?</summary>
+        <div class="ed-faq__answer">Aceitamos cães de pequeno porte, mediante uma pequena taxa por noite. Conte para a gente na reserva para alinharmos os detalhes.</div>
+      </details>
+      <details class="ed-faq__item">
+        <summary>Como faço a reserva e qual o valor do sinal?</summary>
+        <div class="ed-faq__answer">É simples e pelo WhatsApp: você envia as datas e o número de hóspedes, recebe a cotação e confirma com 30% de sinal. O restante você acerta na chegada. <a href="https://wa.me/5519998400306" target="_blank" rel="noopener">Falar no WhatsApp</a>.</div>
+      </details>
+      <details class="ed-faq__item">
+        <summary>Como chego até a pousada?</summary>
+        <div class="ed-faq__answer">Estamos em Socorro-SP, na Serra da Mantiqueira, dentro do Circuito das Águas Paulista — a cerca de 2h30 de carro da capital. Enviamos a localização exata e dicas de rota na sua reserva.</div>
+      </details>
+      <details class="ed-faq__item">
+        <summary>Qual é a política de cancelamento?</summary>
+        <div class="ed-faq__answer">Cancelamento gratuito até 7 dias antes do check-in. Para cancelamentos mais próximos da data, fale conosco que avaliamos cada caso.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- Seção 10 — Reserva (CTA final: passos enxutos + WhatsApp) -->
+<section class="landing-section ed-reserve" id="reserva">
+  <div class="ed-reserve__inner">
+    <h2 class="ed-fade">Pronto para desacelerar?</h2>
+    <p class="ed-reserve__lead ed-fade d1">Envie suas datas pelo WhatsApp e garanta sua estadia na serra. A gente cuida do resto.</p>
+    <div class="ed-reserve__steps ed-fade d1">
+      <span class="ed-reserve__step">Envie suas datas e nº de hóspedes</span>
+      <span class="ed-reserve__step">Receba a cotação na hora</span>
+      <span class="ed-reserve__step">Confirme com 30% de sinal</span>
+      <span class="ed-reserve__step">Chegue e aproveite</span>
+    </div>
+    <div class="ed-reserve__cta ed-fade d2">
+      <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta">Reservar pelo WhatsApp</a>
+    </div>
+    <p class="ed-reserve__note ed-fade d2">Resposta em minutos • Disponível todos os dias</p>
+  </div>
 </section>
 
 <footer class="landing-footer">
   <div style="max-width:800px;margin:0 auto">
-    <div style="font-family:var(--f-serif);font-size:1rem;font-weight:600;color:var(--tx1);margin-bottom:var(--sp-2)">Pousada Luz da Lua</div>
-    <p style="margin-bottom:var(--sp-2)">Socorro — SP · Serra da Mantiqueira</p>
-    <p>
-      <a href="https://wa.me/5513981388816" target="_blank" rel="noopener" style="color:var(--royal-l)">(13) 98138-8816</a>
+    <div style="font-family:var(--font-serif);font-size:var(--fz-body);font-weight:var(--fw-semibold);color:var(--tx1);margin-bottom:var(--space-xs)">Pousada Luz da Lua</div>
+    <p style="margin-bottom:var(--space-xs)">Socorro — SP · Serra da Mantiqueira · Circuito das Águas Paulista</p>
+    <p style="margin-bottom:var(--space-xs)">
+      <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" style="color:var(--royal-l)">(19) 99840-0306</a>
     </p>
-    <p style="margin-top:var(--sp-4);font-size:.75rem;color:var(--tx3)">© 2026 Pousada Luz da Lua · Todos os direitos reservados</p>
+    <p style="margin-bottom:var(--space-sm);font-size:var(--fz-caption);color:var(--tx3)">
+      Check-in a partir das 14h · Check-out até 12h · Diária de 24h conforme Portaria MTur 28/2025.
+      Cancelamento gratuito até 7 dias antes do check-in.
+    </p>
+    <p style="font-size:var(--fz-caption);color:var(--tx3)">© 2026 Pousada Luz da Lua · Todos os direitos reservados · <a href="/privacy" style="color:var(--tx3);text-decoration:underline">Privacidade</a></p>
   </div>
 </footer>
 
-<script src="../design-system/u.js"></script>
+<!-- CTA sticky: sempre acessível para quem já decidiu (zona do polegar no mobile).
+     Aparece ao sair do hero; sem JS, fica visível o tempo todo. -->
+<div class="sticky-cta" id="stickyCta">
+  <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta sticky-cta__fab" aria-label="Falar no WhatsApp">
+    <svg class="sticky-cta__ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.27-1.38a9.86 9.86 0 0 0 4.77 1.22c5.46 0 9.9-4.44 9.9-9.9S17.5 2 12.04 2zm0 18.02a8.1 8.1 0 0 1-4.13-1.13l-.3-.18-3.13.82.84-3.05-.2-.31a8.08 8.08 0 0 1-1.24-4.31c0-4.48 3.65-8.12 8.13-8.12s8.12 3.64 8.12 8.12-3.64 8.12-8.12 8.12zm4.45-6.08c-.24-.12-1.45-.72-1.67-.8-.22-.08-.39-.12-.55.12-.16.24-.63.8-.77.96-.14.16-.28.18-.52.06-.24-.12-1.03-.38-1.96-1.21-.72-.64-1.21-1.43-1.35-1.67-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.33-.76-1.81-.2-.48-.4-.42-.55-.42-.14 0-.3-.02-.46-.02-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.57.18 1.1.16 1.51.1.46-.07 1.45-.59 1.65-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28z"/></svg>
+  </a>
+</div>
+
+<!-- u.js NÃO é carregado aqui de propósito: seu initTheme() lê localStorage('ldl-theme')
+     e sobrescreveria o tema "luar" da landing pelo tema do CRM. A landing não usa funções do u.js. -->
+
+<!-- Fade-in editorial: progressive enhancement. Sem JS / com prefers-reduced-motion,
+     todo o conteúdo aparece normalmente (nada fica oculto). -->
+<script>
+(function () {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var els = document.querySelectorAll('.ed-fade');
+  if (!els.length) return;
+  document.documentElement.classList.add('ed-anim-ready');
+  if (!('IntersectionObserver' in window)) {
+    els.forEach(function (e) { e.classList.add('in'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+  els.forEach(function (e) { io.observe(e); });
+})();
+
+// CTA sticky: visível depois que o hero sai da tela. Sem IntersectionObserver
+// (navegadores antigos), fica visível sempre — quem decidiu nunca perde o botão.
+(function () {
+  var cta = document.getElementById('stickyCta');
+  var hero = document.getElementById('topo');
+  if (!cta) return;
+  if (!hero || !('IntersectionObserver' in window)) { cta.classList.add('is-visible'); return; }
+  var io = new IntersectionObserver(function (entries) {
+    cta.classList.toggle('is-visible', !entries[0].isIntersecting);
+  }, { threshold: 0 });
+  io.observe(hero);
+})();
+
+// Depoimentos: carrossel de avaliações curadas (carrega reviews.json).
+// Sem JS/fetch, o quote estático de fallback no HTML permanece visível.
+(function () {
+  var root = document.querySelector('.ed-quotes');
+  if (!root || !window.fetch) return;
+  var src = root.getAttribute('data-reviews-src');
+  if (!src) return;
+
+  fetch(src).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+    if (!data || !Array.isArray(data.items) || !data.items.length) return;
+
+    var items = data.items;
+    var fig = root.querySelector('#reviewQuote');
+    var quoteEl = fig.querySelector('blockquote');
+    var starsEl = fig.querySelector('.ed-quote__stars');
+    var authorEl = fig.querySelector('.ed-quote__author');
+    var metaEl = fig.querySelector('.ed-quote__meta');
+    var nav = root.querySelector('.ed-quotes__nav');
+    var dotsWrap = root.querySelector('.ed-quotes__dots');
+    var moreWrap = root.querySelector('.ed-quotes__more');
+    var moreLink = moreWrap ? moreWrap.querySelector('a') : null;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var current = 0;
+    var timer = null;
+
+    function render(n) {
+      var it = items[n];
+      starsEl.textContent = '★★★★★'.slice(0, it.stars || 5);
+      quoteEl.textContent = '“' + it.text + '”';
+      authorEl.textContent = it.author || '';
+      metaEl.textContent = it.meta || '';
+      Array.prototype.forEach.call(dotsWrap.children, function (d, idx) {
+        d.setAttribute('aria-selected', idx === n ? 'true' : 'false');
+      });
+      current = n;
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function start() { stop(); if (!reduce) timer = setInterval(function () { render((current + 1) % items.length); }, 7000); }
+    function go(delta) { render((current + delta + items.length) % items.length); start(); }
+
+    if (items.length > 1) {
+      items.forEach(function (_, idx) {
+        var b = document.createElement('button');
+        b.className = 'ed-quotes__dot';
+        b.type = 'button';
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-label', 'Avaliação ' + (idx + 1));
+        b.addEventListener('click', function () { render(idx); start(); });
+        dotsWrap.appendChild(b);
+      });
+      nav.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-dir]');
+        if (btn) go(btn.getAttribute('data-dir') === 'next' ? 1 : -1);
+      });
+      nav.hidden = false;
+      root.addEventListener('mouseenter', stop);
+      root.addEventListener('mouseleave', start);
+      root.addEventListener('focusin', stop);
+      start();
+    }
+
+    if (moreLink && data.googleUrl && data.googleUrl.indexOf('REPLACE') === -1) {
+      moreLink.href = data.googleUrl;
+      moreWrap.hidden = false;
+    }
+
+    render(0);
+  }).catch(function () { /* mantém o fallback estático */ });
+})();
+</script>
 </body>
 </html>

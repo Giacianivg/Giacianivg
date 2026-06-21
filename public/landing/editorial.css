@@ -1,0 +1,598 @@
+/* ============================================================================
+   editorial.css — Sistema de layout editorial da landing "Luz da Lua"
+   ============================================================================
+   Estrutura/grid/ritmo no espírito de hotelaria de luxo (Aman, Fasano, Six
+   Senses). NÃO trata de cor (paleta vive em tokens.css/luar.css). Escopado em
+   [data-theme="luar"] — não afeta o CRM. Carregado por último.
+
+   Ordem nas páginas: t.css -> c.css -> l.css -> tokens.css -> luar.css -> editorial.css
+   ============================================================================ */
+
+/* ── Offset de âncora: a navbar é sticky (64px); evita que o topo da seção
+      alvo fique escondido sob ela ao clicar nos links Acomodações/Experiência/Região. */
+:root[data-theme="luar"] .landing-section,
+:root[data-theme="luar"] .ed-immersive,
+:root[data-theme="luar"] .landing-hero {
+  scroll-margin-top: calc(var(--nav-height) + var(--space-sm));
+}
+
+/* ── Container & ritmo de seção (sobrepõe o 1100px/64px do l.css, só na landing) */
+:root[data-theme="luar"] .landing-section-inner { max-width: var(--container-max); }
+:root[data-theme="luar"] .landing-section { padding: var(--section-py) var(--container-pad); }
+:root[data-theme="luar"] .landing-section--lg { padding-block: var(--section-py-lg); }
+
+/* Largura ideal de leitura para blocos de texto editoriais */
+.ed-measure { max-width: var(--container-text); }
+
+/* ── Eyebrow editorial: maiúsculas finas e espaçadas, com filete (sem emoji) */
+.ed-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--fz-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+}
+.ed-eyebrow::before {
+  content: "";
+  width: 40px;
+  height: 1px;
+  background: currentColor;
+  opacity: .55;
+}
+
+/* ── Statement: a primeira respiração depois do hero. Centralizado, estreito,
+      muito ar. Uma frase serif refinada + uma linha de apoio. */
+.ed-statement {
+  max-width: var(--container-text);
+  margin-inline: auto;
+  text-align: center;
+}
+.ed-statement .ed-eyebrow { color: var(--text-muted); margin-bottom: var(--space-lg); }
+.ed-statement .ed-lead {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-strong);
+  text-wrap: balance;
+}
+.ed-statement p {
+  margin-top: var(--space-xl);
+  font-size: var(--fz-body-lg);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+/* ── Link de texto discreto (CTA secundário; substitui botão "ghost") */
+.ed-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .5em;
+  font-size: var(--fz-body);
+  font-weight: var(--fw-medium);
+  color: inherit;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+  transition: gap var(--motion-base), opacity var(--motion-base);
+}
+.ed-link:hover { gap: .85em; opacity: .8; text-decoration: none; }
+.ed-link .ed-arrow { transition: transform var(--motion-base); }
+.ed-link:hover .ed-arrow { transform: translateX(3px); }
+
+/* ── Full-bleed: foto rompe o container para sensação editorial (próximas seções) */
+.ed-fullbleed {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+
+/* ── Seção editorial imagem + texto (sem card/borda/sombra).
+      Imagem rompe até a borda da viewport (~60% da largura); texto numa coluna
+      estreita do lado oposto, com muito ar. Base do ritmo cinematográfico:
+      esta variante é "imagem-esquerda + texto-direita". */
+.ed-feature-section { padding-inline: 0; }   /* deixa a imagem sangrar até a borda */
+.ed-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(var(--space-xl), 5vw, var(--space-3xl));
+}
+.ed-feature__media img {
+  display: block;
+  width: 100%;
+  height: clamp(420px, 64vh, 760px);
+  object-fit: cover;
+  /* sem radius/sombra/borda de propósito — sangra limpa na borda da tela */
+}
+.ed-feature__body {
+  max-width: 560px;
+  padding-right: var(--container-pad);   /* respiro na borda direita */
+}
+.ed-feature__body .ed-eyebrow { color: var(--text-muted); margin-bottom: var(--space-md); }
+.ed-feature__body h2 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-strong);
+  margin-bottom: var(--space-lg);
+  text-wrap: balance;
+}
+.ed-feature__body p {
+  font-size: var(--fz-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  margin-bottom: var(--space-md);
+}
+.ed-feature__body .ed-link { margin-top: var(--space-sm); color: var(--accent-strong); }
+
+/* Variante espelhada: imagem-direita + texto-esquerda (para alternar no ritmo).
+   Troca a largura das colunas (texto estreito à esquerda, imagem larga à
+   direita) e reordena para a imagem sangrar na borda direita da viewport. */
+.ed-feature--mirror { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); }
+.ed-feature--mirror .ed-feature__media { order: 2; }
+.ed-feature--mirror .ed-feature__body  {
+  order: 1;
+  padding-right: 0;
+  padding-left: var(--container-pad);
+}
+
+@media (max-width: 768px) {
+  .ed-feature { grid-template-columns: 1fr; gap: var(--space-lg); }
+  .ed-feature__media img { height: clamp(280px, 56vh, 440px); }
+  .ed-feature__body,
+  .ed-feature--mirror .ed-feature__body {
+    max-width: none;
+    padding-inline: var(--container-pad);
+  }
+  /* no mobile a imagem sempre vem primeiro, independente da variante */
+  .ed-feature--mirror .ed-feature__media { order: 0; }
+  .ed-feature--mirror .ed-feature__body  { order: 0; justify-self: stretch; }
+}
+
+/* ── Hero: conteúdo mais largo p/ o título editorial (96px) respirar */
+:root[data-theme="luar"] .landing-hero-content { max-width: 820px; }
+:root[data-theme="luar"] .hero-title .ed-eyebrow,
+:root[data-theme="luar"] .landing-hero-content .ed-eyebrow {
+  margin-bottom: var(--space-lg);
+}
+
+/* ── Grupo de ações do hero: CTA + link discreto, alinhados pela base */
+.ed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+/* ── Animação: fade-in suave on-scroll. Progressive enhancement —
+      o conteúdo só fica oculto se o JS marcar .ed-anim-ready (e o usuário
+      não pediu redução de movimento). Sem JS, tudo aparece normalmente. */
+@media (prefers-reduced-motion: no-preference) {
+  .ed-anim-ready .ed-fade {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity .9s cubic-bezier(.22,.61,.36,1),
+                transform .9s cubic-bezier(.22,.61,.36,1);
+    will-change: opacity, transform;
+  }
+  .ed-anim-ready .ed-fade.in { opacity: 1; transform: none; }
+  /* leve cascata entre irmãos */
+  .ed-anim-ready .ed-fade.in.d1 { transition-delay: .08s; }
+  .ed-anim-ready .ed-fade.in.d2 { transition-delay: .16s; }
+  .ed-anim-ready .ed-fade.in.d3 { transition-delay: .24s; }
+}
+
+/* ── Mobile: preserva respiro e hierarquia (sem apertar) */
+@media (max-width: 768px) {
+  .ed-actions { gap: var(--space-md); }
+}
+
+/* ── Cabeçalho de seção editorial (eyebrow + título serif + lead), alinhado à esquerda */
+.ed-section-head {
+  max-width: 720px;
+  margin-bottom: clamp(var(--space-xl), 5vw, var(--space-3xl));
+}
+.ed-section-head .ed-eyebrow { color: var(--text-muted); margin-bottom: var(--space-md); }
+.ed-section-head h2 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h1);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-strong);
+  margin-bottom: var(--space-sm);
+  text-wrap: balance;
+}
+.ed-section-head .ed-section-lead {
+  font-size: var(--fz-body-lg);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+
+/* ── Galeria ampla de acomodações (sem card chrome: só imagem + texto editorial) */
+.ed-rooms {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(var(--space-lg), 3vw, var(--space-2xl));
+}
+.ed-room__media {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+.ed-room__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--motion-slow);
+}
+.ed-room:hover .ed-room__media img { transform: scale(1.04); }
+.ed-room__media--soon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ldl-sand-deep);
+  color: var(--text-muted);
+  font-size: var(--fz-caption);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+.ed-room__name {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h3);
+  color: var(--text-strong);
+  margin-bottom: var(--space-2xs);
+}
+.ed-room__kind {
+  font-size: var(--fz-caption);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+.ed-room__desc {
+  font-size: var(--fz-body);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  margin-bottom: var(--space-md);
+}
+.ed-room .ed-link {
+  font-size: var(--fz-body-sm);
+  color: var(--accent-strong);
+}
+
+@media (max-width: 900px) {
+  .ed-rooms { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .ed-rooms { grid-template-columns: 1fr; gap: var(--space-xl); }
+  .ed-room__media { aspect-ratio: 3 / 2; }
+}
+
+/* ── Reserva (clímax final): faixa escura ardósia, centralizada. Funde os 4
+      passos (linha numerada enxuta, sem step-cards) + CTA WhatsApp forte. */
+.ed-reserve {
+  background: linear-gradient(135deg, var(--midnight) 0%, var(--royal) 100%);
+  color: var(--on-dark);
+  text-align: center;
+}
+.ed-reserve__inner { max-width: 820px; margin-inline: auto; }
+.ed-reserve h2 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  margin-bottom: var(--space-md);
+  text-wrap: balance;
+}
+.ed-reserve__lead {
+  font-size: var(--fz-body-lg);
+  line-height: var(--lh-body);
+  color: rgba(255, 255, 255, .85);
+  margin-bottom: clamp(var(--space-xl), 4vw, var(--space-2xl));
+}
+.ed-reserve__steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm) var(--space-lg);
+  counter-reset: step;
+  margin-bottom: clamp(var(--space-xl), 4vw, var(--space-2xl));
+}
+.ed-reserve__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--fz-body-sm);
+  color: rgba(255, 255, 255, .9);
+}
+.ed-reserve__step::before {
+  counter-increment: step;
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, .4);
+  font-size: var(--fz-caption);
+}
+.ed-reserve__cta .btn-cta { background: #fff; color: var(--royal); font-size: var(--fz-body-lg); }
+.ed-reserve__note { margin-top: var(--space-md); font-size: var(--fz-body-sm); color: rgba(255, 255, 255, .65); }
+
+/* ── FAQ: accordion nativo <details>/<summary> (acessível, sem JS). Usa os
+      tokens de accordion do tokens.css. Coluna estreita de leitura. */
+.ed-faq { max-width: 760px; margin-inline: auto; }
+.ed-faq__item { border-bottom: var(--accordion-border); }
+.ed-faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--accordion-pad-y) 0;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-sans);
+  font-size: var(--fz-body-lg);
+  font-weight: var(--accordion-title-weight);
+  color: var(--accordion-title);
+  transition: color var(--motion-fast);
+}
+.ed-faq__item summary:hover { color: var(--accent-strong); }
+.ed-faq__item summary::-webkit-details-marker { display: none; }
+.ed-faq__item summary::after {
+  content: "+";
+  flex: none;
+  font-size: 1.5em;
+  line-height: 1;
+  color: var(--accordion-icon);
+  transition: transform var(--accordion-transition);
+}
+.ed-faq__item[open] summary::after { transform: rotate(45deg); }
+.ed-faq__answer {
+  padding: 0 0 var(--space-md);
+  max-width: 64ch;
+  font-size: var(--fz-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+}
+.ed-faq__answer a { color: var(--accent-strong); text-decoration: underline; }
+.ed-faq__item summary:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+
+/* ── Quote central: um depoimento grande em serif, centralizado. Beat calmo,
+      sem cards — substitui o grid de 3 review-cards (cara de template). */
+.ed-quote {
+  max-width: 900px;
+  margin-inline: auto;
+  text-align: center;
+}
+.ed-quote__stars {
+  color: var(--gold);
+  letter-spacing: .25em;
+  font-size: var(--fz-body-lg);
+  margin-bottom: var(--space-lg);
+}
+.ed-quote blockquote {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-tight);
+  color: var(--text-strong);
+  text-wrap: balance;
+  margin: 0 0 var(--space-lg);
+}
+.ed-quotes { max-width: 900px; margin-inline: auto; text-align: center; }
+.ed-quotes__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+}
+.ed-quotes__btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fz-body);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), color var(--motion-fast);
+}
+.ed-quotes__btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+.ed-quotes__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ed-quotes__dots { display: flex; align-items: center; gap: var(--space-xs); }
+.ed-quotes__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background var(--motion-fast), transform var(--motion-fast);
+}
+.ed-quotes__dot[aria-selected="true"] { background: var(--accent); transform: scale(1.3); }
+.ed-quotes__dot:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ed-quotes__more { margin-top: var(--space-lg); }
+.ed-quotes__more .ed-link { color: var(--accent-strong); }
+
+.ed-quote figcaption { display: flex; flex-direction: column; gap: var(--space-2xs); }
+.ed-quote__author {
+  font-size: var(--fz-body-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text);
+}
+.ed-quote__meta { font-size: var(--fz-caption); color: var(--text-muted); }
+
+/* ── Lazer na pousada: galeria de atmosfera com legenda sobreposta na foto
+      (distinta da galeria de Acomodações, que tem texto abaixo da imagem). */
+.ed-amenities {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+}
+.ed-amenity {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.ed-amenity img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--motion-slow);
+}
+.ed-amenity:hover img { transform: scale(1.05); }
+.ed-amenity figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-lg) var(--space-sm) var(--space-sm);
+  background: linear-gradient(to top, rgba(41, 52, 64, .8), rgba(41, 52, 64, 0));
+  color: #fff;
+  font-size: var(--fz-body-sm);
+  font-weight: var(--fw-medium);
+}
+@media (max-width: 760px) {
+  .ed-amenities { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Seção Região: índice tipográfico das cidades (sem card/chip), liga à
+      página do Circuito. Interlúdio calmo — quebra o ritmo das galerias/fotos. */
+.ed-region__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(var(--space-lg), 3vw, var(--space-2xl)) clamp(var(--space-xl), 5vw, var(--space-3xl));
+  border-top: 1px solid var(--border);
+  padding-top: clamp(var(--space-lg), 4vw, var(--space-2xl));
+}
+.ed-region__city h3 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h3);
+  color: var(--text-strong);
+  margin-bottom: var(--space-2xs);
+}
+.ed-region__tag { font-size: var(--fz-body-sm); line-height: var(--lh-normal); color: var(--accent-strong); }
+.ed-region__dist {
+  margin-top: var(--space-2xs);
+  font-size: var(--fz-caption);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ed-region__cta { margin-top: clamp(var(--space-xl), 4vw, var(--space-2xl)); }
+
+/* ── Seção imersiva full-bleed: imagem ocupa a tela, texto sobreposto discreto
+      no rodapé (estilo Aman). Quebra o ritmo do split .ed-feature. Gradiente
+      ardósia apenas para legibilidade — nunca escurece a foto inteira. */
+.ed-immersive {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(560px, 88vh, 920px);
+  overflow: hidden;
+}
+.ed-immersive__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ed-immersive__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(41, 52, 64, .74) 0%,
+    rgba(41, 52, 64, .28) 38%,
+    rgba(41, 52, 64, 0) 66%
+  );
+}
+.ed-immersive__content {
+  position: relative;
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: clamp(var(--space-xl), 7vw, var(--space-3xl)) var(--container-pad);
+}
+.ed-immersive__text { max-width: 640px; color: var(--on-dark); }
+.ed-immersive__text .ed-eyebrow { color: rgba(255, 255, 255, .85); margin-bottom: var(--space-md); }
+.ed-immersive__text h2 {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-regular);
+  font-size: var(--fz-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  margin-bottom: var(--space-md);
+  text-wrap: balance;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .25);
+}
+.ed-immersive__text p {
+  font-size: var(--fz-body-lg);
+  line-height: var(--lh-body);
+  color: rgba(255, 255, 255, .92);
+  max-width: 46ch;
+}
+
+@media (max-width: 768px) {
+  .ed-immersive { min-height: clamp(460px, 72vh, 640px); }
+}
+
+/* ── Botão flutuante do WhatsApp: FAB circular só com o ícone (auto-explicativo),
+      canto inferior direito, na zona do polegar no mobile (respeita safe-area).
+      Contato rápido — a reserva direta vive no nav ("Reservar") e no hero.
+      Progressive enhancement: sem JS, fica visível (o JS o esconde até sair
+      do hero — ver bloco no index.html). */
+.sticky-cta {
+  position: fixed;
+  z-index: 60;
+  right: var(--space-lg);
+  bottom: var(--space-lg);
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity var(--motion-base), transform var(--motion-base);
+}
+.sticky-cta.is-visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.sticky-cta__fab {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+}
+.sticky-cta__ico { width: 30px; height: 30px; flex: none; }
+
+@media (max-width: 768px) {
+  .sticky-cta {
+    right: var(--space-sm);
+    bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-cta { transition: opacity var(--motion-base); transform: none; }
+}

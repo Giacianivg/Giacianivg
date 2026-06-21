@@ -1,0 +1,23 @@
+/* luar.css — Tema "Luar sobre Areia" (Fusão C+A) | regras de elemento
+   ----------------------------------------------------------------------------
+   Os TOKENS do tema (cores, tipografia, spacing, radius, shadows, grid,
+   componentes…) vivem em tokens.css — fonte única, carregado ANTES deste.
+   Aqui ficam apenas as regras de ELEMENTO que sobrescrevem cores hardcoded do
+   design-system (l.css) para o tema luar, consumindo os tokens.
+
+   Ordem nas páginas: t.css → c.css → l.css → tokens.css → luar.css
+   Aprovado por Vitor a partir de _preview-CA.html#h1 (2026-06-20).
+   ---------------------------------------------------------------------------- */
+
+/* Barra de navegação: vidro de areia (em vez do branco padrão do l.css) */
+:root[data-theme="luar"] .landing-nav {
+  background: var(--nav-bg);
+  -webkit-backdrop-filter: blur(var(--nav-blur));
+  backdrop-filter: blur(var(--nav-blur));
+}
+
+/* Scrim do hero: véu ardósia → azul-luar (paleta luar), mais escuro à esquerda
+   onde fica o texto, garantindo legibilidade do branco sobre a foto. */
+:root[data-theme="luar"] .landing-hero-overlay {
+  background: linear-gradient(135deg, rgba(28,36,46,.72) 0%, rgba(88,107,130,.45) 100%);
+}
