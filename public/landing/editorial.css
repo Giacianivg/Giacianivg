@@ -556,6 +556,80 @@
   .ed-immersive { min-height: clamp(460px, 72vh, 640px); }
 }
 
+/* ── Navbar: brand + menu inline no desktop; vira drawer lateral no mobile ──── */
+.landing-nav .nav-brand { display: flex; align-items: center; gap: var(--space-sm); text-decoration: none; }
+.nav-menu { display: flex; align-items: center; gap: var(--space-sm); }
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text-strong);
+}
+.nav-overlay { display: none; }
+
+@media (max-width: 768px) {
+  /* nome centralizado, hambúrguer à direita, sem overflow horizontal */
+  :root[data-theme="luar"] .landing-nav { justify-content: center; z-index: 90; }
+  .nav-toggle {
+    display: inline-flex;
+    position: absolute;
+    right: var(--container-pad);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  /* drawer lateral direito */
+  .nav-menu {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(80vw, 320px);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+    padding: calc(var(--nav-height) + var(--space-lg)) var(--space-lg) var(--space-lg);
+    background: var(--bg1);
+    border-left: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform var(--motion-base);
+    z-index: 80;
+  }
+  .nav-menu.is-open { transform: translateX(0); }
+  /* itens: links grandes à esquerda; CTAs como botões full-width */
+  .nav-menu .btn { width: 100%; font-size: var(--fz-body); min-height: 48px; }
+  .nav-menu .btn-ghost {
+    justify-content: flex-start;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    padding-inline: var(--space-2xs);
+  }
+  .nav-menu .btn-primary { justify-content: center; margin-top: var(--space-sm); }
+  .nav-menu .nav-cta-wa { justify-content: center; margin-top: var(--space-2xs); }
+  /* overlay escurece o resto */
+  .nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(41, 52, 64, .45);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--motion-base), visibility var(--motion-base);
+    z-index: 70;
+  }
+  .nav-overlay.is-open { opacity: 1; visibility: visible; }
+  /* impede o drawer off-canvas de gerar scroll horizontal */
+  :root[data-theme="luar"] body { overflow-x: clip; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu, .nav-overlay { transition: none; }
+}
+
 /* ── Botão flutuante do WhatsApp: FAB circular só com o ícone (auto-explicativo),
       canto inferior direito, na zona do polegar no mobile (respeita safe-area).
       Contato rápido — a reserva direta vive no nav ("Reservar") e no hero.

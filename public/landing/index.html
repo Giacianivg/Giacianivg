@@ -74,18 +74,22 @@
 
 <!-- Nav -->
 <nav class="landing-nav">
-  <a href="#topo" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
+  <a class="nav-brand" href="#topo">
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
     <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
-  <div style="display:flex;align-items:center;gap:var(--space-sm)">
+  <div class="nav-menu" id="navMenu">
     <a href="#quartos" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Acomodações</a>
     <a href="#desacelerar" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Experiência</a>
     <a href="#regiao" class="btn btn-ghost btn-sm" style="color:var(--tx2)">Região</a>
     <a href="/landing/reservar.html" class="btn btn-primary btn-sm">Reservar</a>
-    <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
+    <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm nav-cta-wa" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
   </div>
+  <button class="nav-toggle" id="navToggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="navMenu">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+  </button>
 </nav>
+<div class="nav-overlay" id="navOverlay" aria-hidden="true"></div>
 
 <!-- Hero -->
 <section class="landing-hero" id="topo">
@@ -393,6 +397,25 @@
     cta.classList.toggle('is-visible', !entries[0].isIntersecting);
   }, { threshold: 0 });
   io.observe(hero);
+})();
+
+// Navbar mobile: drawer hambúrguer (acessível).
+(function () {
+  var toggle = document.getElementById('navToggle');
+  var menu = document.getElementById('navMenu');
+  var overlay = document.getElementById('navOverlay');
+  if (!toggle || !menu) return;
+  function setOpen(open) {
+    menu.classList.toggle('is-open', open);
+    if (overlay) overlay.classList.toggle('is-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  toggle.addEventListener('click', function () { setOpen(!menu.classList.contains('is-open')); });
+  if (overlay) overlay.addEventListener('click', function () { setOpen(false); });
+  menu.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
 })();
 
 // Depoimentos: carrossel de avaliações curadas (carrega reviews.json).
