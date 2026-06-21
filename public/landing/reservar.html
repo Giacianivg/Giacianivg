@@ -61,7 +61,7 @@
     <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
     <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
   </a>
-  <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-primary btn-sm">WhatsApp</a>
+  <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
 </nav>
 
 <div class="res-wrap">
@@ -87,7 +87,7 @@
         <option>5</option><option>6</option><option>7</option><option>8</option>
       </select>
     </div>
-    <button type="submit" class="btn btn-primary" id="searchBtn">Buscar</button>
+    <button type="submit" class="btn btn-reserve" id="searchBtn">Buscar</button>
   </form>
 
   <div id="cf-turnstile"></div>
@@ -115,7 +115,7 @@
           <label for="bkEmail">E-mail (opcional)</label>
           <input type="email" id="bkEmail" autocomplete="email">
         </div>
-        <button type="submit" class="btn btn-primary" id="bkSubmit" style="width:100%">Reservar e segurar o quarto</button>
+        <button type="submit" class="btn btn-reserve" id="bkSubmit" style="width:100%">Reservar e segurar o quarto</button>
         <p id="bkError" class="state err" style="display:none;padding:var(--space-sm) 0 0"></p>
       </form>
     </div>
@@ -123,7 +123,7 @@
       <div style="font-size:2rem">✅</div>
       <h2 style="font-family:var(--font-serif);color:var(--tx1);margin:var(--space-xs) 0">Reserva pré-confirmada!</h2>
       <p id="bookDoneMsg" style="color:var(--tx2);line-height:1.6"></p>
-      <a id="bookDoneWa" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:var(--space-sm)">Finalizar pagamento no WhatsApp</a>
+      <a id="bookDoneWa" href="#" target="_blank" rel="noopener" class="btn" style="margin-top:var(--space-sm);background:#25D366;border-color:#25D366;color:#fff">Finalizar pagamento no WhatsApp</a>
       <p style="font-size:var(--fz-caption);color:var(--tx3);margin-top:var(--space-sm)">O pagamento por PIX direto no site chega em breve.</p>
     </div>
   </div>
@@ -211,7 +211,7 @@
         '<div class="per">total · ' + o.nights + ' noite' + (o.nights > 1 ? 's' : '') +
           (o.desconto ? ' · ' + o.desconto + '% desc.' : '') + '</div>' +
         // Bloco 3: abre o modal de reserva (pending + hold). PIX entra no Bloco 4.
-        '<button class="btn btn-primary btn-sm book-btn" style="margin-top:8px" ' +
+        '<button class="btn btn-reserve btn-sm book-btn" style="margin-top:8px" ' +
           'data-room="' + o.room_type + '" data-label="' + o.label + '" data-total="' + o.total_price + '">Reservar</button>' +
         '</div>';
     }
@@ -224,7 +224,7 @@
     if (data.group_inquiry) {
       resultsEl.innerHTML = '<div class="group-box">Para grupos maiores, montamos uma proposta sob medida. ' +
         '<a href="' + WA + '?text=' + encodeURIComponent('Olá! Quero uma proposta para grupo.') +
-        '" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:8px">Falar com a equipe</a></div>';
+        '" target="_blank" rel="noopener" class="btn btn-sm" style="margin-top:8px;background:#25D366;border-color:#25D366;color:#fff">Falar com a equipe</a></div>';
       return;
     }
     if (!data.offers || !data.offers.length) {

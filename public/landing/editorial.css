@@ -556,23 +556,6 @@
   .ed-immersive { min-height: clamp(460px, 72vh, 640px); }
 }
 
-/* ── CTA de reserva: "Midnight Blue Metallic" (Porsche 39C). Gradiente claro→
-      escuro evoca a luz/sombra da tinta. Exclusivo dos botões que levam à
-      reserva (hero "Ver disponibilidade e preços" + "Reservar" da navbar).
-      WhatsApp continua verde — decisão fixa. */
-:root[data-theme="luar"] .btn-reserve {
-  background: linear-gradient(165deg, var(--reserve-lite), var(--reserve) 55%, var(--reserve-dark));
-  color: #fff;
-  border-color: var(--reserve-dark);
-  box-shadow: 0 6px 20px rgba(20, 29, 52, .30), inset 0 1px 0 rgba(255, 255, 255, .14);
-  transition: filter var(--motion-fast), transform var(--motion-base), box-shadow var(--motion-base);
-}
-:root[data-theme="luar"] .btn-reserve:hover:not(:disabled) {
-  filter: brightness(1.12);
-  transform: translateY(var(--hover-lift));
-  box-shadow: 0 10px 28px rgba(20, 29, 52, .36), inset 0 1px 0 rgba(255, 255, 255, .16);
-}
-
 /* ── Navbar: brand + menu inline no desktop; vira drawer lateral no mobile ──── */
 .landing-nav .nav-brand { display: flex; align-items: center; gap: var(--space-sm); text-decoration: none; }
 .nav-menu { display: flex; align-items: center; gap: var(--space-sm); }
