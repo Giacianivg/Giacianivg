@@ -12,41 +12,149 @@
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="luar.css">
   <style>
-    .res-wrap { max-width: 920px; margin: 0 auto; padding: var(--space-lg); }
-    .res-head { text-align: center; margin: var(--space-lg) 0; }
-    .res-head h1 { font-family: var(--font-serif); font-size: var(--fz-h1); color: var(--tx1); letter-spacing: var(--ls-tight); margin-bottom: var(--space-xs); }
-    .res-head p { color: var(--tx2); }
+    /* ── Página: largura editorial + respiro sob a navbar sticky ───────────── */
+    .res-page { max-width: var(--container-max); margin: 0 auto; padding: 0 var(--container-pad); }
+    .back { display: inline-block; margin: var(--space-md) 0 0; color: var(--accent-strong); text-decoration: none; font-size: var(--fz-body-sm); }
+    .back:hover { opacity: .8; }
 
-    .search-card {
-      background: var(--sur1); border: 1px solid var(--bdr); border-radius: var(--radius-lg);
-      padding: var(--space-md); box-shadow: var(--shadow-md);
-      display: grid; grid-template-columns: 1fr 1fr 0.8fr auto; gap: var(--space-sm); align-items: end;
+    /* ── Cabeçalho editorial (eyebrow + título serif + lead) ───────────────── */
+    .res-hero { max-width: 720px; padding: var(--space-lg) 0 var(--space-xl); }
+    .res-hero .ed-eyebrow { color: var(--text-muted); margin-bottom: var(--space-md); }
+    .res-hero h1 {
+      font-family: var(--font-serif); font-weight: var(--fw-regular);
+      font-size: var(--fz-h1); line-height: var(--lh-snug); letter-spacing: var(--ls-tight);
+      color: var(--text-strong); margin-bottom: var(--space-sm); text-wrap: balance;
     }
-    .field label { display: block; font-size: var(--fz-caption); font-weight: var(--fw-semibold); color: var(--tx2); margin-bottom: 6px; }
-    .field input, .field select {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--input-bdr); border-radius: var(--radius-md);
-      background: var(--input-bg); color: var(--tx1); font-size: var(--fz-body-sm);
-    }
-    @media (max-width: 720px){ .search-card { grid-template-columns: 1fr 1fr; } }
+    .res-hero p { font-size: var(--fz-body-lg); line-height: var(--lh-body); color: var(--text); }
 
-    #cf-turnstile { margin: var(--space-sm) auto 0; display: flex; justify-content: center; }
-    .results { margin-top: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-sm); }
-    .offer {
-      background: var(--bg0); border: 1px solid var(--bdr); border-radius: var(--radius-lg);
-      padding: var(--space-md); display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap;
+    /* ── Barra de reserva: superfície única dividida por filetes (sem caixa de
+         template por campo). Datas + hóspedes + buscar numa peça só. ────────── */
+    .res-bar {
+      display: grid; grid-template-columns: 1fr 1fr auto auto; align-items: stretch;
+      background: var(--surface-raised); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;
     }
-    .offer.sold { opacity: .6; }
-    .offer-info h3 { font-size: var(--fz-body-lg); color: var(--tx1); margin-bottom: var(--space-2xs); }
-    .offer-info .meta { font-size: var(--fz-caption); color: var(--tx3); }
-    .offer-info .notice { font-size: var(--fz-caption); color: var(--warn); margin-top: var(--space-2xs); }
-    .offer-price { text-align: right; }
-    .offer-price .amount { font-size: var(--fz-h3); font-weight: var(--fw-bold); color: var(--tx1); font-family: var(--font-serif); }
-    .offer-price .per { font-size: var(--fz-caption); color: var(--tx3); }
-    .badge-sold { font-size: var(--fz-caption); font-weight: var(--fw-semibold); color: var(--err); background: var(--err-bg); padding: 3px 10px; border-radius: var(--radius-pill); }
+    .res-field { display: flex; flex-direction: column; gap: var(--space-2xs); padding: var(--space-sm) var(--space-md); min-width: 0; }
+    .res-field + .res-field, .res-field + .res-submit { border-left: 1px solid var(--border); }
+    .res-field > label {
+      font-size: var(--fz-caption); font-weight: var(--fw-medium); letter-spacing: var(--ls-wide);
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .res-field input {
+      width: 100%; border: 0; padding: 2px 0; background: transparent; color: var(--text-strong);
+      font-family: var(--font-sans); font-size: var(--fz-body); font-weight: var(--fw-medium);
+    }
+    .res-field input:focus { outline: none; }
+    .res-field:focus-within > label { color: var(--accent-strong); }
+
+    /* Stepper de hóspedes (substitui o dropdown de sistema) */
+    .res-stepper { display: flex; align-items: center; gap: var(--space-sm); padding-top: 2px; }
+    .res-stepper button {
+      width: 30px; height: 30px; flex: none; display: grid; place-items: center;
+      border: 1px solid var(--border-strong); border-radius: var(--radius-pill);
+      background: transparent; color: var(--text); font-size: var(--fz-body-lg); line-height: 1; cursor: pointer;
+      transition: border-color var(--motion-fast), color var(--motion-fast);
+    }
+    .res-stepper button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-strong); }
+    .res-stepper button:disabled { opacity: .4; cursor: not-allowed; }
+    .res-stepper button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+    .res-stepper__val { min-width: 1.2ch; text-align: center; font-size: var(--fz-body); font-weight: var(--fw-semibold); color: var(--text-strong); }
+
+    /* Célula do botão Buscar dentro da barra */
+    .res-submit { display: flex; align-items: stretch; }
+    .res-submit .btn-reserve { border-radius: 0; padding-inline: var(--space-xl); white-space: nowrap; }
+
+    @media (max-width: 720px) {
+      .res-bar { grid-template-columns: 1fr 1fr; }
+      .res-field:nth-child(3) { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--border); }
+      .res-submit { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+      .res-submit .btn-reserve { width: 100%; padding-block: var(--btn-pad-y); }
+    }
+
+    #cf-turnstile { margin: var(--space-sm) 0 0; display: flex; }
+
+    /* ── Layout de resultados: lista (esq.) + resumo lateral sticky (dir.) ──── */
+    .res-layout {
+      display: grid; grid-template-columns: minmax(0, 1fr) 340px;
+      gap: clamp(var(--space-lg), 4vw, var(--space-2xl));
+      align-items: start; margin: var(--space-xl) 0 var(--section-py);
+    }
+    .results { display: flex; flex-direction: column; gap: var(--space-md); }
+
+    /* ── Resumo lateral (sticky): "Sua reserva" em tempo real ──────────────── */
+    .res-summary {
+      position: sticky; top: calc(var(--nav-height) + var(--space-md));
+      background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: var(--space-lg); box-shadow: var(--shadow-sm);
+    }
+    .res-summary__title {
+      font-family: var(--font-serif); font-weight: var(--fw-regular); font-size: var(--fz-h3);
+      color: var(--text-strong); margin-bottom: var(--space-md);
+    }
+    .res-summary__row { display: flex; justify-content: space-between; gap: var(--space-sm); padding: var(--space-sm) 0; border-top: 1px solid var(--border); }
+    .res-summary__row:first-of-type { border-top: 0; }
+    .res-summary__k { font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-muted); }
+    .res-summary__v { font-size: var(--fz-body-sm); color: var(--text-strong); text-align: right; }
+    .res-summary__v.muted { color: var(--text-muted); font-style: italic; }
+    .res-summary__total { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-sm); margin-top: var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--border-strong); }
+    .res-summary__total .res-summary__k { color: var(--text); }
+    .res-summary__total .amount { display: inline-flex; align-items: baseline; gap: .14em; font-family: var(--font-serif); font-size: var(--fz-h3); font-weight: var(--fw-semibold); color: var(--text-strong); }
+    .res-summary__total .amount .cur { font-size: .62em; font-weight: var(--fw-medium); }
+    .res-summary__cta { width: 100%; margin-top: var(--space-md); }
+    .res-summary__policy { margin-top: var(--space-md); font-size: var(--fz-caption); line-height: var(--lh-normal); color: var(--text-muted); }
+
+    @media (max-width: 900px) {
+      .res-layout { grid-template-columns: 1fr; }
+      .res-summary { position: static; order: -1; }
+    }
+
+    /* ── Card de quarto: foto editorial + corpo, sem chrome de template.
+         Linha arejada que ganha moldura suave no hover/selecionado. ─────────── */
+    .room {
+      display: grid; grid-template-columns: minmax(0, 40%) 1fr;
+      gap: clamp(var(--space-md), 3vw, var(--space-lg)); align-items: stretch;
+      padding: var(--space-md); border-radius: var(--radius-lg);
+      border: 1px solid transparent;
+      transition: background var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-base);
+    }
+    .room:not(.sold):hover { background: var(--surface); }
+    .room.is-selected { background: var(--accent-soft); border-color: var(--accent); box-shadow: var(--shadow-sm); }
+    .room.sold { opacity: .55; }
+
+    .room__media { aspect-ratio: 4 / 3; border-radius: var(--radius-md); overflow: hidden; }
+    .room__media img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform var(--motion-slow); }
+    .room:not(.sold):hover .room__media img { transform: scale(1.04); }
+    .room__media--soon {
+      display: grid; place-items: center; background: var(--ldl-sand-deep); color: var(--text-muted);
+      font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase;
+    }
+
+    .room__body { display: flex; flex-direction: column; gap: var(--space-2xs); min-width: 0; }
+    .room__name { font-family: var(--font-serif); font-weight: var(--fw-regular); font-size: var(--fz-h3); color: var(--text-strong); }
+    .room__kind { font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-muted); }
+    .room__amenities { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0; }
+    .amenity { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fz-caption); color: var(--text-muted); }
+    .amenity svg { width: var(--icon-size-sm); height: var(--icon-size-sm); flex: none; }
+    .room__notice { font-size: var(--fz-caption); line-height: var(--lh-normal); color: var(--accent-strong); margin-top: var(--space-2xs); }
+
+    .room__foot { margin-top: auto; padding-top: var(--space-sm); display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
+    .room__price .per-night { display: inline-flex; align-items: baseline; gap: .14em; font-family: var(--font-serif); font-size: var(--fz-h3); font-weight: var(--fw-semibold); color: var(--text-strong); }
+    .room__price .per-night .cur { font-size: .62em; font-weight: var(--fw-medium); }
+    .room__price .per-label { font-size: var(--fz-body-sm); color: var(--text-muted); }
+    .room__price .total { display: block; margin-top: 2px; font-size: var(--fz-caption); color: var(--text-muted); }
+    .room__sold-tag {
+      font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 4px 12px;
+    }
+
+    @media (max-width: 520px) {
+      .room { grid-template-columns: 1fr; }
+      .room__media { aspect-ratio: 3 / 2; }
+    }
+
     .state { text-align: center; color: var(--tx2); padding: var(--space-lg); }
     .state.err { color: var(--err); }
     .group-box { background: var(--royal-bg); border: 1px solid var(--royal-bdr); border-radius: var(--radius-lg); padding: var(--space-md); text-align: center; color: var(--tx1); }
-    .back { display: inline-block; margin-bottom: var(--space-sm); color: var(--royal-l); text-decoration: none; font-size: var(--fz-body-sm); }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: var(--space-sm); z-index: var(--z-modal); }
     .modal-overlay[hidden] { display: none; }
@@ -64,35 +172,65 @@
   <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
 </nav>
 
-<div class="res-wrap">
+<div class="res-page">
   <a href="index.html" class="back">← Voltar ao início</a>
-  <div class="res-head">
-    <h1>Disponibilidade e preços</h1>
-    <p>Escolha suas datas e veja o valor real de cada acomodação.</p>
-  </div>
 
-  <form class="search-card" id="searchForm">
-    <div class="field">
+  <header class="res-hero">
+    <span class="ed-eyebrow">Reserva</span>
+    <h1>Disponibilidade e preços para suas datas</h1>
+    <p>Escolha quando quer chegar e veja o valor real de cada acomodação, na hora.</p>
+  </header>
+
+  <form class="res-bar" id="searchForm">
+    <div class="res-field">
       <label for="checkin">Check-in</label>
       <input type="date" id="checkin" required>
     </div>
-    <div class="field">
+    <div class="res-field">
       <label for="checkout">Check-out</label>
       <input type="date" id="checkout" required>
     </div>
-    <div class="field">
-      <label for="guests">Hóspedes</label>
-      <select id="guests">
-        <option>1</option><option selected>2</option><option>3</option><option>4</option>
-        <option>5</option><option>6</option><option>7</option><option>8</option>
-      </select>
+    <div class="res-field">
+      <label id="guestsLabel">Hóspedes</label>
+      <div class="res-stepper" role="group" aria-labelledby="guestsLabel">
+        <button type="button" id="guestsMinus" aria-label="Menos hóspedes">−</button>
+        <span class="res-stepper__val" id="guestsVal" aria-live="polite">2</span>
+        <button type="button" id="guestsPlus" aria-label="Mais hóspedes">+</button>
+        <input type="hidden" id="guests" value="2">
+      </div>
     </div>
-    <button type="submit" class="btn btn-reserve" id="searchBtn">Buscar</button>
+    <div class="res-submit">
+      <button type="submit" class="btn btn-reserve" id="searchBtn">Buscar</button>
+    </div>
   </form>
 
   <div id="cf-turnstile"></div>
 
-  <div class="results" id="results"></div>
+  <div class="res-layout">
+    <div class="results" id="results"></div>
+
+    <aside class="res-summary" id="summary" aria-label="Resumo da reserva">
+      <h2 class="res-summary__title">Sua reserva</h2>
+      <div class="res-summary__row">
+        <span class="res-summary__k">Datas</span>
+        <span class="res-summary__v muted" id="sumDates">Selecione as datas</span>
+      </div>
+      <div class="res-summary__row">
+        <span class="res-summary__k">Noites</span>
+        <span class="res-summary__v muted" id="sumNights">—</span>
+      </div>
+      <div class="res-summary__row">
+        <span class="res-summary__k">Acomodação</span>
+        <span class="res-summary__v muted" id="sumRoom">Nenhuma selecionada</span>
+      </div>
+      <div class="res-summary__total">
+        <span class="res-summary__k">Total</span>
+        <span class="amount" id="sumTotal">—</span>
+      </div>
+      <button type="button" class="btn btn-reserve res-summary__cta" id="sumCta" disabled>Selecione um quarto</button>
+      <p class="res-summary__policy">Cancelamento gratuito até 7 dias antes do check-in. O sinal de 30% confirma a reserva; o restante você acerta na chegada.</p>
+    </aside>
+  </div>
 </div>
 
 <!-- Modal de reserva (Bloco 3) -->
@@ -157,6 +295,68 @@
     if (!checkoutEl.value || checkoutEl.value <= checkinEl.value) checkoutEl.value = next;
   });
 
+  // ── Stepper de hóspedes (substitui o dropdown de sistema) ─────────────────
+  var GUESTS_MIN = 1, GUESTS_MAX = 8;
+  var guestsValEl = document.getElementById('guestsVal');
+  var guestsMinus = document.getElementById('guestsMinus');
+  var guestsPlus = document.getElementById('guestsPlus');
+  function setGuests(n) {
+    n = Math.max(GUESTS_MIN, Math.min(GUESTS_MAX, n));
+    guestsEl.value = String(n);
+    guestsValEl.textContent = String(n);
+    guestsMinus.disabled = n <= GUESTS_MIN;
+    guestsPlus.disabled = n >= GUESTS_MAX;
+  }
+  guestsMinus.addEventListener('click', function () { setGuests(parseInt(guestsEl.value, 10) - 1); });
+  guestsPlus.addEventListener('click', function () { setGuests(parseInt(guestsEl.value, 10) + 1); });
+  setGuests(parseInt(guestsEl.value, 10) || 2);
+
+  // ── Resumo lateral: datas + noites + acomodação/total selecionados ────────
+  var sumDatesEl  = document.getElementById('sumDates');
+  var sumNightsEl = document.getElementById('sumNights');
+  var sumRoomEl   = document.getElementById('sumRoom');
+  var sumTotalEl  = document.getElementById('sumTotal');
+  var sumCtaEl    = document.getElementById('sumCta');
+  function fmtBR(d) { var p = d.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; } // YYYY-MM-DD → DD/MM/YYYY
+  function setSummaryDates(checkin, checkout, nights) {
+    sumDatesEl.textContent = fmtBR(checkin) + ' → ' + fmtBR(checkout);
+    sumDatesEl.classList.remove('muted');
+    sumNightsEl.textContent = nights + (nights > 1 ? ' noites' : ' noite');
+    sumNightsEl.classList.remove('muted');
+  }
+
+  // Quarto selecionado: alimenta o resumo e habilita o CTA (que abre o modal).
+  var selected = null;
+  function selectRoom(offer, cardEl) {
+    selected = offer;
+    var prev = resultsEl.querySelector('.room.is-selected');
+    if (prev) prev.classList.remove('is-selected');
+    if (cardEl) cardEl.classList.add('is-selected');
+    sumRoomEl.textContent = offer.label;
+    sumRoomEl.classList.remove('muted');
+    sumTotalEl.innerHTML = priceHTML(offer.total);
+    sumCtaEl.disabled = false;
+    sumCtaEl.textContent = 'Reservar';
+  }
+  function resetSelection() {
+    selected = null;
+    sumRoomEl.textContent = 'Nenhuma selecionada';
+    sumRoomEl.classList.add('muted');
+    sumTotalEl.textContent = '—';
+    sumCtaEl.disabled = true;
+    sumCtaEl.textContent = 'Selecione um quarto';
+  }
+
+  // Foto editorial por ala (asset, não dado de negócio). Sem asset → "Foto em breve".
+  var ROOM_IMG = { ALA_B: '/landing/assets/quarto-ala-b.jpeg' };
+
+  // Comodidades da pousada (válidas p/ todas as acomodações) — ícones outline.
+  var AMENITIES = '<div class="room__amenities">' +
+    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7 2.5c-.4.6-.4 1.4 0 2M11 2.5c-.4.6-.4 1.4 0 2"/></svg>Café da manhã</span>' +
+    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>Wi-Fi</span>' +
+    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16c1.5 0 1.5 1.2 3 1.2S10.5 16 12 16s1.5 1.2 3 1.2S19.5 16 21 16"/><path d="M3 20c1.5 0 1.5 1.2 3 1.2S10.5 20 12 20s1.5 1.2 3 1.2S19.5 20 21 20"/><path d="M8 16V6a2 2 0 0 1 4 0M12 13V6"/></svg>Piscina</span>' +
+    '</div>';
+
   // ── Access token (verifica Turnstile uma vez, reusa por 15 min) ───────────
   var accessToken = null;
   var turnstileToken = null;
@@ -190,37 +390,56 @@
   }
 
   function fmtBRL(n) { return 'R$ ' + Number(n).toLocaleString('pt-BR'); }
+  // Preço estruturado: moeda + valor em spans, p/ alinhar a baseline no CSS
+  // (Playfair desalinha "R$" do número quando ambos vivem num texto só).
+  function priceHTML(n) { return '<span class="cur">R$</span><span class="val">' + Number(n).toLocaleString('pt-BR') + '</span>'; }
 
-  function offerCard(o, ctx) {
-    var div = document.createElement('div');
-    div.className = 'offer' + (o.available ? '' : ' sold');
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-    var info = '<div class="offer-info"><h3>' + o.label + '</h3>' +
-      '<div class="meta">Até ' + o.max_guests + ' hóspedes · ' + o.nights + ' noite' + (o.nights > 1 ? 's' : '') + '</div>';
-    if (o.notice) info += '<div class="notice">⚠️ ' + o.notice + '</div>';
-    info += '</div>';
+  function offerCard(o) {
+    var art = document.createElement('article');
+    art.className = 'room' + (o.available ? '' : ' sold');
 
-    var right;
+    var src = ROOM_IMG[o.room_type];
+    var media = src
+      ? '<div class="room__media"><img src="' + src + '" alt="Acomodação ' + esc(o.label) + ' da Pousada Luz da Lua" loading="lazy"></div>'
+      : '<div class="room__media room__media--soon">Foto em breve</div>';
+
+    var foot;
     if (!o.available) {
-      right = '<div class="offer-price"><span class="badge-sold">Esgotado</span></div>';
+      foot = '<div class="room__foot"><span class="room__sold-tag">Sem disponibilidade nessas datas</span></div>';
     } else if (o.total_price == null) {
-      right = '<div class="offer-price"><span class="per">consultar</span></div>';
+      // Disponível mas sem cotação automática (ex.: mínimo de noites) → consultar equipe.
+      foot = '<div class="room__foot">' +
+        '<a class="ed-link" href="' + WA + '?text=' + encodeURIComponent('Olá! Quero consultar a ' + o.label + ' para essas datas.') +
+        '" target="_blank" rel="noopener">Consultar <span class="ed-arrow">→</span></a></div>';
     } else {
-      right = '<div class="offer-price">' +
-        '<div class="amount">' + fmtBRL(o.total_price) + '</div>' +
-        '<div class="per">total · ' + o.nights + ' noite' + (o.nights > 1 ? 's' : '') +
-          (o.desconto ? ' · ' + o.desconto + '% desc.' : '') + '</div>' +
-        // Bloco 3: abre o modal de reserva (pending + hold). PIX entra no Bloco 4.
-        '<button class="btn btn-reserve btn-sm book-btn" style="margin-top:8px" ' +
-          'data-room="' + o.room_type + '" data-label="' + o.label + '" data-total="' + o.total_price + '">Reservar</button>' +
+      var perNight = Math.round(o.total_price / o.nights);
+      foot = '<div class="room__foot">' +
+        '<div class="room__price">' +
+          '<span class="per-night">' + priceHTML(perNight) + '</span><span class="per-label"> /noite</span>' +
+          '<span class="total">Total ' + o.nights + ' noite' + (o.nights > 1 ? 's' : '') + ' · ' + fmtBRL(o.total_price) +
+            (o.desconto ? ' · ' + o.desconto + '% off' : '') + '</span>' +
+        '</div>' +
+        '<button type="button" class="btn btn-reserve btn-sm select-btn" ' +
+          'data-room="' + esc(o.room_type) + '" data-label="' + esc(o.label) + '" data-total="' + o.total_price + '">Selecionar</button>' +
         '</div>';
     }
-    div.innerHTML = info + right;
-    return div;
+
+    art.innerHTML = media +
+      '<div class="room__body">' +
+        '<h3 class="room__name">' + esc(o.label) + '</h3>' +
+        '<p class="room__kind">Até ' + o.max_guests + ' hóspedes</p>' +
+        AMENITIES +
+        (o.notice ? '<p class="room__notice">' + esc(o.notice) + '</p>' : '') +
+        foot +
+      '</div>';
+    return art;
   }
 
   function render(data) {
     resultsEl.innerHTML = '';
+    resetSelection();
     if (data.group_inquiry) {
       resultsEl.innerHTML = '<div class="group-box">Para grupos maiores, montamos uma proposta sob medida. ' +
         '<a href="' + WA + '?text=' + encodeURIComponent('Olá! Quero uma proposta para grupo.') +
@@ -232,7 +451,8 @@
       return;
     }
     lastSearch = { checkin: data.checkin, checkout: data.checkout, guests: data.guests };
-    data.offers.forEach(function (o) { resultsEl.appendChild(offerCard(o, lastSearch)); });
+    setSummaryDates(data.checkin, data.checkout, data.offers[0].nights);
+    data.offers.forEach(function (o) { resultsEl.appendChild(offerCard(o)); });
   }
 
   // ── Reserva (Bloco 3): modal → POST /api/public/book ──────────────────────
@@ -258,11 +478,18 @@
   document.getElementById('bookClose').addEventListener('click', closeModal);
   modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
+  // Clique no card: seleciona o quarto e alimenta o resumo (não abre o modal).
   resultsEl.addEventListener('click', function (e) {
-    var btn = e.target.closest('.book-btn');
+    var btn = e.target.closest('.select-btn');
     if (!btn) return;
-    openModal({ room_type: btn.dataset.room, label: btn.dataset.label, total: Number(btn.dataset.total) });
+    selectRoom(
+      { room_type: btn.dataset.room, label: btn.dataset.label, total: Number(btn.dataset.total) },
+      btn.closest('.room')
+    );
   });
+
+  // CTA do resumo: abre o modal de reserva para o quarto selecionado.
+  sumCtaEl.addEventListener('click', function () { if (selected) openModal(selected); });
 
   bookForm.addEventListener('submit', function (e) {
     e.preventDefault();
