@@ -193,8 +193,6 @@ app.use('/api/public', require('./routes/public'));
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
-  // MercadoPago webhook has its own signature validation
-  if (req.method === 'POST' && req.path === '/payments/webhook') return next();
   return requireCrmAuth(req, res, next);
 });
 
@@ -329,10 +327,10 @@ app.get('/', (_req, res) => {
     </div>
 
     <div class="card">
-      <h2>Payments (MercadoPago PIX)</h2>
-      <div class="route"><span class="method POST">POST</span><span class="path">/api/payments/pix</span><span class="desc">Create PIX link</span></div>
+      <h2>Payments (InfinitePay)</h2>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/payments/pix</span><span class="desc">Create payment link</span></div>
       <div class="route"><span class="method GET">GET</span><span class="path">/api/payments/:id</span><span class="desc">Get payment status</span></div>
-      <div class="route"><span class="method POST">POST</span><span class="path">/api/payments/webhook</span><span class="desc">MP notification</span></div>
+      <div class="route"><span class="method POST">POST</span><span class="path">/api/public/infinitepay-webhook</span><span class="desc">InfinitePay webhook</span></div>
     </div>
   </div>
 
