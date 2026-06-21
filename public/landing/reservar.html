@@ -131,9 +131,13 @@
     .room__body { display: flex; flex-direction: column; gap: var(--space-2xs); min-width: 0; }
     .room__name { font-family: var(--font-serif); font-weight: var(--fw-regular); font-size: var(--fz-h3); color: var(--text-strong); }
     .room__kind { font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-muted); }
-    .room__amenities { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: var(--space-sm) 0; }
-    .amenity { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fz-caption); color: var(--text-muted); }
-    .amenity svg { width: var(--icon-size-sm); height: var(--icon-size-sm); flex: none; }
+    .room__beds { display: flex; align-items: center; gap: var(--space-2xs); margin-top: var(--space-xs); font-size: var(--fz-caption); color: var(--text); }
+    .room__beds svg { width: var(--icon-size-sm); height: var(--icon-size-sm); flex: none; color: var(--text-muted); }
+    .room__amenities { margin-top: var(--space-2xs); font-size: var(--fz-caption); line-height: var(--lh-normal); color: var(--text-muted); }
+    .room__more-btn { align-self: flex-start; margin-top: var(--space-xs); padding: 0; background: none; border: 0; border-bottom: 1px solid currentColor; font-family: var(--font-sans); font-size: var(--fz-body-sm); color: var(--accent-strong); cursor: pointer; transition: opacity var(--motion-fast); }
+    .room__more-btn:hover { opacity: .8; }
+    .room__more { margin-top: var(--space-xs); font-size: var(--fz-body-sm); line-height: var(--lh-body); color: var(--text); }
+    .room__more[hidden] { display: none; }
     .room__notice { font-size: var(--fz-caption); line-height: var(--lh-normal); color: var(--accent-strong); margin-top: var(--space-2xs); }
 
     .room__foot { margin-top: auto; padding-top: var(--space-sm); display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap; }
@@ -156,7 +160,7 @@
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: var(--space-sm); z-index: var(--z-modal); }
     .modal-overlay[hidden] { display: none; }
-    .modal-card { background: var(--sur0); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-md); max-width: 440px; width: 100%; position: relative; }
+    .modal-card { background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-md); max-width: 440px; width: 100%; position: relative; }
     .modal-close { position: absolute; top: 10px; right: 14px; background: none; border: none; font-size: 1.5rem; color: var(--tx3); cursor: pointer; line-height: 1; }
   </style>
 </head>
@@ -348,12 +352,27 @@
   // Foto editorial por ala (asset, não dado de negócio). Sem asset → "Foto em breve".
   var ROOM_IMG = { ALA_B: '/landing/assets/quarto-ala-b.jpeg' };
 
-  // Comodidades da pousada (válidas p/ todas as acomodações) — ícones outline.
-  var AMENITIES = '<div class="room__amenities">' +
-    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7 2.5c-.4.6-.4 1.4 0 2M11 2.5c-.4.6-.4 1.4 0 2"/></svg>Café da manhã</span>' +
-    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/></svg>Wi-Fi</span>' +
-    '<span class="amenity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16c1.5 0 1.5 1.2 3 1.2S10.5 16 12 16s1.5 1.2 3 1.2S19.5 16 21 16"/><path d="M3 20c1.5 0 1.5 1.2 3 1.2S10.5 20 12 20s1.5 1.2 3 1.2S19.5 20 21 20"/><path d="M8 16V6a2 2 0 0 1 4 0M12 13V6"/></svg>Piscina</span>' +
-    '</div>';
+  // Cama + comodidades vêm da tabela `rooms` (offer.amenities / offer.description),
+  // não hardcode. Itens de cama saem numa linha própria; o resto vira a lista.
+  var BED_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7v11"/><path d="M3 13h18v5"/><path d="M21 18v-4a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10.5" r="1.6"/></svg>';
+
+  function bedsHTML(amenities) {
+    if (!Array.isArray(amenities)) return '';
+    var beds = amenities.filter(function (a) { return /cama/i.test(a); });
+    if (!beds.length) return '';
+    return '<p class="room__beds">' + BED_ICON + '<span>' + beds.map(esc).join(' · ') + '</span></p>';
+  }
+  function amenitiesHTML(amenities) {
+    if (!Array.isArray(amenities)) return '';
+    var others = amenities.filter(function (a) { return !/cama/i.test(a); });
+    if (!others.length) return '';
+    return '<p class="room__amenities">' + others.map(esc).join(' · ') + '</p>';
+  }
+  function moreHTML(description) {
+    if (!description) return '';
+    return '<button type="button" class="room__more-btn" aria-expanded="false">Mais detalhes</button>' +
+      '<div class="room__more" hidden>' + esc(description) + '</div>';
+  }
 
   // ── Access token (verifica Turnstile uma vez, reusa por 15 min) ───────────
   var accessToken = null;
@@ -425,7 +444,9 @@
       '<div class="room__body">' +
         '<h3 class="room__name">' + esc(o.label) + '</h3>' +
         '<p class="room__kind">Até ' + o.max_guests + ' hóspedes</p>' +
-        AMENITIES +
+        bedsHTML(o.amenities) +
+        amenitiesHTML(o.amenities) +
+        moreHTML(o.description) +
         (o.notice ? '<p class="room__notice">' + esc(o.notice) + '</p>' : '') +
         foot +
       '</div>';
@@ -473,8 +494,17 @@
   document.getElementById('bookClose').addEventListener('click', closeModal);
   modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
 
-  // Clique no card: seleciona o quarto e alimenta o resumo (não abre o modal).
+  // Clique no card: "Mais detalhes" expande inline; "Selecionar" alimenta o resumo.
   resultsEl.addEventListener('click', function (e) {
+    var more = e.target.closest('.room__more-btn');
+    if (more) {
+      var panel = more.nextElementSibling;
+      var willOpen = panel.hasAttribute('hidden');
+      if (willOpen) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+      more.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      more.textContent = willOpen ? 'Menos detalhes' : 'Mais detalhes';
+      return;
+    }
     var btn = e.target.closest('.select-btn');
     if (!btn) return;
     selectRoom(

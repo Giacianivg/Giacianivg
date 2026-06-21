@@ -91,7 +91,7 @@ router.get('/offers', requirePublicAccess, async (req, res) => {
   }
 
   const [roomsRes, sellRes] = await Promise.all([
-    supabaseAdmin.from('rooms').select('code, max_guests').eq('active', true),
+    supabaseAdmin.from('rooms').select('code, max_guests, description, amenities, sort_order').eq('active', true),
     supabaseAdmin.from('vw_ala_sellable').select('ala, date, sellable')
       .in('ala', ['A', 'B', 'C']).gte('date', checkin).lt('date', checkout),
   ]);
@@ -103,10 +103,22 @@ router.get('/offers', requirePublicAccess, async (req, res) => {
   for (const r of roomsRes.data || []) {
     const ala = String(r.code)[0];
     if (!['A', 'B', 'C'].includes(ala)) continue;
-    if (!roomsByAla[ala]) roomsByAla[ala] = { maxGuests: 0, totalRooms: 0 };
+    if (!roomsByAla[ala]) roomsByAla[ala] = { maxGuests: 0, totalRooms: 0, _rooms: [] };
     roomsByAla[ala].totalRooms++;
     const mg = Number(r.max_guests) || 0;
     if (mg > roomsByAla[ala].maxGuests) roomsByAla[ala].maxGuests = mg;
+    roomsByAla[ala]._rooms.push(r);
+  }
+
+  // Cama/comodidades: usa o quarto "representante" da ala — o que a reserva
+  // alocaria p/ esse nº de hóspedes (menor sort_order que comporta). Dados reais
+  // da tabela `rooms`, sem hardcode; reflete o quarto que o hóspede vai receber.
+  for (const ala of Object.keys(roomsByAla)) {
+    const list = roomsByAla[ala]._rooms.slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    const rep = list.find(r => (Number(r.max_guests) || 0) >= guests) || list[list.length - 1] || null;
+    roomsByAla[ala].description = rep ? (rep.description || null) : null;
+    roomsByAla[ala].amenities   = rep && Array.isArray(rep.amenities) ? rep.amenities : [];
+    delete roomsByAla[ala]._rooms;
   }
 
   const sellableMap = new Map();

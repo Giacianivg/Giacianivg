@@ -70,6 +70,8 @@ function buildOffers({ checkin, checkout, guests, nights, roomsByAla, sellableMa
       room_type:   tipo,
       label:       (quote && quote.tipoLabel) || tipo,
       max_guests:  info.maxGuests,
+      description: info.description || null,
+      amenities:   Array.isArray(info.amenities) ? info.amenities : [],
       available,
       nights,
       total_price: null,
