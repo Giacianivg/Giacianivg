@@ -40,6 +40,11 @@
   --ldl-gold:        #B8924A;  /* dourado terroso — estrelas / destaque numérico */
   --ldl-white:       #FFFFFF;
 
+  /* Porsche "Midnight Blue Metallic" (39C) — EXCLUSIVO dos CTAs de reserva */
+  --reserve:         #1E2A48;  /* base */
+  --reserve-lite:    #2C3B63;  /* luz — topo do gradiente metálico */
+  --reserve-dark:    #141D34;  /* sombra — base do gradiente metálico */
+
   /* 1.2 — Mapeamento para os tokens do DESIGN-SYSTEM (consumidos por t/c/l.css
            e pelos estilos inline das páginas). Não renomear: quebraria o reuso. */
   --bg0: var(--ldl-sand);
