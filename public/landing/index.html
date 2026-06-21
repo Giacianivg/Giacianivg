@@ -68,6 +68,13 @@
       margin-bottom: var(--space-xl); line-height: var(--lh-normal); max-width: 46ch;
     }
     .rooms-section { background: var(--bg0); }
+
+    /* "Também por perto": vizinhas fora do Circuito oficial (precisão geográfica) */
+    .ed-region__nearby { margin-top: clamp(var(--space-xl), 4vw, var(--space-2xl)); }
+    .ed-region__nearby .ed-eyebrow { color: var(--text-muted); margin-bottom: var(--space-sm); }
+    .ed-region__nearby-lead { font-size: var(--fz-body); line-height: var(--lh-body); color: var(--text); max-width: 62ch; margin-bottom: clamp(var(--space-lg), 3vw, var(--space-xl)); }
+    /* lista interna sem o filete/topo da .ed-region__list principal */
+    .ed-region__list--plain { border-top: 0; padding-top: 0; }
   </style>
 </head>
 <body>
@@ -187,38 +194,70 @@
     <header class="ed-section-head ed-fade">
       <span class="ed-eyebrow">Arredores</span>
       <h2>O Circuito das Águas, na porta</h2>
-      <p class="ed-section-lead">Seis cidades a poucos quilômetros umas das outras. Use a pousada como base e monte seu roteiro: aventura, águas termais, o Caminho do Café, vinho e compras.</p>
+      <p class="ed-section-lead">As nove cidades do Circuito das Águas Paulista, a partir da pousada — das que ficam logo ali às que pedem um dia inteiro. Use-a como base e monte seu roteiro: aventura, águas termais, o Caminho do Café, flores, vinho e compras.</p>
     </header>
     <div class="ed-region__list ed-fade">
       <div class="ed-region__city">
+        <h3>Lindóia</h3>
+        <p class="ed-region__tag">Capital Nacional da Água Mineral</p>
+        <p class="ed-region__dist">6 km · 7 min</p>
+      </div>
+      <div class="ed-region__city">
         <h3>Socorro</h3>
         <p class="ed-region__tag">Capital Nacional do Turismo de Aventura</p>
-        <p class="ed-region__dist">Base da pousada</p>
+        <p class="ed-region__dist">13 km · 15 min</p>
       </div>
       <div class="ed-region__city">
         <h3>Águas de Lindóia</h3>
         <p class="ed-region__tag">Capital Termal do Brasil</p>
-        <p class="ed-region__dist">aprox. 30 km</p>
+        <p class="ed-region__dist">15 km · 20 min</p>
       </div>
       <div class="ed-region__city">
         <h3>Serra Negra</h3>
         <p class="ed-region__tag">Teleférico, Caminho do Café e vinícolas</p>
-        <p class="ed-region__dist">aprox. 25 km</p>
-      </div>
-      <div class="ed-region__city">
-        <h3>Lindóia</h3>
-        <p class="ed-region__tag">Capital Nacional da Água Mineral</p>
-        <p class="ed-region__dist">aprox. 28 km</p>
-      </div>
-      <div class="ed-region__city">
-        <h3>Amparo</h3>
-        <p class="ed-region__tag">Centro histórico e turismo rural</p>
-        <p class="ed-region__dist">aprox. 1h30</p>
+        <p class="ed-region__dist">20 km · 25 min</p>
       </div>
       <div class="ed-region__city">
         <h3>Monte Alegre do Sul</h3>
         <p class="ed-region__tag">Charme italiano e alambiques de cachaça</p>
-        <p class="ed-region__dist">aprox. 1h30</p>
+        <p class="ed-region__dist">21 km · 35 min</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Amparo</h3>
+        <p class="ed-region__tag">Centro histórico e turismo rural</p>
+        <p class="ed-region__dist">35 km · 45 min</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Pedreira</h3>
+        <p class="ed-region__tag">Capital da Porcelana · compras</p>
+        <p class="ed-region__dist">~50 km · passeio de um dia</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Jaguariúna</h3>
+        <p class="ed-region__tag">Maria Fumaça e Rodeo Festival</p>
+        <p class="ed-region__dist">~65 km · passeio de um dia</p>
+      </div>
+      <div class="ed-region__city">
+        <h3>Holambra</h3>
+        <p class="ed-region__tag">Cidade das Flores · colônia holandesa</p>
+        <p class="ed-region__dist">~75 km · passeio de um dia</p>
+      </div>
+    </div>
+
+    <div class="ed-region__nearby ed-fade">
+      <span class="ed-eyebrow">Também por perto</span>
+      <p class="ed-region__nearby-lead">Vizinhas logo ali — fora do Circuito das Águas Paulista, mas a um pulo da pousada.</p>
+      <div class="ed-region__list ed-region__list--plain">
+        <div class="ed-region__city">
+          <h3>Monte Sião <span style="font-size:.7em;color:var(--text-muted)">· MG</span></h3>
+          <p class="ed-region__tag">Capital Nacional do Tricô</p>
+          <p class="ed-region__dist">21 km · 30 min</p>
+        </div>
+        <div class="ed-region__city">
+          <h3>Bragança Paulista <span style="font-size:.7em;color:var(--text-muted)">· SP</span></h3>
+          <p class="ed-region__tag">Represa, gastronomia e compras</p>
+          <p class="ed-region__dist">60 km · 1h</p>
+        </div>
       </div>
     </div>
     <div class="ed-region__cta ed-fade">
