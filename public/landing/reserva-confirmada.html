@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="luar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reserva confirmada | Pousada Luz da Lua</title>
+  <meta name="description" content="Confirmação da sua reserva na Pousada Luz da Lua.">
+  <meta name="robots" content="noindex"><!-- página transacional, fora do índice -->
+  <link rel="stylesheet" href="../design-system/t.css">
+  <link rel="stylesheet" href="../design-system/c.css">
+  <link rel="stylesheet" href="../design-system/l.css">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="luar.css">
+  <style>
+    .rc-wrap { max-width: 560px; margin: 0 auto; padding: calc(var(--nav-height) + var(--space-2xl)) var(--container-pad) var(--section-py); text-align: center; }
+    .rc-mark { width: 64px; height: 64px; margin: 0 auto var(--space-lg); display: grid; place-items: center; border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-strong); }
+    .rc-mark svg { width: 32px; height: 32px; }
+    .rc-eyebrow { color: var(--text-muted); margin-bottom: var(--space-md); justify-content: center; }
+    .rc-wrap h1 { font-family: var(--font-serif); font-weight: var(--fw-regular); font-size: var(--fz-h1); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); color: var(--text-strong); margin-bottom: var(--space-sm); text-wrap: balance; }
+    .rc-lead { font-size: var(--fz-body-lg); line-height: var(--lh-body); color: var(--text); margin-bottom: var(--space-lg); }
+    .rc-card { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-sm); text-align: left; margin-bottom: var(--space-lg); }
+    .rc-row { display: flex; justify-content: space-between; gap: var(--space-sm); padding: var(--space-sm) 0; border-top: 1px solid var(--border); }
+    .rc-row:first-child { border-top: 0; }
+    .rc-k { font-size: var(--fz-caption); letter-spacing: var(--ls-wide); text-transform: uppercase; color: var(--text-muted); }
+    .rc-v { font-size: var(--fz-body-sm); color: var(--text-strong); font-weight: var(--fw-medium); text-align: right; }
+    .rc-status { display: inline-flex; align-items: center; gap: var(--space-2xs); font-size: var(--fz-body-sm); font-weight: var(--fw-semibold); }
+    .rc-status--pending { color: var(--text-muted); }
+    .rc-status--paid    { color: var(--accent-strong); }
+    .rc-spin { width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: rc-rot .8s linear infinite; }
+    @keyframes rc-rot { to { transform: rotate(360deg); } }
+    .rc-note { font-size: var(--fz-caption); line-height: var(--lh-normal); color: var(--text-muted); margin-top: var(--space-md); }
+    .rc-actions { display: flex; flex-direction: column; gap: var(--space-sm); align-items: center; }
+    @media (prefers-reduced-motion: reduce) { .rc-spin { animation: none; } }
+  </style>
+</head>
+<body>
+
+<nav class="landing-nav">
+  <a href="index.html" style="display:flex;align-items:center;gap:var(--space-sm);text-decoration:none">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/><path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/><circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/></svg>
+    <span style="font-family:var(--font-serif);font-weight:var(--fw-semibold);color:var(--tx1);font-size:var(--fz-body-sm)">Luz da Lua</span>
+  </a>
+  <a href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">WhatsApp</a>
+</nav>
+
+<div class="rc-wrap">
+  <div class="rc-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  </div>
+  <span class="ed-eyebrow rc-eyebrow">Reserva</span>
+  <h1 id="rcTitle">Recebemos seu pagamento</h1>
+  <p class="rc-lead" id="rcLead">Estamos confirmando sua reserva — leva só um instante.</p>
+
+  <div class="rc-card" id="rcCard" hidden>
+    <div class="rc-row"><span class="rc-k">Reserva</span><span class="rc-v" id="rcNumber">—</span></div>
+    <div class="rc-row"><span class="rc-k">Status</span><span class="rc-v"><span class="rc-status rc-status--pending" id="rcStatus"><span class="rc-spin"></span> Confirmando…</span></span></div>
+    <div class="rc-row"><span class="rc-k">Total da estadia</span><span class="rc-v" id="rcTotal">—</span></div>
+    <div class="rc-row"><span class="rc-k">Sinal pago</span><span class="rc-v" id="rcDeposit">—</span></div>
+  </div>
+
+  <div class="rc-actions">
+    <a id="rcWa" href="https://wa.me/5519998400306" target="_blank" rel="noopener" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#fff">Falar com a equipe</a>
+    <a href="index.html" class="ed-link" style="color:var(--accent-strong)">Voltar ao início <span class="ed-arrow">→</span></a>
+  </div>
+  <p class="rc-note" id="rcNote">O restante você acerta na chegada. Enviaremos os detalhes pelo WhatsApp.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var WA = 'https://wa.me/5519998400306';
+  var params = new URLSearchParams(location.search);
+  var order = params.get('order');
+
+  var elTitle = document.getElementById('rcTitle');
+  var elLead = document.getElementById('rcLead');
+  var elCard = document.getElementById('rcCard');
+  var elNumber = document.getElementById('rcNumber');
+  var elStatus = document.getElementById('rcStatus');
+  var elTotal = document.getElementById('rcTotal');
+  var elDeposit = document.getElementById('rcDeposit');
+  var elWa = document.getElementById('rcWa');
+
+  function fmtBRL(n) { return n == null ? '—' : 'R$ ' + Number(n).toLocaleString('pt-BR'); }
+
+  if (!order) {
+    elTitle.textContent = 'Reserva';
+    elLead.textContent = 'Não encontramos os dados desta reserva. Fale com a equipe pelo WhatsApp.';
+    return;
+  }
+
+  elCard.hidden = false;
+  elNumber.textContent = order;
+  elWa.href = WA + '?text=' + encodeURIComponent('Olá! Fiz a reserva ' + order + ' pelo site.');
+
+  // Access token (mesma verificação anti-robô do reservar.html; em dev passa sem captcha).
+  var accessToken = null;
+  function ensureAccess() {
+    if (accessToken) return Promise.resolve(accessToken);
+    return fetch('/api/public/session', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) throw new Error('sessao');
+      accessToken = d.access_token; return accessToken;
+    });
+  }
+
+  function setPaid(d) {
+    elStatus.className = 'rc-status rc-status--paid';
+    elStatus.textContent = '✓ Confirmada';
+    elTitle.textContent = 'Reserva confirmada!';
+    elLead.textContent = 'Tudo certo — sua estadia na serra está garantida.';
+    if (d.total_amount != null) elTotal.textContent = fmtBRL(d.total_amount);
+    if (d.deposit_amount != null) elDeposit.textContent = fmtBRL(d.deposit_amount);
+  }
+  function setPendingData(d) {
+    if (d.total_amount != null) elTotal.textContent = fmtBRL(d.total_amount);
+    if (d.deposit_amount != null) elDeposit.textContent = fmtBRL(d.deposit_amount);
+  }
+
+  var tries = 0, MAX = 20;
+  function poll() {
+    tries++;
+    ensureAccess()
+      .then(function (tok) {
+        return fetch('/api/public/payment-status?order=' + encodeURIComponent(order), { headers: { 'x-pub-token': tok } });
+      })
+      .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.status === 401) { accessToken = null; }
+        if (res.d && res.d.success) {
+          if (res.d.paid) { setPaid(res.d); return; }
+          setPendingData(res.d);
+        }
+        if (tries < MAX) setTimeout(poll, 3000);
+        else {
+          elStatus.innerHTML = 'Processando';
+          elLead.textContent = 'Seu pagamento está sendo processado. Se já pagou, sua reserva é confirmada em instantes — qualquer dúvida, fale com a equipe.';
+        }
+      })
+      .catch(function () { if (tries < MAX) setTimeout(poll, 3000); });
+  }
+  poll();
+})();
+</script>
+</body>
+</html>

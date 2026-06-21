@@ -512,14 +512,15 @@
       })
       .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
       .then(function (res) {
-        submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
         if (!res.d.success) {
+          submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
           if (res.status === 401) accessToken = null;
           errEl.textContent = res.d.message || 'Não foi possível reservar.';
           errEl.style.display = 'block';
           return;
         }
         var d = res.d;
+        // Fallback (caso o checkout online não esteja ativo): pagar o sinal pelo WhatsApp.
         document.getElementById('bookDoneMsg').innerHTML =
           'Reserva <strong>' + d.reservation_number + '</strong> segura por <strong>' + d.hold_minutes +
           ' minutos</strong>.<br>Total ' + fmtBRL(d.total_amount) + ' · sinal de ' + fmtBRL(d.deposit_amount) +
@@ -527,7 +528,31 @@
         var wmsg = encodeURIComponent('Olá! Fiz a reserva ' + d.reservation_number + ' (' + current.label + ', ' +
           lastSearch.checkin + ' a ' + lastSearch.checkout + '). Quero pagar o sinal de ' + fmtBRL(d.deposit_amount) + '.');
         document.getElementById('bookDoneWa').href = WA + '?text=' + wmsg;
-        stepForm.hidden = true; stepDone.hidden = false;
+
+        // Caminho principal: gera o checkout InfinitePay e redireciona o hóspede.
+        submitBtn.textContent = 'Indo para o pagamento…';
+        ensureAccess()
+          .then(function (tok) {
+            return fetch('/api/public/checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-pub-token': tok },
+              body: JSON.stringify({ reservation_id: d.reservation_id }),
+            });
+          })
+          .then(function (r) { return r.json().then(function (cd) { return { status: r.status, cd: cd }; }); })
+          .then(function (cres) {
+            if (cres.cd && cres.cd.success && cres.cd.checkout_url) {
+              window.location.href = cres.cd.checkout_url;   // → checkout hospedado InfinitePay
+              return;
+            }
+            // Checkout indisponível (flag off / erro) → passo de confirmação com WhatsApp.
+            submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
+            stepForm.hidden = true; stepDone.hidden = false;
+          })
+          .catch(function () {
+            submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';
+            stepForm.hidden = true; stepDone.hidden = false;
+          });
       })
       .catch(function (err) {
         submitBtn.disabled = false; submitBtn.textContent = 'Reservar e segurar o quarto';

@@ -22,7 +22,7 @@ const { calculateQuotation } = require('../services/quotation/engine');
 const { buildOffers } = require('../services/quotation/public-offers');
 const { normalizeWhatsapp, isValidName, computeDeposit, holdExpiryISO, HOLD_MINUTES } = require('../services/quotation/booking-helpers');
 const { verifyTurnstile, issueAccessToken, verifyAccessToken } = require('../services/security/turnstile');
-const { createPixPayment } = require('../services/payments/mercadopago');
+const { createPaymentLink, verifyPayment, mapCaptureMethod } = require('../services/payments/infinitepay');
 
 const router = Router();
 
@@ -290,14 +290,20 @@ router.post('/book', requirePublicAccess, async (req, res) => {
   }, 201);
 });
 
-// POST /api/public/pix — gera o PIX do sinal de uma reserva online (DEC-025 Bloco 4).
-// ATRÁS DE FEATURE-FLAG: só ativa com PUBLIC_PIX_ENABLED='true' (+ credenciais MP).
-// Com a flag off (default) retorna 503 — testável sem credencial.
-const isPublicPixEnabled = () => process.env.PUBLIC_PIX_ENABLED === 'true';
+// ── Base pública p/ montar redirect_url e webhook_url da InfinitePay ──────────
+function siteBaseUrl(req) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const host  = req.headers['x-forwarded-host']  || req.get('host');
+  return `${proto}://${host}`;
+}
 
-router.post('/pix', requirePublicAccess, async (req, res) => {
-  if (!isPublicPixEnabled()) {
-    return fail(res, 'pix_unavailable', 'Pagamento online por PIX ainda não está ativo. Finalize pelo WhatsApp.', 503);
+// POST /api/public/checkout — gera o link de pagamento InfinitePay do sinal de
+// uma reserva online (troca MP→InfinitePay). ATRÁS de PUBLIC_BOOKING_ENABLED.
+// O preço é SEMPRE o deposit_amount já calculado pelo servidor no /book.
+router.post('/checkout', requirePublicAccess, async (req, res) => {
+  if (!isPublicBookingEnabled()) {
+    return fail(res, 'booking_unavailable', 'Reserva online ainda não está ativa. Finalize pelo WhatsApp.', 503);
   }
 
   const reservationId = req.body && req.body.reservation_id;
@@ -317,34 +323,100 @@ router.post('/pix', requirePublicAccess, async (req, res) => {
     return fail(res, 'hold_expired', 'O tempo da reserva expirou. Faça uma nova busca.', 409);
   }
 
-  let pix;
+  const base = siteBaseUrl(req);
+  let link;
   try {
-    pix = await createPixPayment({
-      reservationId: r.id,
-      amount:        Number(r.deposit_amount),
-      description:   `Sinal reserva ${r.reservation_number}`,
+    link = await createPaymentLink({
+      orderNsu:    r.reservation_number,             // = order_nsu (lookup no webhook)
+      amount:      Number(r.deposit_amount),         // sinal de 30%, autoritativo do servidor
+      description: `Sinal reserva ${r.reservation_number} — Pousada Luz da Lua`,
+      redirectUrl: `${base}/landing/reserva-confirmada.html?order=${encodeURIComponent(r.reservation_number)}`,
+      webhookUrl:  `${base}/api/public/infinitepay-webhook`,
     });
   } catch (e) {
     return serverError(res, e);
   }
 
-  const statusMap = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed' };
-  const { data: pay, error: pErr } = await supabaseAdmin.from('payments').insert({
+  // Pagamento entra como pending — confirmado SÓ via webhook + payment_check.
+  // method 'pix' é o caminho esperado/grátis; ajustado p/ o real na confirmação.
+  const { error: pErr } = await supabaseAdmin.from('payments').insert({
     reservation_id: r.id, payment_type: 'deposit', amount: Number(r.deposit_amount),
-    method: 'pix', status: statusMap[pix.status] || 'pending',
-    external_id: String(pix.payment_id), qr_code_url: pix.pix_link,
-    pix_copy_paste: pix.pix_qr_code, expires_at: pix.expires_at,
-  }).select('id').single();
+    method: 'pix', status: 'pending',
+    external_id: String(r.reservation_number), qr_code_url: link.url, expires_at: r.hold_expires_at,
+  });
   if (pErr) return serverError(res, pErr);
 
+  return ok(res, { checkout_url: link.url, order_nsu: link.order_nsu }, 201);
+});
+
+// POST /api/public/infinitepay-webhook — notificação de pagamento da InfinitePay.
+// SEM auth (webhook não envia token) e SEM assinatura no payload → SEMPRE
+// verificamos com payment_check antes de confirmar. Idempotente.
+router.post('/infinitepay-webhook', async (req, res) => {
+  const b = req.body || {};
+  const orderNsu = b.order_nsu;
+  if (!orderNsu) return res.sendStatus(200);
+
+  try {
+    const { data: r } = await supabaseAdmin
+      .from('reservations')
+      .select('id, status, deposit_amount, reservation_number')
+      .eq('reservation_number', String(orderNsu)).maybeSingle();
+    if (!r) return res.sendStatus(200);                       // pedido desconhecido → ignora
+
+    // Idempotência: já em estado final → nada a fazer.
+    if (['confirmed', 'checked_in', 'completed', 'cancelled'].includes(r.status)) {
+      return res.sendStatus(200);
+    }
+
+    // Verificação server-side (fonte da verdade — webhook não é assinado).
+    const v = await verifyPayment({
+      orderNsu,
+      transactionNsu: b.transaction_nsu,
+      slug:           b.invoice_slug || b.slug,
+    });
+
+    const expectedCents = Math.round(Number(r.deposit_amount) * 100);
+    if (!v.paid || (v.paid_amount != null && v.paid_amount < expectedCents)) {
+      return res.sendStatus(200);                             // ainda não pago — outro webhook virá
+    }
+
+    // Confirma pagamento + reserva.
+    await supabaseAdmin.from('payments')
+      .update({
+        status: 'confirmed', method: mapCaptureMethod(v.capture_method),
+        confirmed_at: new Date().toISOString(), webhook_payload: b,
+      })
+      .eq('reservation_id', r.id).eq('external_id', String(orderNsu));
+
+    await supabaseAdmin.from('reservations').update({ status: 'confirmed' }).eq('id', r.id);
+    console.log(`[infinitepay-webhook] Reserva ${r.reservation_number} confirmada — sinal pago`);
+    return res.sendStatus(200);
+  } catch (e) {
+    // Erro transitório (ex.: payment_check fora do ar) → 400 p/ a InfinitePay reenviar.
+    console.error('[infinitepay-webhook] erro:', e.message);
+    return res.sendStatus(400);
+  }
+});
+
+// GET /api/public/payment-status?order=<reservation_number> — status p/ a página
+// de confirmação fazer polling.
+router.get('/payment-status', requirePublicAccess, async (req, res) => {
+  const orderNsu = req.query.order;
+  if (!orderNsu) return fail(res, 'missing_params', 'order é obrigatório.', 422);
+  const { data: r, error } = await supabaseAdmin
+    .from('reservations')
+    .select('reservation_number, status, total_amount, deposit_amount')
+    .eq('reservation_number', String(orderNsu)).maybeSingle();
+  if (error) return serverError(res, error);
+  if (!r) return fail(res, 'not_found', 'Reserva não encontrada.', 404);
   return ok(res, {
-    payment_id:   pay.id,
-    mp_id:        pix.payment_id,
-    pix_qr_code:  pix.pix_qr_code,
-    pix_qr_base64: pix.pix_qr_base64,
-    pix_link:     pix.pix_link,
-    expires_at:   pix.expires_at,
-  }, 201);
+    reservation_number: r.reservation_number,
+    status:             r.status,
+    paid:               ['confirmed', 'checked_in', 'completed'].includes(r.status),
+    total_amount:       r.total_amount,
+    deposit_amount:     r.deposit_amount,
+  });
 });
 
 module.exports = router;

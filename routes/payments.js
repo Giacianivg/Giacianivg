@@ -2,56 +2,64 @@
 
 const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
-const { createPixPayment, getPaymentStatus, validateWebhookSignature } = require('../services/payments/mercadopago');
+const { createPaymentLink } = require('../services/payments/infinitepay');
 const { ok, fail, notFound, serverError } = require('../services/utils/response');
 
 const router = Router();
 
-// POST /api/payments/pix
-// Body: { reservation_id, amount, description, payer_email? }
+// POST /api/payments/pix — gera um link de pagamento InfinitePay p/ uma reserva
+// (troca MP→InfinitePay; nome mantido por compat). A confirmação chega pelo
+// webhook público /api/public/infinitepay-webhook (verificado via payment_check).
+// Body: { reservation_id, amount?, description? }  (amount default = sinal de 30%)
 router.post('/pix', async (req, res) => {
-  const { reservation_id, amount, description, payer_email } = req.body;
+  const { reservation_id, amount, description } = req.body;
+  if (!reservation_id) return fail(res, 'missing_fields', 'reservation_id required');
 
-  if (!reservation_id || amount === undefined) {
-    return fail(res, 'missing_fields', 'reservation_id and amount required');
-  }
+  const { data: r, error: rErr } = await supabaseAdmin
+    .from('reservations')
+    .select('id, reservation_number, deposit_amount, hold_expires_at')
+    .eq('id', reservation_id).maybeSingle();
+  if (rErr) return serverError(res, rErr);
+  if (!r) return notFound(res, 'Reservation');
 
-  let pixData;
+  const value = amount !== undefined ? Number(amount) : Number(r.deposit_amount);
+  if (!(value > 0)) return fail(res, 'invalid_amount', 'amount deve ser > 0');
+
+  const base = process.env.PUBLIC_BASE_URL
+    ? process.env.PUBLIC_BASE_URL.replace(/\/$/, '')
+    : `${req.headers['x-forwarded-proto'] || req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}`;
+
+  let link;
   try {
-    pixData = await createPixPayment({ reservationId: reservation_id, amount, description, payerEmail: payer_email });
+    link = await createPaymentLink({
+      orderNsu:    r.reservation_number,
+      amount:      value,
+      description: description || `Sinal reserva ${r.reservation_number}`,
+      redirectUrl: `${base}/landing/reserva-confirmada.html?order=${encodeURIComponent(r.reservation_number)}`,
+      webhookUrl:  `${base}/api/public/infinitepay-webhook`,
+    });
   } catch (err) {
     return serverError(res, err);
   }
-
-  // Map MercadoPago status to schema enum: pending|processing|confirmed|failed|refunded
-  const statusMap = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed' };
-  const dbStatus  = statusMap[pixData.status] || 'pending';
 
   const { data, error } = await supabaseAdmin
     .from('payments')
     .insert({
       reservation_id,
-      payment_type:   'deposit',
-      amount:         Number(amount),
-      method:         'pix',
-      status:         dbStatus,
-      external_id:    String(pixData.payment_id),
-      qr_code_url:    pixData.pix_link,
-      pix_copy_paste: pixData.pix_qr_code,
-      expires_at:     pixData.expires_at,
+      payment_type: 'deposit',
+      amount:       value,
+      method:       'pix',
+      status:       'pending',
+      external_id:  String(r.reservation_number),
+      qr_code_url:  link.url,
+      expires_at:   r.hold_expires_at,
     })
     .select('id')
     .single();
 
   if (error) return serverError(res, error);
 
-  return ok(res, {
-    payment_id:  data.id,
-    mp_id:       pixData.payment_id,
-    pix_link:    pixData.pix_link,
-    pix_qr_code: pixData.pix_qr_code,
-    expires_at:  pixData.expires_at,
-  }, 201);
+  return ok(res, { payment_id: data.id, checkout_url: link.url, order_nsu: link.order_nsu }, 201);
 });
 
 // POST /api/payments/manual
@@ -105,68 +113,8 @@ router.get('/:id', async (req, res) => {
   return ok(res, { payment: data });
 });
 
-// POST /api/payments/webhook — MercadoPago notifications
-router.post('/webhook', async (req, res) => {
-  // Validate signature first
-  const signature = req.headers['x-signature'];
-  const paymentId = req.body?.data?.id;
-
-  if (!validateWebhookSignature(signature, paymentId)) {
-    return fail(res, 'invalid_signature', 'Webhook signature validation failed', 401);
-  }
-
-  const { type, data } = req.body;
-
-  // Only process payment notifications
-  if (type !== 'payment' || !data?.id) {
-    return res.sendStatus(200);
-  }
-
-  try {
-    const mpStatus = await getPaymentStatus(data.id);
-
-    // Find payment in DB by external_id
-    const { data: payment } = await supabaseAdmin
-      .from('payments')
-      .select('id, reservation_id, status')
-      .eq('external_id', String(data.id))
-      .single();
-
-    if (!payment) {
-      console.warn('[mp-webhook] Payment not found for mp_id:', data.id);
-      return res.sendStatus(200);
-    }
-
-    // Idempotency: skip if already in final state (schema: confirmed|failed|refunded)
-    if (['confirmed', 'failed', 'refunded'].includes(payment.status)) {
-      return res.sendStatus(200);
-    }
-
-    // Map MercadoPago status to schema enum
-    const mpToDb = { approved: 'confirmed', pending: 'pending', in_process: 'processing', rejected: 'failed', refunded: 'refunded' };
-    const newStatus = mpToDb[mpStatus.status] || 'pending';
-    const updates = { status: newStatus, webhook_payload: req.body };
-    if (mpStatus.status === 'approved' && mpStatus.paid_at) {
-      updates.confirmed_at = mpStatus.paid_at;
-    }
-
-    // Update payment status
-    await supabaseAdmin.from('payments').update(updates).eq('id', payment.id);
-
-    // On approval: confirm reservation
-    if (mpStatus.status === 'approved') {
-      await supabaseAdmin
-        .from('reservations')
-        .update({ status: 'confirmed' })
-        .eq('id', payment.reservation_id);
-      console.log(`[mp-webhook] Reservation ${payment.reservation_id} confirmed — PIX paid`);
-    }
-  } catch (err) {
-    console.error('[mp-webhook] Error processing notification:', err.message);
-    // Return 200 anyway to prevent MP retries on our errors
-  }
-
-  return res.sendStatus(200);
-});
+// Webhook de pagamento: agora é ÚNICO e PÚBLICO (não-autenticado, pois o
+// provedor não envia JWT) — vive em routes/public.js → POST /api/public/infinitepay-webhook.
+// O antigo /api/payments/webhook (MercadoPago) foi removido na troca de provedor.
 
 module.exports = router;

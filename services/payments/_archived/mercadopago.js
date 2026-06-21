@@ -1,5 +1,20 @@
 'use strict';
 
+/**
+ * ⚠️ ARQUIVADO / DESCONTINUADO (2026-06-21).
+ *
+ * O provedor de pagamento foi trocado para a InfinitePay
+ * (services/payments/infinitepay.js). Motivos da troca:
+ *   - PIX gratuito, sem taxa;
+ *   - sem SDK obrigatório (só HTTP);
+ *   - Checkout Integrado hospedado (link via POST /links) — menos PCI/risco
+ *     no nosso lado.
+ *
+ * Este arquivo é mantido apenas como referência histórica e NÃO é importado
+ * por nenhuma rota. Pode ser removido após a InfinitePay estar validada em
+ * produção. Não reativar sem nova DEC.
+ */
+
 const crypto = require('crypto');
 
 const ACCESS_TOKEN    = process.env.MERCADOPAGO_ACCESS_TOKEN;
