@@ -186,6 +186,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'pousada-crm-api', ts: Date.now() });
 });
 
+// ── Public site API (DEC-025) — SEM AUTH. Montada ANTES do rate limiter/auth de
+//    /api para não exigir JWT do CRM (Turnstile + store próprio no router).
+app.use('/api/public', require('./routes/public'));
+
 // Apply rate limiting and auth to all /api/* routes
 app.use('/api', rateLimiter());
 app.use('/api', (req, res, next) => {
