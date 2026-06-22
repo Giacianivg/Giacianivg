@@ -301,30 +301,10 @@
   </div>
 </section>
 
-<!-- Seção 8 — Depoimentos (carrossel de avaliações curadas; lê reviews.json) -->
-<section class="landing-section" id="depoimentos" style="background:var(--bg0)">
-  <div class="landing-section-inner">
-    <div class="ed-quotes ed-fade" data-reviews-src="/landing/reviews.json">
-      <!-- Fallback estático: aparece sem JS/fetch; o JS substitui pelo conjunto curado -->
-      <figure class="ed-quote" id="reviewQuote" aria-live="polite">
-        <div class="ed-quote__stars" aria-hidden="true">★★★★★</div>
-        <blockquote>“Lugar lindo, tranquilo e muito bem cuidado. A piscina e a vista da serra são de tirar o fôlego — voltamos com a alma lavada.”</blockquote>
-        <figcaption>
-          <span class="ed-quote__author">Avaliação ilustrativa</span>
-          <span class="ed-quote__meta">exemplo provisório · substituir por review real do Google</span>
-        </figcaption>
-      </figure>
-      <div class="ed-quotes__nav" hidden>
-        <button class="ed-quotes__btn" type="button" data-dir="prev" aria-label="Avaliação anterior">←</button>
-        <div class="ed-quotes__dots" role="tablist" aria-label="Avaliações"></div>
-        <button class="ed-quotes__btn" type="button" data-dir="next" aria-label="Próxima avaliação">→</button>
-      </div>
-      <div class="ed-quotes__more" hidden>
-        <a class="ed-link" href="#" target="_blank" rel="noopener">Ver todas no Google <span class="ed-arrow">→</span></a>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- Seção 8 — Depoimentos: REMOVIDA até haver avaliações reais do Google.
+     O reviews.json continha apenas exemplos provisórios (provisional:true) — não
+     exibir review fictício ao público. Reativar com reviews reais quando houver
+     (reverter este commit ou recolocar a seção + o carrossel no JS). -->
 
 <!-- Seção 9 — FAQ (accordion nativo, acessível) -->
 <section class="landing-section" id="faq" style="background:var(--bg1)">
@@ -348,7 +328,7 @@
       </details>
       <details class="ed-faq__item">
         <summary>Como faço a reserva e qual o valor do sinal?</summary>
-        <div class="ed-faq__answer">É simples e pelo WhatsApp: você envia as datas e o número de hóspedes, recebe a cotação e confirma com 30% de sinal. O restante você acerta na chegada. <a href="https://wa.me/5519998400306" target="_blank" rel="noopener">Falar no WhatsApp</a>.</div>
+        <div class="ed-faq__answer">Você pode reservar e pagar o sinal direto aqui no site, com PIX: em <a href="/landing/reservar.html">Disponibilidade e preços</a> você escolhe as datas, vê o valor real de cada acomodação e confirma com 30% de sinal (o restante você acerta na chegada). Prefere falar com uma pessoa? Dá para reservar pelo <a href="https://wa.me/5519998400306" target="_blank" rel="noopener">WhatsApp</a> também.</div>
       </details>
       <details class="ed-faq__item">
         <summary>Como chego até a pousada?</summary>
@@ -362,19 +342,20 @@
   </div>
 </section>
 
-<!-- Seção 10 — Reserva (CTA final: passos enxutos + WhatsApp) -->
+<!-- Seção 10 — Reserva (CTA final: reserva online + WhatsApp como alternativa) -->
 <section class="landing-section ed-reserve" id="reserva">
   <div class="ed-reserve__inner">
     <h2 class="ed-fade">Pronto para desacelerar?</h2>
-    <p class="ed-reserve__lead ed-fade d1">Envie suas datas pelo WhatsApp e garanta sua estadia na serra. A gente cuida do resto.</p>
+    <p class="ed-reserve__lead ed-fade d1">Veja a disponibilidade e o preço real das suas datas e garanta sua estadia na serra — reserve online em minutos, ou pelo WhatsApp se preferir falar com a gente.</p>
     <div class="ed-reserve__steps ed-fade d1">
-      <span class="ed-reserve__step">Envie suas datas e nº de hóspedes</span>
-      <span class="ed-reserve__step">Receba a cotação na hora</span>
+      <span class="ed-reserve__step">Escolha as datas e o nº de hóspedes</span>
+      <span class="ed-reserve__step">Veja o preço real na hora</span>
       <span class="ed-reserve__step">Confirme com 30% de sinal</span>
       <span class="ed-reserve__step">Chegue e aproveite</span>
     </div>
-    <div class="ed-reserve__cta ed-fade d2">
-      <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="btn-cta">Reservar pelo WhatsApp</a>
+    <div class="ed-reserve__cta ed-fade d2" style="display:flex;flex-direction:column;align-items:center;gap:var(--space-md)">
+      <a href="/landing/reservar.html" class="btn-cta">Ver disponibilidade e reservar</a>
+      <a href="https://wa.me/5519998400306?text=Ol%C3%A1%2C+gostaria+de+fazer+uma+reserva+na+Pousada+Luz+da+Lua" target="_blank" rel="noopener" class="ed-link" style="color:#fff">Prefere falar com a gente? WhatsApp <span class="ed-arrow">→</span></a>
     </div>
     <p class="ed-reserve__note ed-fade d2">Resposta em minutos • Disponível todos os dias</p>
   </div>
@@ -458,75 +439,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
 })();
 
-// Depoimentos: carrossel de avaliações curadas (carrega reviews.json).
-// Sem JS/fetch, o quote estático de fallback no HTML permanece visível.
-(function () {
-  var root = document.querySelector('.ed-quotes');
-  if (!root || !window.fetch) return;
-  var src = root.getAttribute('data-reviews-src');
-  if (!src) return;
-
-  fetch(src).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
-    if (!data || !Array.isArray(data.items) || !data.items.length) return;
-
-    var items = data.items;
-    var fig = root.querySelector('#reviewQuote');
-    var quoteEl = fig.querySelector('blockquote');
-    var starsEl = fig.querySelector('.ed-quote__stars');
-    var authorEl = fig.querySelector('.ed-quote__author');
-    var metaEl = fig.querySelector('.ed-quote__meta');
-    var nav = root.querySelector('.ed-quotes__nav');
-    var dotsWrap = root.querySelector('.ed-quotes__dots');
-    var moreWrap = root.querySelector('.ed-quotes__more');
-    var moreLink = moreWrap ? moreWrap.querySelector('a') : null;
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var current = 0;
-    var timer = null;
-
-    function render(n) {
-      var it = items[n];
-      starsEl.textContent = '★★★★★'.slice(0, it.stars || 5);
-      quoteEl.textContent = '“' + it.text + '”';
-      authorEl.textContent = it.author || '';
-      metaEl.textContent = it.meta || '';
-      Array.prototype.forEach.call(dotsWrap.children, function (d, idx) {
-        d.setAttribute('aria-selected', idx === n ? 'true' : 'false');
-      });
-      current = n;
-    }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function start() { stop(); if (!reduce) timer = setInterval(function () { render((current + 1) % items.length); }, 7000); }
-    function go(delta) { render((current + delta + items.length) % items.length); start(); }
-
-    if (items.length > 1) {
-      items.forEach(function (_, idx) {
-        var b = document.createElement('button');
-        b.className = 'ed-quotes__dot';
-        b.type = 'button';
-        b.setAttribute('role', 'tab');
-        b.setAttribute('aria-label', 'Avaliação ' + (idx + 1));
-        b.addEventListener('click', function () { render(idx); start(); });
-        dotsWrap.appendChild(b);
-      });
-      nav.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-dir]');
-        if (btn) go(btn.getAttribute('data-dir') === 'next' ? 1 : -1);
-      });
-      nav.hidden = false;
-      root.addEventListener('mouseenter', stop);
-      root.addEventListener('mouseleave', start);
-      root.addEventListener('focusin', stop);
-      start();
-    }
-
-    if (moreLink && data.googleUrl && data.googleUrl.indexOf('REPLACE') === -1) {
-      moreLink.href = data.googleUrl;
-      moreWrap.hidden = false;
-    }
-
-    render(0);
-  }).catch(function () { /* mantém o fallback estático */ });
-})();
+// (Carrossel de depoimentos removido junto com a Seção 8 — sem reviews reais ainda.)
 </script>
 </body>
 </html>
