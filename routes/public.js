@@ -118,6 +118,9 @@ router.get('/offers', requirePublicAccess, async (req, res) => {
     const rep = list.find(r => (Number(r.max_guests) || 0) >= guests) || list[list.length - 1] || null;
     roomsByAla[ala].description = rep ? (rep.description || null) : null;
     roomsByAla[ala].amenities   = rep && Array.isArray(rep.amenities) ? rep.amenities : [];
+    // capacidade do quarto representante (p/ o "Até N hóspedes" do card bater com
+    // a cama exibida). maxGuests da ala segue p/ a lógica de cabe/grupo.
+    roomsByAla[ala].repMaxGuests = rep ? (Number(rep.max_guests) || roomsByAla[ala].maxGuests) : roomsByAla[ala].maxGuests;
     delete roomsByAla[ala]._rooms;
   }
 

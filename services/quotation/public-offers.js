@@ -69,7 +69,8 @@ function buildOffers({ checkin, checkout, guests, nights, roomsByAla, sellableMa
     const offer = {
       room_type:   tipo,
       label:       (quote && quote.tipoLabel) || tipo,
-      max_guests:  info.maxGuests,
+      // capacidade do quarto representante (cai p/ o máx. da ala se não vier)
+      max_guests:  info.repMaxGuests || info.maxGuests,
       description: info.description || null,
       amenities:   Array.isArray(info.amenities) ? info.amenities : [],
       available,

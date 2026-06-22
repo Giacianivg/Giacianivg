@@ -34,4 +34,14 @@ test('buildOffers usa defaults seguros quando a ala não tem description/ameniti
   const a = res.offers.find((o) => o.room_type === 'ALA_A');
   assert.strictEqual(a.description, null);
   assert.deepStrictEqual(a.amenities, []);
+  assert.strictEqual(a.max_guests, 3); // sem repMaxGuests → cai p/ o máx. da ala
+});
+
+test('buildOffers exibe a capacidade do quarto representante (repMaxGuests)', () => {
+  // ala comporta até 4 (quarto familiar), mas p/ 2 hóspedes o representante é o
+  // quarto casal (cap. 3) — o card deve mostrar 3, não 4.
+  const roomsByAla = { A: { maxGuests: 4, repMaxGuests: 3, totalRooms: 8 } };
+  const res = buildOffers({ ...BASE, roomsByAla, sellableMap: new Map(), calcQuote: fakeQuote });
+  const a = res.offers.find((o) => o.room_type === 'ALA_A');
+  assert.strictEqual(a.max_guests, 3);
 });
