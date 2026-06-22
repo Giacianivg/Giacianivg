@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 28 28">
+  <!-- Lua "Luz da Lua" — crescente C (glow sutil). Cores literais (favicon
+       não herda CSS vars): dourado #B8924A (halo) + azul-luar #4E6076. -->
+  <defs>
+    <filter id="g" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="1.2"/></filter>
+  </defs>
+  <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="#B8924A" opacity=".55" filter="url(#g)"/>
+  <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="#4E6076"/>
+</svg>

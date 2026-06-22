@@ -6,6 +6,7 @@
   <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xeGVzanhicXVwbWhuaXZrZnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MjAzODgsImV4cCI6MjA4OTA5NjM4OH0.MHAGQTNBNrDAPR3jCsPz8wftXriNrwCR6eyYbVemYDk">
   <title>Login — Pousada Luz da Lua</title>
   <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="design-system/t.css">
   <link rel="stylesheet" href="design-system/c.css">
   <link rel="stylesheet" href="design-system/l.css">
@@ -15,11 +16,10 @@
 <div class="auth-shell">
   <div class="auth-card">
     <div class="auth-logo">
-      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <circle cx="28" cy="28" r="28" fill="var(--royal-bg)"/>
-        <path d="M36 28a12 12 0 01-12 12 12 12 0 010-24 9 9 0 000 12z" fill="var(--royal-l)" opacity=".9"/>
-        <circle cx="22" cy="18" r="2" fill="var(--gold)" opacity=".7"/>
-        <circle cx="38" cy="22" r="1.5" fill="var(--gold)" opacity=".5"/>
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style="overflow:visible" aria-hidden="true">
+        <defs><filter id="lunaGlow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="1.2"/></filter></defs>
+        <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="var(--gold)" opacity=".55" filter="url(#lunaGlow)"/>
+        <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="var(--royal-l)"/>
       </svg>
       <div>
         <div class="auth-brand">Luz da Lua</div>

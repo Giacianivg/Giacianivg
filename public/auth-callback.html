@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Autenticando... — Luz da Lua</title>
   <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="design-system/t.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -63,10 +64,10 @@
 </head>
 <body>
 <div class="auth-box">
-  <svg class="auth-logo" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="28" cy="28" r="28" fill="var(--royal-bg)"/>
-    <path d="M36 28a14 14 0 01-14 14 14 14 0 010-28 10 10 0 000 14z" fill="var(--royal-l)" opacity=".9"/>
-    <circle cx="21" cy="16" r="2.5" fill="var(--gold)" opacity=".7"/>
+  <svg class="auth-logo" viewBox="0 0 24 24" fill="none" style="overflow:visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs><filter id="lunaGlow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="1.2"/></filter></defs>
+    <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="var(--gold)" opacity=".55" filter="url(#lunaGlow)"/>
+    <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3.5 6.6 6.6 0 0 0 21 12.8Z" fill="var(--royal-l)"/>
   </svg>
 
   <div class="auth-title" id="auth-title">Verificando sua identidade...</div>
