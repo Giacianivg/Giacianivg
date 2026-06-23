@@ -583,12 +583,15 @@
     top: 50%;
     transform: translateY(-50%);
   }
-  /* FIX containing-block: o blur de vidro da navbar (luar.css) cria um
-     containing block que ancora/recorta o drawer `fixed` à altura da barra
-     (~64px) — o fundo opaco existe mas some, e os itens vazam sobre o hero.
-     Enquanto o menu está aberto, removemos o blur: o drawer volta a se ancorar
-     no viewport e cobre a tela inteira. Fechado, o vidro da barra permanece. */
-  :root[data-theme="luar"] .landing-nav:has(.nav-menu.is-open) {
+  /* FIX containing-block (robusto, sem depender de :has):
+     o blur de vidro da navbar (l.css/luar.css) cria um containing block que
+     ancora/recorta o drawer `fixed` à altura da barra (~64px) — o fundo areia
+     opaco existe mas é recortado, e os itens vazam ilegíveis sobre o hero.
+     Sintoma observado: transparente ao abrir no topo. No mobile removemos o
+     blur SEMPRE: assim o drawer volta a se ancorar no viewport e cobrir a tela
+     inteira com fundo sólido, em qualquer navegador e em qualquer scroll.
+     A barra mantém o fundo --nav-bg (areia 85%), só sem o blur no mobile. */
+  :root[data-theme="luar"] .landing-nav {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
