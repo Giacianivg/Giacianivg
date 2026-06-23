@@ -1,27 +1,24 @@
 {
-  "_comment": "Avaliacoes curadas (apenas reais e positivas) exibidas na Secao 8. Selecao editorial de reviews genuinas do Google — NAO e um feed ao vivo (ver porque no commit). Para atualizar: troque os itens abaixo por avaliacoes reais e ajuste 'googleUrl' para o link do perfil no Google Maps. Remova os itens marcados provisional:true ao colar as reais.",
+  "_comment": "Avaliacoes REAIS do Google da pousada, exibidas na Secao 8 (carrossel editorial). Selecao curada — NAO e feed ao vivo. Texto e palavra de hospede real: nao alterar o sentido. O link 'Ver todas as avaliacoes no Google' so aparece quando 'googleUrl' for um link real (enquanto contiver 'REPLACE', o JS o mantem oculto). Para ativar: troque 'googleUrl' pelo link do perfil no Google Maps.",
   "googleUrl": "https://maps.google.com/?cid=REPLACE_COM_O_CID_DA_POUSADA",
   "items": [
     {
       "stars": 5,
-      "text": "Lugar lindo, tranquilo e muito bem cuidado. A piscina e a vista da serra são de tirar o fôlego — voltamos com a alma lavada.",
-      "author": "Avaliação ilustrativa",
-      "meta": "exemplo provisório · substituir por review real do Google",
-      "provisional": true
+      "text": "Pousada simples mas tudo limpinho, bom café da manhã, pessoas super amáveis e chuveiro ótimo. Vista linda, tranquilidade e bom preço.",
+      "author": "Sergio Pié",
+      "meta": "via Google"
     },
     {
       "stars": 5,
-      "text": "Atendimento que parece de casa de amigo. As crianças amaram o parquinho e o salão de jogos, e o café da manhã é caprichado demais.",
-      "author": "Avaliação ilustrativa",
-      "meta": "exemplo provisório · substituir por review real do Google",
-      "provisional": true
+      "text": "Amo e sempre volto quando possível. A Lili e o esposo são muito prestativos. Vista linda, tranquilidade e ideal para crianças.",
+      "author": "Adriana José",
+      "meta": "via Google"
     },
     {
       "stars": 5,
-      "text": "Base perfeita para explorar o Circuito das Águas. Pertinho de tudo e, na volta, um sossego só. Já queremos voltar.",
-      "author": "Avaliação ilustrativa",
-      "meta": "exemplo provisório · substituir por review real do Google",
-      "provisional": true
+      "text": "Lugar tranquilo, ótimo para passar uns dias — mas o destaque são as pessoas. O atendimento da Lillieli, desde o WhatsApp até a saída, é impecável. Voltarei mais vezes.",
+      "author": "Bruna Monique",
+      "meta": "via Google"
     }
   ]
 }

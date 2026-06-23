@@ -301,10 +301,34 @@
   </div>
 </section>
 
-<!-- Seção 8 — Depoimentos: REMOVIDA até haver avaliações reais do Google.
-     O reviews.json continha apenas exemplos provisórios (provisional:true) — não
-     exibir review fictício ao público. Reativar com reviews reais quando houver
-     (reverter este commit ou recolocar a seção + o carrossel no JS). -->
+<!-- Seção 8 — Depoimentos (carrossel editorial de avaliações REAIS do Google; lê reviews.json) -->
+<section class="landing-section" id="depoimentos" style="background:var(--bg0)">
+  <div class="landing-section-inner">
+    <header class="ed-section-head ed-fade" style="max-width:760px;margin-inline:auto">
+      <span class="ed-eyebrow">Quem já ficou</span>
+      <h2>A palavra de quem esteve aqui</h2>
+    </header>
+    <div class="ed-quotes ed-fade" data-reviews-src="/landing/reviews.json">
+      <!-- Fallback estático (sem JS): mostra uma avaliação real; o JS ativa o carrossel com as demais -->
+      <figure class="ed-quote" id="reviewQuote" aria-live="polite">
+        <div class="ed-quote__stars" aria-hidden="true">★★★★★</div>
+        <blockquote>“Pousada simples mas tudo limpinho, bom café da manhã, pessoas super amáveis e chuveiro ótimo. Vista linda, tranquilidade e bom preço.”</blockquote>
+        <figcaption>
+          <span class="ed-quote__author">Sergio Pié</span>
+          <span class="ed-quote__meta">via Google</span>
+        </figcaption>
+      </figure>
+      <div class="ed-quotes__nav" hidden>
+        <button class="ed-quotes__btn" type="button" data-dir="prev" aria-label="Avaliação anterior">←</button>
+        <div class="ed-quotes__dots" role="tablist" aria-label="Avaliações"></div>
+        <button class="ed-quotes__btn" type="button" data-dir="next" aria-label="Próxima avaliação">→</button>
+      </div>
+      <div class="ed-quotes__more" hidden>
+        <a class="ed-link" href="#" target="_blank" rel="noopener">Ver todas as avaliações no Google <span class="ed-arrow">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Seção 9 — FAQ (accordion nativo, acessível) -->
 <section class="landing-section" id="faq" style="background:var(--bg1)">
@@ -439,7 +463,75 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
 })();
 
-// (Carrossel de depoimentos removido junto com a Seção 8 — sem reviews reais ainda.)
+// Depoimentos: carrossel de avaliações reais (carrega reviews.json).
+// Sem JS/fetch, o quote estático de fallback no HTML permanece visível.
+(function () {
+  var root = document.querySelector('.ed-quotes');
+  if (!root || !window.fetch) return;
+  var src = root.getAttribute('data-reviews-src');
+  if (!src) return;
+
+  fetch(src).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+    if (!data || !Array.isArray(data.items) || !data.items.length) return;
+
+    var items = data.items;
+    var fig = root.querySelector('#reviewQuote');
+    var quoteEl = fig.querySelector('blockquote');
+    var starsEl = fig.querySelector('.ed-quote__stars');
+    var authorEl = fig.querySelector('.ed-quote__author');
+    var metaEl = fig.querySelector('.ed-quote__meta');
+    var nav = root.querySelector('.ed-quotes__nav');
+    var dotsWrap = root.querySelector('.ed-quotes__dots');
+    var moreWrap = root.querySelector('.ed-quotes__more');
+    var moreLink = moreWrap ? moreWrap.querySelector('a') : null;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var current = 0;
+    var timer = null;
+
+    function render(n) {
+      var it = items[n];
+      starsEl.textContent = '★★★★★'.slice(0, it.stars || 5);
+      quoteEl.textContent = '“' + it.text + '”';
+      authorEl.textContent = it.author || '';
+      metaEl.textContent = it.meta || '';
+      Array.prototype.forEach.call(dotsWrap.children, function (d, idx) {
+        d.setAttribute('aria-selected', idx === n ? 'true' : 'false');
+      });
+      current = n;
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function start() { stop(); if (!reduce) timer = setInterval(function () { render((current + 1) % items.length); }, 7000); }
+    function go(delta) { render((current + delta + items.length) % items.length); start(); }
+
+    if (items.length > 1) {
+      items.forEach(function (_, idx) {
+        var b = document.createElement('button');
+        b.className = 'ed-quotes__dot';
+        b.type = 'button';
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-label', 'Avaliação ' + (idx + 1));
+        b.addEventListener('click', function () { render(idx); start(); });
+        dotsWrap.appendChild(b);
+      });
+      nav.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-dir]');
+        if (btn) go(btn.getAttribute('data-dir') === 'next' ? 1 : -1);
+      });
+      nav.hidden = false;
+      root.addEventListener('mouseenter', stop);
+      root.addEventListener('mouseleave', start);
+      root.addEventListener('focusin', stop);
+      start();
+    }
+
+    if (moreLink && data.googleUrl && data.googleUrl.indexOf('REPLACE') === -1) {
+      moreLink.href = data.googleUrl;
+      moreWrap.hidden = false;
+    }
+
+    render(0);
+  }).catch(function () { /* mantém o fallback estático */ });
+})();
 </script>
 </body>
 </html>
