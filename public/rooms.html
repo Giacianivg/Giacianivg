@@ -499,6 +499,20 @@
         </div>
       </div>
 
+      <!-- Nomes públicos das alas — FONTE ÚNICA (reflete em reserva online, Luna e calendário) -->
+      <div class="card" id="public-names-card" style="margin-bottom:var(--sp-4);padding:var(--sp-4);border:1px solid var(--bdr1);border-radius:var(--r-md);background:var(--sur1)">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-3)">
+          <strong style="font-size:.95rem">Nomes públicos das alas</strong>
+          <span style="font-size:.72rem;color:var(--tx3)">Um único lugar de edição — reflete na reserva online, na Luna e no calendário. Não altera o nome interno dos quartos (Front Desk).</span>
+        </div>
+        <div style="font-size:.72rem;color:var(--warn,#b45309);background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:var(--sp-3)">
+          ⚠️ A página de marketing (landing/index.html) tem o texto fixo à mão — se mudar um nome aqui, ajuste a landing também.
+        </div>
+        <div id="public-names-rows" style="display:flex;flex-direction:column;gap:var(--sp-2)">
+          <div style="color:var(--tx3);font-size:.8rem">Carregando…</div>
+        </div>
+      </div>
+
       <!-- Table view (hidden by default) -->
       <div id="view-table" style="display:none">
         <div class="rooms-table-wrap">
@@ -991,6 +1005,55 @@
     setupModalClosers();
     setupModalActions();
     loadRooms();
+    loadPublicNames();
+  }
+
+  // ── Nomes públicos das alas (fonte única — room_types) ───────────
+  function escAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+  async function loadPublicNames() {
+    const cont = document.getElementById('public-names-rows');
+    try {
+      const res = await apiFetch('/api/rooms/types');
+      const list = (res && res.room_types) || [];
+      if (!list.length) { cont.innerHTML = '<div style="color:var(--tx3);font-size:.8rem">Sem alas configuradas.</div>'; return; }
+      cont.innerHTML = list.map(rt => `
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap" data-ala="${escAttr(rt.ala)}">
+          <span style="font-weight:700;min-width:28px;color:var(--tx2)">${escAttr(rt.ala)}</span>
+          <input class="input pn-name" style="flex:1;min-width:180px" value="${escAttr(rt.public_name)}" placeholder="Nome público (ex: Casal Especial)">
+          <input class="input pn-sub" style="width:140px" value="${escAttr(rt.subtitle)}" placeholder="Subtítulo (ex: 5 suítes)">
+          <button class="btn btn-sm pn-save" type="button">Salvar</button>
+          <span class="pn-msg" style="font-size:.72rem;color:var(--tx3)"></span>
+        </div>`).join('');
+      cont.querySelectorAll('.pn-save').forEach(btn => {
+        btn.addEventListener('click', () => savePublicName(btn.closest('[data-ala]')));
+      });
+    } catch (err) {
+      cont.innerHTML = `<div style="color:var(--err);font-size:.8rem">Falha ao carregar nomes: ${escAttr(err.message)}</div>`;
+    }
+  }
+
+  async function savePublicName(row) {
+    const ala  = row.getAttribute('data-ala');
+    const name = row.querySelector('.pn-name').value.trim();
+    const sub  = row.querySelector('.pn-sub').value.trim();
+    const msg  = row.querySelector('.pn-msg');
+    if (!name) { msg.style.color = 'var(--err)'; msg.textContent = 'Nome obrigatório'; return; }
+    msg.style.color = 'var(--tx3)'; msg.textContent = 'Salvando…';
+    try {
+      const res = await apiFetch(`/api/rooms/types/${encodeURIComponent(ala)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ public_name: name, subtitle: sub }),
+      });
+      if (res && res.success !== false) {
+        msg.style.color = 'var(--ok,#16a34a)'; msg.textContent = 'Salvo ✓';
+        setTimeout(() => { msg.textContent = ''; }, 2500);
+      } else {
+        msg.style.color = 'var(--err)'; msg.textContent = (res && res.message) || 'Falha';
+      }
+    } catch (err) {
+      msg.style.color = 'var(--err)'; msg.textContent = err.message || 'Falha';
+    }
   }
 
   // ── Load rooms ───────────────────────────────────────────────

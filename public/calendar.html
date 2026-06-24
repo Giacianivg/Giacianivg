@@ -514,7 +514,7 @@
     sb.auth.getSession().then(({ data: sd }) => {
       authToken = sd?.session?.access_token;
       checkCompBanner();
-      loadSpecialPeriods().finally(render);
+      Promise.all([loadSpecialPeriods(), loadRoomTypes()]).finally(render);
     });
   });
 
@@ -612,6 +612,21 @@
      calendário de feriados (★/◆) é uma camada separada de contexto. */
   let SPECIAL_PERIODS_RAW = [];
   let MINSTAY = []; // [{ from, to, label, minNights, rowId, singleDay }]
+
+  /* Nomes públicos das alas vêm da FONTE ÚNICA (room_types). Sobrescreve os
+     labels/subs do ROOMS; se falhar, mantém o fallback hardcoded. */
+  async function loadRoomTypes() {
+    try {
+      const r = await fetch('/api/public/room-types');
+      const j = await r.json();
+      for (const rt of (j?.room_types || [])) {
+        const room = ROOMS.find(x => x.code === rt.room_type_code);
+        if (!room) continue;
+        if (rt.public_name) room.label = rt.public_name;
+        if (rt.subtitle)    room.sub   = rt.subtitle;
+      }
+    } catch { /* mantém labels padrão */ }
+  }
 
   async function loadSpecialPeriods() {
     try {

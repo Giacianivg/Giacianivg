@@ -81,10 +81,23 @@ let _warnedOnce = false;
 const PRICING_KEYS = ['alta_base_price', 'alta_extra_per_person', 'discount_7plus_pct', 'discount_14plus_pct', 'pet_fee_per_day'];
 const QUOTABLE_CODES = ['ALA_A', 'ALA_B', 'ALA_C_CASAL'];
 
+/**
+ * Mescla os nomes públicos vindos de room_types sobre o mapa de labels.
+ * Função PURA (não toca preço): sobrescreve só o tipoLabel por room_type_code.
+ * Lista vazia/ausente → retorna o fallback intacto (byte-idêntico).
+ */
+function applyRoomTypeLabels(baseLabels, rows) {
+  const out = { ...baseLabels };
+  for (const rt of (rows || [])) {
+    if (rt && rt.room_type_code && rt.public_name) out[rt.room_type_code] = rt.public_name;
+  }
+  return out;
+}
+
 async function fetchPricingConfig() {
   const { supabaseAdmin } = require('../supabase/client');
 
-  const [roomsRes, settingsRes, periodsRes, packagesRes] = await Promise.all([
+  const [roomsRes, settingsRes, periodsRes, packagesRes, roomTypesRes] = await Promise.all([
     // NOTA: busca por code, NÃO por active — as linhas ALA_* estão active=false
     // no banco (os quartos físicos A1-C5 é que estão ativos). Divergência de
     // dados a resolver com o Founder; aqui preservamos o comportamento atual.
@@ -92,14 +105,22 @@ async function fetchPricingConfig() {
     supabaseAdmin.from('settings').select('key, value').in('key', PRICING_KEYS),
     supabaseAdmin.from('special_periods').select('label, start_md, end_md, min_nights').eq('active', true),
     supabaseAdmin.from('packages').select('name, description, start_date, end_date, nights, max_guests, price, includes').eq('active', true),
+    // Nome público por ala (fonte única) — sobrescreve tipoLabel; fallback no DEFAULT.
+    supabaseAdmin.from('room_types').select('room_type_code, public_name').eq('active', true),
   ]);
 
   const cfg = {
     ...DEFAULT_CONFIG,
     priceTable: { ...DEFAULT_CONFIG.priceTable },
+    tipoLabel: { ...DEFAULT_CONFIG.tipoLabel },
     feriadoRanges: DEFAULT_CONFIG.feriadoRanges,
     packages: DEFAULT_CONFIG.packages,
   };
+
+  // Nome público (tipoLabel) vem de room_types — um único ponto de edição.
+  if (!roomTypesRes.error) {
+    cfg.tipoLabel = applyRoomTypeLabels(cfg.tipoLabel, roomTypesRes.data);
+  }
 
   if (!roomsRes.error && roomsRes.data?.length) {
     for (const r of roomsRes.data) {
@@ -392,7 +413,7 @@ ${descontoLine}💳 *Total: R$ ${q.totalFinal}*
 Responda *CONFIRMAR* para reservar e nossa equipe finaliza! 🌿`;
 }
 
-module.exports = { calculateQuotation, formatWhatsAppMessage, invalidatePricingCache, getMinNightsForISO };
+module.exports = { calculateQuotation, formatWhatsAppMessage, invalidatePricingCache, getMinNightsForISO, applyRoomTypeLabels };
 
 // ─── Pacotes promocionais (generalização do PASCOA_PACKAGE) ──────────────────
 // Compat: getPascoaPackage e PASCOA_PACKAGE mantêm nome e shape de retorno.

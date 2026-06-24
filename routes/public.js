@@ -77,6 +77,17 @@ router.post('/session', async (req, res) => {
   return ok(res, { access_token: issueAccessToken(), expires_in: 900 });
 });
 
+// GET /api/public/room-types — nomes públicos das alas (fonte única, leitura aberta)
+router.get('/room-types', async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('room_types')
+    .select('ala, room_type_code, public_name, subtitle, sort_order')
+    .eq('active', true)
+    .order('sort_order', { ascending: true });
+  if (error) return serverError(res, error);
+  return ok(res, { room_types: data || [] });
+});
+
 // GET /api/public/offers?checkin=&checkout=&guests=
 router.get('/offers', requirePublicAccess, async (req, res) => {
   let parsed;

@@ -99,6 +99,52 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ─── Nomes públicos por ala (fonte única — room_types) ───────────────────────
+// Definidos ANTES de /:code para não serem capturados pela rota dinâmica.
+
+// GET /api/rooms/types — lista nomes públicos das alas (admin)
+router.get('/types', async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from('room_types')
+    .select('ala, room_type_code, public_name, subtitle, sort_order, active, updated_at')
+    .order('sort_order', { ascending: true });
+  if (error) return serverError(res, error);
+  return ok(res, { room_types: data || [] });
+});
+
+// PATCH /api/rooms/types/:ala — edita o nome público de uma ala (fonte única).
+// Reflete automaticamente na cotação (reservar.html), Luna e calendar.html.
+router.patch('/types/:ala', async (req, res) => {
+  const ala = String(req.params.ala || '').toUpperCase();
+
+  const patch = {};
+  if (typeof req.body.public_name === 'string' && req.body.public_name.trim()) {
+    patch.public_name = req.body.public_name.trim();
+  }
+  if (req.body.subtitle !== undefined) {
+    patch.subtitle = req.body.subtitle === null ? null : String(req.body.subtitle).trim();
+  }
+  if (Object.keys(patch).length === 0) {
+    return fail(res, 'no_changes', 'Informe public_name e/ou subtitle');
+  }
+  patch.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabaseAdmin
+    .from('room_types')
+    .update(patch)
+    .eq('ala', ala)
+    .select()
+    .maybeSingle();
+
+  if (error) return serverError(res, error);
+  if (!data) return notFound(res, `Ala ${ala}`);
+
+  // Invalida o cache do motor para o novo nome valer imediatamente na cotação/Luna.
+  try { require('../services/quotation/engine').invalidatePricingCache(); } catch { /* noop */ }
+
+  return ok(res, { room_type: data });
+});
+
 // GET /api/rooms/:code
 // Room detail + 30-day availability window
 router.get('/:code', async (req, res) => {
