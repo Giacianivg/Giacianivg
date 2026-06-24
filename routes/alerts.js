@@ -22,6 +22,7 @@ router.get('/active', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('leads')
       .select('id, name, whatsapp_number, alert_type, alert_message, score, score_label, alert_updated_at')
+      .eq('is_test', false)
       .not('alert_type', 'is', null);
 
     if (error) return serverError(res, error);

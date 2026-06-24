@@ -36,9 +36,10 @@ router.post('/upsert', async (req, res) => {
   return ok(res, { lead_id: data.id, lead: data }, 200);
 });
 
-// GET /api/leads?funnel_stage=new&search=5519...&limit=50&offset=0
+// GET /api/leads?funnel_stage=new&search=5519...&limit=50&offset=0&include_test=1
 router.get('/', async (req, res) => {
-  const { funnel_stage, search, limit = 50, offset = 0 } = req.query;
+  const { funnel_stage, search, limit = 50, offset = 0, include_test } = req.query;
+  const includeTest = ['1', 'true', 'yes'].includes(String(include_test).toLowerCase());
 
   let query = supabaseAdmin
     .from('leads')
@@ -48,6 +49,7 @@ router.get('/', async (req, res) => {
       name,
       email,
       funnel_stage,
+      is_test,
       created_at,
       updated_at,
       conversations(count)
@@ -55,6 +57,8 @@ router.get('/', async (req, res) => {
     .order('updated_at', { ascending: false })
     .range(Number(offset), Number(offset) + Number(limit) - 1);
 
+  // Por padrão esconde dados de teste; ?include_test=1 revela.
+  if (!includeTest) query = query.eq('is_test', false);
   if (funnel_stage) query = query.eq('funnel_stage', funnel_stage);
   if (search) {
     // vírgula/parênteses quebram a sintaxe do .or() do PostgREST
@@ -128,6 +132,29 @@ router.patch('/:id', async (req, res) => {
     return serverError(res, error);
   }
   return ok(res, { lead: data });
+});
+
+// POST /api/leads/:id/mark-test  — body: { is_test: boolean }
+// Marca/desmarca o lead como teste e cascateia (reservas, propostas, conversas,
+// pagamentos, comandas) via função set_test_by_phone. Esconde/revela nos KPIs e listas.
+router.post('/:id/mark-test', async (req, res) => {
+  const isTest = req.body.is_test === undefined ? true : Boolean(req.body.is_test);
+
+  const { data: lead, error: findErr } = await supabaseAdmin
+    .from('leads')
+    .select('id, whatsapp_number')
+    .eq('id', req.params.id)
+    .single();
+
+  if (findErr || !lead) return fail(res, 'not_found', 'Lead not found', 404);
+
+  const { error } = await supabaseAdmin.rpc('set_test_by_phone', {
+    p_phone: lead.whatsapp_number,
+    p_is_test: isTest,
+  });
+
+  if (error) return serverError(res, error);
+  return ok(res, { lead_id: lead.id, is_test: isTest });
 });
 
 module.exports = router;

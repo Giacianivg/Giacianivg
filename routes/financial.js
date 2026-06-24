@@ -21,6 +21,7 @@ router.get('/summary', async (req, res) => {
     const { data: reservations, error: resErr } = await supabaseAdmin
       .from('reservations')
       .select('id, room_type, total_amount, deposit_amount, balance_amount, status, checkin_date, checkout_date, created_at')
+      .eq('is_test', false)
       .in('status', ACTIVE_STATUSES);
 
     if (resErr) return serverError(res, resErr);
@@ -29,6 +30,7 @@ router.get('/summary', async (req, res) => {
     const { data: payments, error: payErr } = await supabaseAdmin
       .from('payments')
       .select('amount, status, confirmed_at')
+      .eq('is_test', false)
       .eq('status', 'confirmed');
 
     if (payErr) return serverError(res, payErr);
@@ -105,6 +107,7 @@ router.get('/monthly', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('reservations')
       .select('total_amount, deposit_amount, status, checkin_date')
+      .eq('is_test', false)
       .in('status', ACTIVE_STATUSES)
       .gte('checkin_date', from)
       .lte('checkin_date', to);
@@ -153,6 +156,7 @@ router.get('/recent', async (req, res) => {
         guests, total_amount, deposit_amount, balance_amount, status, created_at,
         leads(name, whatsapp_number)
       `)
+      .eq('is_test', false)
       .in('status', ACTIVE_STATUSES)
       .order('created_at', { ascending: false })
       .limit(limit);

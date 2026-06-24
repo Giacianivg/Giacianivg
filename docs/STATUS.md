@@ -1,7 +1,28 @@
 # STATUS — Pousada Luz da Lua
 
-> Atualizado: 2026-06-16 (sessão: melhorias calendário/reservas + diagnóstico de pricing)
+> Atualizado: 2026-06-24 (sessão: Bloco 1 — Higiene de dados / marcador is_test)
 > Branch: `master`
+
+## Bloco 1 — Higiene de dados (is_test) — 2026-06-24
+
+Roadmap incremental (30 dias, blocos isolados). **Bloco 1 concluído** (local + DB de
+produção). Falta **deploy** (`npx vercel --prod`) para os filtros valerem na dashboard ao vivo.
+
+- **Migrations 039 + 040** (aplicadas em produção): coluna `is_test` em 8 tabelas
+  (leads, reservations, proposals, conversation_states, conversations, payments,
+  room_charges, counter_tabs); tabela `test_phone_numbers`; triggers de auto-marca
+  (telefone na lista) e herança ("teste pegajoso pra baixo"); função
+  `set_test_by_phone()`; views `vw_today_board`/`vw_room_day_status` excluem teste.
+- **Backfill:** tudo `is_test=true`, **exceto** a única reserva real `RES-2026-00019`
+  (grupo 60px, 13–18/07/2026, R$39.000). Lead "jaine" fica como teste (telefone fake),
+  mas a reserva é real e aparece nos KPIs — **exceção fixada** (não use o botão "marcar
+  teste" em jaine, cascatearia na reserva real).
+- **Backend:** filtro `is_test=false` em funnel/revenue analytics, financial, alerts,
+  ai-activity; alert-calculator ignora lead de teste.
+- **CRM:** listas (leads.html, bookings.html) escondem teste por padrão + toggle
+  "Mostrar testes"; botão 🧪 marca/desmarca lead como teste (`/api/leads/:id/mark-test`).
+- **Testes:** 491/491 verdes (2 novos provam exclusão); lint 0 erros.
+- Número da equipe `5519998400306` semeado em `test_phone_numbers`.
 
 ## ⚠️ AVISO CRÍTICO — Motor de pricing está LIGADO (`auto`)
 

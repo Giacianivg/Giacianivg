@@ -20,15 +20,22 @@ function makeMockSupabase(rows) {
   return {
     from(table) {
       if (table === 'conversation_states') {
+        const ctx = { _isTest: undefined };
         return {
           select() { return this; },
+          // .eq('is_test', false) exclui dados de teste (undefined = não-teste)
+          eq(col, val) { if (col === 'is_test') ctx._isTest = val; return this; },
           gte() {
-            return Promise.resolve({ data: rows, error: null });
+            const out = ctx._isTest === undefined
+              ? rows
+              : rows.filter((r) => Boolean(r.is_test) === Boolean(ctx._isTest));
+            return Promise.resolve({ data: out, error: null });
           },
         };
       }
       return {
         select() { return this; },
+        eq() { return this; },
         gte() { return Promise.resolve({ data: [], error: null }); },
       };
     },
@@ -201,6 +208,24 @@ describe('getFunnelData', () => {
 
     // drop_off_rate = 1 / 4 = 0.25
     assert.equal(showRoomsStage.drop_off_rate, 0.25, 'drop_off_rate should be 0.25');
+  });
+
+  it('7. Exclui dados de teste — is_test=true não entra no funil', async () => {
+    const real = activeState('SHOW_ROOMS', 'lead-real', '5519999999991');
+    const testRow1 = { ...activeState('SHOW_ROOMS', 'lead-t1', '5519999999992'), is_test: true };
+    const testRow2 = { ...activeState('CONFIRM_BOOKING', 'lead-t2', '5519999999993'), is_test: true };
+
+    // O mock aplica o filtro .eq('is_test', false) e descarta os de teste.
+    const mock = makeMockSupabase([real, testRow1, testRow2]);
+    const { getFunnelData } = loadAnalyticsWithMock(mock);
+    const result = await getFunnelData(30, mock);
+
+    // Só o lead real conta
+    assert.equal(result.total_active_leads, 1, 'só 1 lead real deve contar');
+    const showRooms = result.stages.find((s) => s.name === 'SHOW_ROOMS');
+    assert.equal(showRooms.count, 1, 'SHOW_ROOMS deve ter só o lead real');
+    const confirm = result.stages.find((s) => s.name === 'CONFIRM_BOOKING');
+    assert.equal(confirm.count, 0, 'CONFIRM_BOOKING de teste não deve contar');
   });
 
   it('6. Handles empty list gracefully — no errors, zero totals', async () => {

@@ -49,6 +49,7 @@ async function getPipelineRevenue(supabaseClient) {
   const { data: states, error: statesErr } = await db
     .from('conversation_states')
     .select('lead_id, phone, state, data')
+    .eq('is_test', false)
     .neq('state', 'HANDOFF_HUMAN');
 
   if (statesErr) throw new Error(`Failed to fetch conversation_states: ${statesErr.message}`);
@@ -59,6 +60,7 @@ async function getPipelineRevenue(supabaseClient) {
   const { data: confirmedReservations, error: resErr } = await db
     .from('reservations')
     .select('total_amount, checkin_date, checkout_date')
+    .eq('is_test', false)
     .in('status', ['confirmed', 'checked_in', 'completed'])
     .order('created_at', { ascending: false })
     .limit(10);
@@ -85,6 +87,7 @@ async function getPipelineRevenue(supabaseClient) {
   const { data: recentConfirmed, error: recentErr } = await db
     .from('reservations')
     .select('total_amount')
+    .eq('is_test', false)
     .in('status', ['confirmed', 'checked_in', 'completed'])
     .gte('created_at', thirtyDaysAgo);
 
@@ -108,6 +111,7 @@ async function getPipelineRevenue(supabaseClient) {
     const { data: proposals, error: propErr } = await db
       .from('proposals')
       .select('lead_id, final_amount, created_at')
+      .eq('is_test', false)
       .in('lead_id', leadIds)
       .in('status', ['sent', 'viewed'])
       .order('created_at', { ascending: false });

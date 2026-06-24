@@ -28,6 +28,11 @@ function buildMockClient({ conversation_states = [], proposals = [], reservation
         _limitVal: null,
 
         select() { return self; },
+        eq(col, val) {
+          if (!self._filters.eq) self._filters.eq = [];
+          self._filters.eq.push({ col, val });
+          return self;
+        },
         neq(col, val) { self._filters.neq = { col, val }; return self; },
         in(col, vals) {
           if (!self._filters.in) self._filters.in = [];
@@ -43,6 +48,19 @@ function buildMockClient({ conversation_states = [], proposals = [], reservation
           return resolve(await self._exec());
         },
 
+        // Aplica filtros .eq() registrados (inclui is_test=false: exclui dados de teste;
+        // undefined é tratado como não-teste e permanece).
+        _applyEq(rows) {
+          for (const f of (self._filters.eq || [])) {
+            if (f.col === 'is_test') {
+              rows = rows.filter((r) => Boolean(r.is_test) === Boolean(f.val));
+            } else {
+              rows = rows.filter((r) => r[f.col] === f.val);
+            }
+          }
+          return rows;
+        },
+
         async _exec() {
           if (table === 'conversation_states') {
             const neqFilter = self._filters.neq;
@@ -50,7 +68,7 @@ function buildMockClient({ conversation_states = [], proposals = [], reservation
             if (neqFilter && neqFilter.col === 'state') {
               rows = rows.filter((r) => r.state !== neqFilter.val);
             }
-            return { data: rows, error: null };
+            return { data: self._applyEq(rows), error: null };
           }
 
           if (table === 'proposals') {
@@ -64,7 +82,7 @@ function buildMockClient({ conversation_states = [], proposals = [], reservation
                 rows = rows.filter((r) => f.vals.includes(r.status));
               }
             }
-            return { data: rows, error: null };
+            return { data: self._applyEq(rows), error: null };
           }
 
           if (table === 'reservations') {
@@ -91,7 +109,7 @@ function buildMockClient({ conversation_states = [], proposals = [], reservation
               }
             }
 
-            return { data: rows, error: null };
+            return { data: self._applyEq(rows), error: null };
           }
 
           return { data: [], error: null };
@@ -324,5 +342,27 @@ describe('revenue-analytics — getPipelineRevenue', () => {
     assert.equal(result.forecast_30d, 0);
     assert.equal(result.forecast_60d, 0);
     assert.deepEqual(result.by_stage, {});
+  });
+
+  it('11. Exclui dados de teste — is_test=true fora de receita e pipeline', async () => {
+    const client = buildMockClient({
+      conversation_states: [
+        { lead_id: 'lead-real', phone: '5511001', state: 'SEND_QUOTE', data: {}, is_test: false },
+        { lead_id: 'lead-test', phone: '5511002', state: 'SEND_QUOTE', data: {}, is_test: true },
+      ],
+      proposals: [],
+      reservations_history: [],
+      reservations_recent: [
+        { total_amount: 39000, status: 'confirmed', is_test: false }, // grupo real
+        { total_amount: 300,   status: 'confirmed', is_test: true },  // teste
+      ],
+    });
+
+    const result = await getPipelineRevenue(client);
+
+    // Só a reserva real entra na receita confirmada
+    assert.equal(result.confirmed_revenue, 39000, 'receita deve ignorar reserva de teste');
+    // Só o lead real entra no pipeline (o de teste é filtrado no mock)
+    assert.equal(result.leads_count, 1, 'só o lead real conta no pipeline');
   });
 });

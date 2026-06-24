@@ -57,11 +57,16 @@ async function calculateLeadAlert(leadId, supabaseClient) {
   // 2. Fetch lead for score and created_at
   const { data: lead, error: leadErr } = await db
     .from('leads')
-    .select('id, score, created_at')
+    .select('id, score, created_at, is_test')
     .eq('id', leadId)
     .single();
 
   if (leadErr || !lead) {
+    return { type: null, message: null, priority: 0 };
+  }
+
+  // Leads de teste não geram alertas (mantém o painel limpo)
+  if (lead.is_test) {
     return { type: null, message: null, priority: 0 };
   }
 

@@ -272,6 +272,9 @@
             <option value="direct">🔗 Direto</option>
             <option value="phone">📞 Telefone</option>
           </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--tx3);cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="filter-show-test"> Mostrar testes
+          </label>
         </div>
         <div class="month-nav">
           <button class="nav-arrow" id="prev-month">‹</button>
@@ -473,11 +476,12 @@ async function loadAndRender() {
     const lastDay = new Date(curYear, curMonth+1, 0).getDate();
     const to   = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${lastDay}`;
 
-    const data = await DS.api(`/api/reservations?checkin_from=${from}&checkin_to=${to}&limit=500`);
+    const testParam = document.getElementById('filter-show-test')?.checked ? '&include_test=1' : '';
+    const data = await DS.api(`/api/reservations?checkin_from=${from}&checkin_to=${to}&limit=500${testParam}`);
     allReservations = data?.reservations || [];
 
     // Also load reservations that CHECKOUT in this month (started before)
-    const data2 = await DS.api(`/api/reservations?checkin_to=${to}&limit=500`);
+    const data2 = await DS.api(`/api/reservations?checkin_to=${to}&limit=500${testParam}`);
     const extra  = (data2?.reservations || []).filter(r =>
       r.checkout_date >= from && r.checkin_date < from
     );
@@ -1404,6 +1408,9 @@ function bindEvents() {
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => renderCurrentView(), 300);
   });
+
+  // "Mostrar testes" altera a busca no servidor → recarrega
+  document.getElementById('filter-show-test')?.addEventListener('change', () => loadAndRender());
 
   // Drawer
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);

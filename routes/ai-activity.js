@@ -36,9 +36,11 @@ router.get('/status', async (req, res) => {
     const [convRes, leadRes, fuRes] = await Promise.all([
       supabaseAdmin.from('conversations')
         .select('id', { count: 'exact', head: true })
+        .eq('is_test', false)
         .gte('created_at', `${today}T00:00:00.000Z`),
       supabaseAdmin.from('leads')
         .select('id', { count: 'exact', head: true })
+        .eq('is_test', false)
         .gte('created_at', `${today}T00:00:00.000Z`),
       supabaseAdmin.from('scheduled_follow_ups')
         .select('id', { count: 'exact', head: true })
@@ -74,11 +76,13 @@ router.get('/events', async (req, res) => {
     const [convRes, leadRes, fuRes] = await Promise.all([
       supabaseAdmin.from('conversations')
         .select('id, phone, role, content, created_at')
+        .eq('is_test', false)
         .eq('role', 'user')
         .order('created_at', { ascending: false })
         .limit(12),
       supabaseAdmin.from('leads')
         .select('id, name, phone, source, score, created_at')
+        .eq('is_test', false)
         .order('created_at', { ascending: false })
         .limit(6),
       supabaseAdmin.from('scheduled_follow_ups')

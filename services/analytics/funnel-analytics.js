@@ -63,10 +63,11 @@ async function getFunnelData(periodDays = 30, supabaseClient) {
   const since = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString();
   const now = new Date().toISOString();
 
-  // Fetch all conversation_states created within the period
+  // Fetch all conversation_states created within the period (exclui dados de teste)
   const { data: states, error } = await client
     .from('conversation_states')
     .select('lead_id, phone, state, data, created_at, updated_at, expires_at')
+    .eq('is_test', false)
     .gte('created_at', since);
 
   if (error) {

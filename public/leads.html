@@ -186,6 +186,9 @@
             </select>
             <span style="font-size:.72rem;color:var(--tx3)" id="leads-count"></span>
           </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--tx3);cursor:pointer;margin-top:var(--sp-1)">
+            <input type="checkbox" id="show-test"> Mostrar testes
+          </label>
         </div>
         <div id="leads-list">
           <div style="padding:var(--sp-4)"><div class="skel skel-card" style="height:200px"></div></div>
@@ -238,18 +241,39 @@ function renderList(data) {
     const score = l.score_label || l.score || '';
     const ts    = l.last_message_at || l.updated_at || '';
     const isActive = activeLead && (activeLead.id === l.id);
+    const testBadge = l.is_test
+      ? `<span style="font-size:.62rem;font-weight:700;color:var(--warn,#b45309);background:#fef3c7;border-radius:4px;padding:1px 5px">TESTE</span>` : '';
+    const testBtn = l.id
+      ? `<button class="btn-test-toggle" title="${l.is_test ? 'Remover marca de teste' : 'Marcar como teste'}"
+           onclick="event.stopPropagation();toggleTest('${l.id}', ${!l.is_test})"
+           style="flex-shrink:0;border:none;background:none;cursor:pointer;font-size:.8rem;opacity:.55">${l.is_test ? '↩️' : '🧪'}</button>` : '';
     return `<div class="lead-item${isActive ? ' active' : ''}" onclick="selectLead(${JSON.stringify(l).replace(/"/g,'&quot;')})">
       <div class="avatar avatar-sm">${DS.initials(name)}</div>
       <div class="lead-item-info">
-        <div class="lead-item-name">${DS.esc(name)}</div>
+        <div class="lead-item-name">${DS.esc(name)} ${testBadge}</div>
         <div class="lead-item-meta">
           <span class="lead-item-phone">${DS.esc(phone)}</span>
           <span class="lead-item-time">${DS.rel(ts)}</span>
         </div>
       </div>
       <div style="flex-shrink:0">${DS.scoreBadge(score)}</div>
+      ${testBtn}
     </div>`;
   }).join('');
+}
+
+// ── Marca/desmarca lead como teste (cascateia no backend) ───────────────────
+async function toggleTest(leadId, isTest) {
+  try {
+    await DS.api(`/api/leads/${leadId}/mark-test`, {
+      method: 'POST',
+      body: JSON.stringify({ is_test: isTest }),
+    });
+    DS.toast?.(isTest ? 'Marcado como teste' : 'Removido de teste', 'success');
+    await loadLeads();
+  } catch (err) {
+    DS.toast?.(err.message || 'Falha ao marcar', 'error');
+  }
 }
 
 // ── Filtro ──────────────────────────────────────────────────────────────────
@@ -335,19 +359,25 @@ function renderMessages(msgs) {
   const avEl = document.getElementById('user-avatar');
   if (avEl) avEl.textContent = (session.user.email || '').slice(0,2).toUpperCase();
 
-  try {
-    const res = await DS.api('/api/leads?limit=500');
-    allLeads = res?.leads || res?.data || (Array.isArray(res) ? res : []);
-    filtered = [...allLeads];
-    document.getElementById('leads-count').textContent = filtered.length + ' leads';
-    renderList(filtered);
-  } catch (err) {
-    document.getElementById('leads-list').innerHTML = `<div style="padding:var(--sp-4);color:var(--err);font-size:.8125rem">${DS.esc(err.message)}</div>`;
-  }
+  await loadLeads();
 
   document.getElementById('search').addEventListener('input', applyFilter);
   document.getElementById('score-filter').addEventListener('change', applyFilter);
+  document.getElementById('show-test').addEventListener('change', loadLeads);
 })();
+
+// ── Carrega leads (respeita o toggle "Mostrar testes") ──────────────────────
+async function loadLeads() {
+  const showTest = document.getElementById('show-test')?.checked;
+  const url = `/api/leads?limit=500${showTest ? '&include_test=1' : ''}`;
+  try {
+    const res = await DS.api(url);
+    allLeads = res?.leads || res?.data || (Array.isArray(res) ? res : []);
+    applyFilter();
+  } catch (err) {
+    document.getElementById('leads-list').innerHTML = `<div style="padding:var(--sp-4);color:var(--err);font-size:.8125rem">${DS.esc(err.message)}</div>`;
+  }
+}
 </script>
 </body>
 </html>

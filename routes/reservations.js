@@ -20,20 +20,23 @@ const VALID_STATUSES = ['pending', 'confirmed', 'checkedin', 'checkedout', 'canc
 router.get('/', async (req, res) => {
   const {
     status, checkin_from, checkin_to, room_type, channel,
-    search, limit = 100, offset = 0,
+    search, limit = 100, offset = 0, include_test,
   } = req.query;
+  const includeTest = ['1', 'true', 'yes'].includes(String(include_test).toLowerCase());
 
   let query = supabaseAdmin
     .from('reservations')
     .select(`
       id, reservation_number, room_type, checkin_date, checkout_date,
       guests, total_amount, deposit_amount, balance_amount,
-      status, channel, notes, checkin_at, checkout_at, created_at, vehicle_plate,
+      status, channel, notes, checkin_at, checkout_at, created_at, vehicle_plate, is_test,
       leads!fk_res_lead!inner(id, whatsapp_number, name)
     `)
     .order('checkin_date', { ascending: true })
     .range(Number(offset), Number(offset) + Number(limit) - 1);
 
+  // Por padrão esconde reservas de teste; ?include_test=1 revela.
+  if (!includeTest) query = query.eq('is_test', false);
   if (status)       query = query.eq('status', status);
   if (checkin_from) query = query.gte('checkin_date', checkin_from);
   if (checkin_to)   query = query.lte('checkin_date', checkin_to);
