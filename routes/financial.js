@@ -2,7 +2,12 @@
 
 const { Router } = require('express');
 const { supabaseAdmin } = require('../services/supabase/client');
-const { ok, serverError } = require('../services/utils/response');
+const { ok, fail, notFound, serverError } = require('../services/utils/response');
+const {
+  validateExpense,
+  monthRange,
+  buildCategoryBreakdown,
+} = require('../services/financial/expense-helpers');
 
 const router = Router();
 
@@ -163,6 +168,187 @@ router.get('/recent', async (req, res) => {
 
     if (error) return serverError(res, error);
     return ok(res, { reservations: data || [], count: (data || []).length });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// DESPESAS (saída) — financeiro simples, sem IA. Fonte única, sem planilha paralela.
+// ════════════════════════════════════════════════════════════════════════════
+
+// GET /api/financial/categories?active=true
+router.get('/categories', async (req, res) => {
+  try {
+    let query = supabaseAdmin
+      .from('expense_categories')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (req.query.active !== undefined) {
+      query = query.eq('is_active', req.query.active === 'true');
+    }
+
+    const { data, error } = await query;
+    if (error) return serverError(res, error);
+    return ok(res, { categories: data || [] });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// POST /api/financial/categories
+router.post('/categories', async (req, res) => {
+  try {
+    const name = (req.body.name || '').trim();
+    if (!name) return fail(res, 'missing_fields', 'name é obrigatório');
+
+    const { data, error } = await supabaseAdmin
+      .from('expense_categories')
+      .insert({
+        name,
+        icon: req.body.icon || null,
+        sort_order: Number(req.body.sort_order) || 0,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return fail(res, 'duplicate', 'Categoria já existe', 409);
+      return serverError(res, error);
+    }
+    return ok(res, { category: data }, 201);
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// PATCH /api/financial/categories/:id — renomear / ícone / ativar-desativar
+router.patch('/categories/:id', async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.name !== undefined)       updates.name = String(req.body.name).trim();
+    if (req.body.icon !== undefined)       updates.icon = req.body.icon;
+    if (req.body.is_active !== undefined)  updates.is_active = !!req.body.is_active;
+    if (req.body.sort_order !== undefined) updates.sort_order = Number(req.body.sort_order) || 0;
+
+    if (!Object.keys(updates).length) return fail(res, 'no_fields', 'Nenhum campo válido para atualizar');
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabaseAdmin
+      .from('expense_categories')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') return fail(res, 'duplicate', 'Categoria já existe', 409);
+      return serverError(res, error);
+    }
+    if (!data) return notFound(res, 'Categoria');
+    return ok(res, { category: data });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// GET /api/financial/expenses?month=YYYY-MM
+router.get('/expenses', async (req, res) => {
+  try {
+    const { from, to, month } = monthRange(req.query.month);
+
+    const { data, error } = await supabaseAdmin
+      .from('expenses')
+      .select('id, amount, category_id, description, payment_method, expense_date, created_at, expense_categories(name, icon)')
+      .eq('is_test', false)
+      .gte('expense_date', from)
+      .lte('expense_date', to)
+      .order('expense_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) return serverError(res, error);
+
+    const expenses = (data || []).map(e => ({
+      id: e.id,
+      amount: Number(e.amount),
+      category_id: e.category_id,
+      category_name: e.expense_categories?.name || 'Sem categoria',
+      category_icon: e.expense_categories?.icon || null,
+      description: e.description,
+      payment_method: e.payment_method,
+      expense_date: e.expense_date,
+      created_at: e.created_at,
+    }));
+
+    return ok(res, { month, expenses, count: expenses.length });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// GET /api/financial/expenses/summary?month=YYYY-MM — total + por categoria
+router.get('/expenses/summary', async (req, res) => {
+  try {
+    const { from, to, month } = monthRange(req.query.month);
+
+    const { data, error } = await supabaseAdmin
+      .from('expenses')
+      .select('amount, category_id, expense_categories(name, icon)')
+      .eq('is_test', false)
+      .gte('expense_date', from)
+      .lte('expense_date', to);
+
+    if (error) return serverError(res, error);
+
+    const rows = (data || []).map(e => ({
+      amount: Number(e.amount),
+      category_id: e.category_id,
+      category_name: e.expense_categories?.name || 'Sem categoria',
+    }));
+
+    const breakdown = buildCategoryBreakdown(rows);
+    return ok(res, { month, ...breakdown });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// POST /api/financial/expenses — lançamento rápido
+router.post('/expenses', async (req, res) => {
+  try {
+    const { valid, errors, normalized } = validateExpense(req.body);
+    if (!valid) return fail(res, 'validation', errors.join('; '));
+
+    const { data, error } = await supabaseAdmin
+      .from('expenses')
+      .insert(normalized)
+      .select('id, amount, category_id, description, payment_method, expense_date, created_at')
+      .single();
+
+    if (error) {
+      if (error.code === '23503') return fail(res, 'invalid_category', 'Categoria inexistente');
+      return serverError(res, error);
+    }
+    return ok(res, { expense: data }, 201);
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// DELETE /api/financial/expenses/:id — corrigir lançamento errado
+router.delete('/expenses/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('expenses')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id')
+      .single();
+
+    if (error || !data) return notFound(res, 'Despesa');
+    return ok(res, { deleted: data.id });
   } catch (err) {
     return serverError(res, err);
   }

@@ -233,6 +233,10 @@
       </div>
       <div class="topbar-right">
         <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
+        <button class="btn btn-primary" id="btn-add-expense">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Despesa
+        </button>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -319,6 +323,45 @@
 
       </div><!-- /.bottom-grid -->
 
+      <!-- ── Despesas do mês ────────────────────────────────── -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Despesas do mês</div>
+            <div class="section-sub" id="exp-sub">Para onde foi o dinheiro</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--sp-3)">
+            <select class="year-select" id="exp-month"></select>
+            <button class="btn btn-primary btn-sm" id="btn-add-expense-2">+ Despesa</button>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="bottom-grid" style="grid-template-columns:1fr 2fr;margin-bottom:0">
+            <!-- Breakdown por categoria -->
+            <div>
+              <div style="font-size:.8125rem;color:var(--tx3);margin-bottom:var(--sp-3)">Por categoria</div>
+              <div class="room-list" id="exp-breakdown">
+                <div style="color:var(--tx3);font-size:.875rem">Carregando...</div>
+              </div>
+            </div>
+            <!-- Lista de lançamentos -->
+            <div>
+              <div style="font-size:.8125rem;color:var(--tx3);margin-bottom:var(--sp-3)">Lançamentos</div>
+              <div style="overflow-x:auto">
+                <table class="fin-table">
+                  <thead>
+                    <tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Forma</th><th style="text-align:right">Valor</th><th></th></tr>
+                  </thead>
+                  <tbody id="exp-body">
+                    <tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:var(--sp-6)">Carregando...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Últimas reservas ───────────────────────────────── -->
       <div class="section">
         <div class="section-head">
@@ -351,6 +394,53 @@
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- ── Modal: nova despesa ─────────────────────────────────────── -->
+<div class="modal-backdrop" id="expense-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="expense-modal-title">
+    <div class="modal-header">
+      <div class="modal-title" id="expense-modal-title">Nova despesa</div>
+      <button class="btn btn-ghost btn-icon" id="expense-close" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="expense-form">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <div class="form-group">
+          <label class="form-label" for="exp-amount">Valor (R$)</label>
+          <input class="input" type="number" id="exp-amount" step="0.01" min="0.01" inputmode="decimal" placeholder="0,00" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-category">Categoria</label>
+          <select class="select" id="exp-category" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-payment">Forma de pagamento</label>
+          <select class="select" id="exp-payment">
+            <option value="pix">Pix</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="cartao">Cartão</option>
+            <option value="transferencia">Transferência</option>
+            <option value="boleto">Boleto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-date">Data</label>
+          <input class="input" type="date" id="exp-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="exp-desc">Descrição <span class="form-hint" style="display:inline">(opcional)</span></label>
+          <input class="input" type="text" id="exp-desc" maxlength="200" placeholder="Ex.: conta de luz junho">
+        </div>
+        <div id="exp-error" class="form-error" hidden></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="expense-cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="expense-save">Lançar despesa</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -395,6 +485,18 @@
     return res.json();
   }
 
+  async function apiSend(path, method, body) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, {
+      method,
+      headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
   // ── State ────────────────────────────────────────────────────
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth(); // 0-based
@@ -426,11 +528,13 @@
     loadSummary();
     loadMonthly(currentYear);
     loadRecent();
+    setupExpenses();
   }
   document.getElementById('btn-refresh').addEventListener('click', () => {
     loadSummary();
     loadMonthly(parseInt(yearSel.value, 10));
     loadRecent();
+    loadExpenses();
   });
 
   // ── Summary ──────────────────────────────────────────────────
@@ -680,6 +784,159 @@
         <td><span class="status-pill sp-${r.status}">${STATUS_LABELS[r.status] || r.status}</span></td>
       </tr>`;
     }).join('');
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // DESPESAS
+  // ════════════════════════════════════════════════════════════
+  let expCategories = [];
+  const PAYMENT_LABELS = { pix:'Pix', dinheiro:'Dinheiro', cartao:'Cartão', transferencia:'Transferência', boleto:'Boleto' };
+
+  const expMonthSel = document.getElementById('exp-month');
+  const expModal    = document.getElementById('expense-modal');
+
+  function setupExpenses() {
+    // Seletor de mês (últimos 12 meses)
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${MONTH_FULL[d.getMonth()]} ${d.getFullYear()}`;
+      expMonthSel.appendChild(opt);
+    }
+    expMonthSel.addEventListener('change', loadExpenses);
+
+    // Botões de abrir modal
+    document.getElementById('btn-add-expense').addEventListener('click', openExpenseModal);
+    document.getElementById('btn-add-expense-2').addEventListener('click', openExpenseModal);
+
+    // Controles do modal
+    document.getElementById('expense-close').addEventListener('click', closeExpenseModal);
+    document.getElementById('expense-cancel').addEventListener('click', closeExpenseModal);
+    expModal.addEventListener('click', (e) => { if (e.target === expModal) closeExpenseModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && expModal.classList.contains('open')) closeExpenseModal(); });
+    document.getElementById('expense-form').addEventListener('submit', submitExpense);
+
+    loadCategories().then(loadExpenses);
+  }
+
+  async function loadCategories() {
+    const res = await apiFetch('/api/financial/categories?active=true');
+    expCategories = (res && res.success) ? (res.categories || []) : [];
+    const sel = document.getElementById('exp-category');
+    sel.innerHTML = expCategories.map(c =>
+      `<option value="${c.id}">${c.icon ? c.icon + ' ' : ''}${esc(c.name)}</option>`
+    ).join('');
+  }
+
+  async function loadExpenses() {
+    const month = expMonthSel.value;
+    const [sumRes, listRes] = await Promise.all([
+      apiFetch(`/api/financial/expenses/summary?month=${month}`),
+      apiFetch(`/api/financial/expenses?month=${month}`),
+    ]);
+
+    // Breakdown por categoria
+    const bdEl = document.getElementById('exp-breakdown');
+    const subEl = document.getElementById('exp-sub');
+    if (sumRes && sumRes.success) {
+      subEl.textContent = `Total do mês: ${fmtBRL(sumRes.total)} · ${sumRes.count} lançamento${sumRes.count !== 1 ? 's' : ''}`;
+      if (!sumRes.by_category.length) {
+        bdEl.innerHTML = '<div style="color:var(--tx3);font-size:.875rem">Nenhuma despesa neste mês.</div>';
+      } else {
+        const max = Math.max(...sumRes.by_category.map(c => c.total), 1);
+        bdEl.innerHTML = sumRes.by_category.map(c => {
+          const pct = Math.round((c.total / max) * 100);
+          return `<div class="room-item">
+            <div class="room-head">
+              <div class="room-name">${esc(c.category_name)}</div>
+              <div class="room-amt">${fmtBRL(c.total)}</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#f43f5e;opacity:.8"></div></div>
+            <div class="room-detail">${c.count} lançamento${c.count !== 1 ? 's' : ''} · ${c.pct}% do mês</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
+    // Lista de lançamentos
+    const body = document.getElementById('exp-body');
+    if (listRes && listRes.success) {
+      const items = listRes.expenses || [];
+      if (!items.length) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:var(--sp-6)">Sem lançamentos.</td></tr>';
+      } else {
+        body.innerHTML = items.map(e => `<tr>
+          <td class="num">${fmtDate(e.expense_date)}</td>
+          <td>${e.category_icon ? e.category_icon + ' ' : ''}${esc(e.category_name)}</td>
+          <td class="muted">${esc(e.description) || '—'}</td>
+          <td class="muted">${PAYMENT_LABELS[e.payment_method] || e.payment_method}</td>
+          <td class="num" style="text-align:right;font-weight:700">${fmtBRL(e.amount)}</td>
+          <td class="td-action"><button class="btn btn-ghost btn-icon btn-del-exp" data-id="${e.id}" title="Excluir">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button></td>
+        </tr>`).join('');
+        body.querySelectorAll('.btn-del-exp').forEach(btn =>
+          btn.addEventListener('click', () => deleteExpense(btn.dataset.id))
+        );
+      }
+    }
+  }
+
+  function openExpenseModal() {
+    document.getElementById('expense-form').reset();
+    document.getElementById('exp-error').hidden = true;
+    // Data padrão = hoje (timezone local)
+    const now = new Date();
+    document.getElementById('exp-date').value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    expModal.classList.add('open');
+    setTimeout(() => document.getElementById('exp-amount').focus(), 50);
+  }
+  function closeExpenseModal() { expModal.classList.remove('open'); }
+
+  async function submitExpense(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('exp-error');
+    const saveBtn = document.getElementById('expense-save');
+    errEl.hidden = true;
+
+    const payload = {
+      amount: document.getElementById('exp-amount').value,
+      category_id: document.getElementById('exp-category').value,
+      payment_method: document.getElementById('exp-payment').value,
+      expense_date: document.getElementById('exp-date').value || undefined,
+      description: document.getElementById('exp-desc').value,
+    };
+
+    if (!(Number(payload.amount) > 0)) { errEl.textContent = 'Informe um valor maior que zero.'; errEl.hidden = false; return; }
+    if (!payload.category_id) { errEl.textContent = 'Selecione uma categoria.'; errEl.hidden = false; return; }
+
+    saveBtn.disabled = true; saveBtn.textContent = 'Lançando...';
+    const res = await apiSend('/api/financial/expenses', 'POST', payload);
+    saveBtn.disabled = false; saveBtn.textContent = 'Lançar despesa';
+
+    if (!res || !res.success) {
+      errEl.textContent = (res && res.message) || 'Erro ao lançar despesa.';
+      errEl.hidden = false;
+      return;
+    }
+    // Pula para o mês da despesa lançada, se diferente do selecionado
+    const launched = (res.expense.expense_date || '').slice(0, 7);
+    if (launched && launched !== expMonthSel.value &&
+        [...expMonthSel.options].some(o => o.value === launched)) {
+      expMonthSel.value = launched;
+    }
+    closeExpenseModal();
+    loadExpenses();
+  }
+
+  async function deleteExpense(id) {
+    if (!confirm('Excluir esta despesa?')) return;
+    const res = await apiSend(`/api/financial/expenses/${id}`, 'DELETE');
+    if (res && res.success) loadExpenses();
   }
 
   // ── Helpers ──────────────────────────────────────────────────
