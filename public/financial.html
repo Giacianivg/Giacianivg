@@ -237,6 +237,11 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Despesa
         </button>
+        <button class="btn btn-secondary" id="btn-import-xml" title="Importar despesa de XML de NF-e">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          Importar XML
+        </button>
+        <input type="file" id="xml-file" accept=".xml,text/xml,application/xml" hidden>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -790,6 +795,7 @@
   // DESPESAS
   // ════════════════════════════════════════════════════════════
   let expCategories = [];
+  let pendingNfeKey = null; // chave da NF quando a despesa vem de XML; null = manual
   const PAYMENT_LABELS = { pix:'Pix', dinheiro:'Dinheiro', cartao:'Cartão', transferencia:'Transferência', boleto:'Boleto' };
 
   const expMonthSel = document.getElementById('exp-month');
@@ -811,6 +817,15 @@
     // Botões de abrir modal
     document.getElementById('btn-add-expense').addEventListener('click', openExpenseModal);
     document.getElementById('btn-add-expense-2').addEventListener('click', openExpenseModal);
+
+    // Importar XML de NF-e
+    const xmlInput = document.getElementById('xml-file');
+    document.getElementById('btn-import-xml').addEventListener('click', () => xmlInput.click());
+    xmlInput.addEventListener('change', () => {
+      const file = xmlInput.files && xmlInput.files[0];
+      if (file) importXmlFile(file);
+      xmlInput.value = ''; // permite reimportar o mesmo arquivo se preciso
+    });
 
     // Controles do modal
     document.getElementById('expense-close').addEventListener('click', closeExpenseModal);
@@ -886,6 +901,8 @@
   }
 
   function openExpenseModal() {
+    pendingNfeKey = null; // lançamento manual
+    document.getElementById('expense-modal-title').textContent = 'Nova despesa';
     document.getElementById('expense-form').reset();
     document.getElementById('exp-error').hidden = true;
     // Data padrão = hoje (timezone local)
@@ -896,6 +913,93 @@
     setTimeout(() => document.getElementById('exp-amount').focus(), 50);
   }
   function closeExpenseModal() { expModal.classList.remove('open'); }
+
+  // ── Importação de XML de NF-e (parsing 100% no navegador, DOMParser nativo) ──
+  function importXmlFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseNfeXml(reader.result);
+      if (!parsed.ok) {
+        openExpenseModal();
+        showExpError(parsed.error);
+        return;
+      }
+      // Preenche o modal com os dados extraídos; categoria fica a cargo do usuário.
+      openExpenseModal();
+      pendingNfeKey = parsed.nfe_key;
+      document.getElementById('expense-modal-title').textContent = 'Despesa importada (NF-e)';
+      if (parsed.amount != null)  document.getElementById('exp-amount').value = parsed.amount;
+      if (parsed.date)            document.getElementById('exp-date').value   = parsed.date;
+      if (parsed.description)     document.getElementById('exp-desc').value   = parsed.description;
+      setTimeout(() => document.getElementById('exp-category').focus(), 50);
+    };
+    reader.onerror = () => { openExpenseModal(); showExpError('Não consegui ler o arquivo.'); };
+    reader.readAsText(file);
+  }
+
+  // Extrai campos da NF-e (layout nacional SEFAZ). Retorna {ok, ...} ou {ok:false,error}.
+  function parseNfeXml(text) {
+    let doc;
+    try {
+      doc = new DOMParser().parseFromString(text, 'application/xml');
+    } catch (_) {
+      return { ok: false, error: 'Arquivo não é um XML válido.' };
+    }
+    if (doc.querySelector('parsererror')) {
+      return { ok: false, error: 'Arquivo não é um XML válido.' };
+    }
+
+    // Tolera namespace: busca por nome local em qualquer profundidade.
+    const pick = (tag) => {
+      const el = [...doc.getElementsByTagName('*')].find(n => n.localName === tag);
+      return el ? el.textContent.trim() : '';
+    };
+
+    // Chave: atributo Id do infNFe ("NFe" + 44 díg.) ou tag <chNFe>.
+    const infNFe = [...doc.getElementsByTagName('*')].find(n => n.localName === 'infNFe');
+    const rawKey = (infNFe && infNFe.getAttribute('Id')) || pick('chNFe');
+    const nfe_key = (String(rawKey).replace(/^NFe/i, '').replace(/\D/g, '').length === 44)
+      ? String(rawKey).replace(/^NFe/i, '').replace(/\D/g, '')
+      : null;
+
+    if (!nfe_key) {
+      return { ok: false, error: 'Não encontrei a chave da NF-e. Confira se é um XML de NF-e/NFC-e.' };
+    }
+
+    // Valor total da nota: vNF (ICMSTot). Fallback: vProd.
+    const vNF = pick('vNF') || pick('vProd');
+    const amount = vNF ? Number(vNF) : null;
+    if (!(amount > 0)) {
+      return { ok: false, error: 'Não encontrei o valor total (vNF) na nota.' };
+    }
+
+    // Data: dhEmi (com fuso) ou dEmi (layout antigo). Pega só YYYY-MM-DD.
+    const rawDate = pick('dhEmi') || pick('dEmi');
+    const date = (rawDate.match(/^\d{4}-\d{2}-\d{2}/) || [null])[0];
+
+    // Fornecedor: emit/xNome. Número da nota: ide/nNF.
+    const emitName = pickEmitName(doc);
+    const nNF = pick('nNF');
+    let description = '';
+    if (nNF) description += `NF ${nNF}`;
+    if (emitName) description += (description ? ' — ' : '') + emitName;
+
+    return { ok: true, nfe_key, amount: Math.round(amount * 100) / 100, date, description };
+  }
+
+  // xNome existe em <emit> e <dest>; pegamos o do emitente (fornecedor).
+  function pickEmitName(doc) {
+    const emit = [...doc.getElementsByTagName('*')].find(n => n.localName === 'emit');
+    if (!emit) return '';
+    const xNome = [...emit.getElementsByTagName('*')].find(n => n.localName === 'xNome');
+    return xNome ? xNome.textContent.trim() : '';
+  }
+
+  function showExpError(msg) {
+    const el = document.getElementById('exp-error');
+    el.textContent = msg;
+    el.hidden = false;
+  }
 
   async function submitExpense(e) {
     e.preventDefault();
@@ -909,6 +1013,7 @@
       payment_method: document.getElementById('exp-payment').value,
       expense_date: document.getElementById('exp-date').value || undefined,
       description: document.getElementById('exp-desc').value,
+      nfe_key: pendingNfeKey || undefined,
     };
 
     if (!(Number(payload.amount) > 0)) { errEl.textContent = 'Informe um valor maior que zero.'; errEl.hidden = false; return; }

@@ -329,6 +329,7 @@ router.post('/expenses', async (req, res) => {
 
     if (error) {
       if (error.code === '23503') return fail(res, 'invalid_category', 'Categoria inexistente');
+      if (error.code === '23505') return fail(res, 'duplicate_nfe', 'Esta nota já foi lançada', 409);
       return serverError(res, error);
     }
     return ok(res, { expense: data }, 201);

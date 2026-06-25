@@ -13,7 +13,11 @@ const {
   validateExpense,
   monthRange,
   buildCategoryBreakdown,
+  normalizeNfeKey,
+  isValidNfeKey,
 } = require('../services/financial/expense-helpers');
+
+const KEY44 = '35200114200166000187550010000000071123456780'; // 44 dígitos
 
 // ── validateExpense ─────────────────────────────────────────────────────────────
 describe('validateExpense', () => {
@@ -98,6 +102,61 @@ describe('validateExpense', () => {
   test('description é aparada; vazia vira null', () => {
     assert.equal(validateExpense({ ...base, description: '  conta de luz  ' }).normalized.description, 'conta de luz');
     assert.equal(validateExpense(base).normalized.description, null);
+  });
+
+  test('nfe_key ausente não entra no normalized (lançamento manual)', () => {
+    const r = validateExpense(base);
+    assert.equal(r.valid, true);
+    assert.equal('nfe_key' in r.normalized, false);
+  });
+
+  test('nfe_key válida (44 díg.) entra normalizada', () => {
+    const r = validateExpense({ ...base, nfe_key: KEY44 });
+    assert.equal(r.valid, true);
+    assert.equal(r.normalized.nfe_key, KEY44);
+  });
+
+  test('nfe_key com prefixo NFe é normalizada para 44 díg.', () => {
+    const r = validateExpense({ ...base, nfe_key: 'NFe' + KEY44 });
+    assert.equal(r.valid, true);
+    assert.equal(r.normalized.nfe_key, KEY44);
+  });
+
+  test('rejeita nfe_key com tamanho errado', () => {
+    const r = validateExpense({ ...base, nfe_key: '123' });
+    assert.equal(r.valid, false);
+    assert.ok(r.errors.some(e => e.includes('nfe_key')));
+  });
+});
+
+// ── normalizeNfeKey / isValidNfeKey ─────────────────────────────────────────────
+describe('normalizeNfeKey / isValidNfeKey', () => {
+  test('44 dígitos puros → válida', () => {
+    assert.equal(normalizeNfeKey(KEY44), KEY44);
+    assert.equal(isValidNfeKey(KEY44), true);
+  });
+
+  test('prefixo NFe é removido', () => {
+    assert.equal(normalizeNfeKey('NFe' + KEY44), KEY44);
+  });
+
+  test('espaços e separadores são removidos', () => {
+    const spaced = KEY44.replace(/(.{4})/g, '$1 ').trim();
+    assert.equal(normalizeNfeKey(spaced), KEY44);
+  });
+
+  test('menos de 44 dígitos → null', () => {
+    assert.equal(normalizeNfeKey('123'), null);
+    assert.equal(isValidNfeKey('123'), false);
+  });
+
+  test('mais de 44 dígitos → null', () => {
+    assert.equal(normalizeNfeKey(KEY44 + '99'), null);
+  });
+
+  test('null/undefined → null', () => {
+    assert.equal(normalizeNfeKey(null), null);
+    assert.equal(normalizeNfeKey(undefined), null);
   });
 });
 

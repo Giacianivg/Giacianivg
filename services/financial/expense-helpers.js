@@ -7,6 +7,20 @@
 
 const PAYMENT_METHODS = ['pix', 'dinheiro', 'cartao', 'transferencia', 'boleto'];
 
+// ─── NF-e key ───────────────────────────────────────────────────────────────────
+// Chave de acesso da NF-e: exatamente 44 dígitos. Aceita entrada com prefixo
+// "NFe" (vem do atributo Id do <infNFe>) e com espaços. Retorna só os 44 dígitos
+// ou null se inválida.
+function normalizeNfeKey(raw) {
+  if (raw === undefined || raw === null) return null;
+  const digits = String(raw).replace(/^NFe/i, '').replace(/\D/g, '');
+  return digits.length === 44 ? digits : null;
+}
+
+function isValidNfeKey(raw) {
+  return normalizeNfeKey(raw) !== null;
+}
+
 // ─── Validation ────────────────────────────────────────────────────────────────
 // Returns { valid, errors, normalized }. `normalized` is safe to insert.
 function validateExpense(body = {}) {
@@ -38,6 +52,13 @@ function validateExpense(body = {}) {
     expense_date = undefined; // deixa o DEFAULT do banco (CURRENT_DATE) assumir
   }
 
+  // nfe_key opcional (só em importação de XML). Se vier, deve ter 44 dígitos.
+  let nfe_key;
+  if (body.nfe_key !== undefined && body.nfe_key !== null && body.nfe_key !== '') {
+    nfe_key = normalizeNfeKey(body.nfe_key);
+    if (!nfe_key) errors.push('nfe_key deve ter 44 dígitos');
+  }
+
   const description = body.description ? String(body.description).trim() : null;
 
   const normalized = {
@@ -47,6 +68,7 @@ function validateExpense(body = {}) {
     payment_method,
   };
   if (expense_date) normalized.expense_date = expense_date;
+  if (nfe_key) normalized.nfe_key = nfe_key;
 
   return { valid: errors.length === 0, errors, normalized };
 }
@@ -103,4 +125,6 @@ module.exports = {
   validateExpense,
   monthRange,
   buildCategoryBreakdown,
+  normalizeNfeKey,
+  isValidNfeKey,
 };
