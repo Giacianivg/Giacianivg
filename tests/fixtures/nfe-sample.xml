@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+    <infNFe Id="NFe35200114200166000187550010000000071123456780" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <nNF>71</nNF>
+        <dhEmi>2026-06-15T09:30:00-03:00</dhEmi>
+        <tpNF>1</tpNF>
+      </ide>
+      <emit>
+        <CNPJ>14200166000187</CNPJ>
+        <xNome>Atacadao Distribuicao Ltda</xNome>
+      </emit>
+      <dest>
+        <CNPJ>99888777000166</CNPJ>
+        <xNome>Pousada Luz da Lua</xNome>
+      </dest>
+      <det nItem="1">
+        <prod>
+          <cProd>1001</cProd>
+          <xProd>PAO FRANCES KG</xProd>
+          <NCM>19059090</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>KG</uCom>
+          <qCom>10.0000</qCom>
+          <vUnCom>12.5000000000</vUnCom>
+          <vProd>125.00</vProd>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cProd>1002</cProd>
+          <xProd>LEITE INTEGRAL 1L</xProd>
+          <NCM>04012010</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>24.0000</qCom>
+          <vUnCom>4.7900000000</vUnCom>
+          <vProd>114.96</vProd>
+        </prod>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cProd>2050</cProd>
+          <xProd>DETERGENTE NEUTRO 500ML</xProd>
+          <NCM>34022000</NCM>
+          <CFOP>5102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>12.0000</qCom>
+          <vUnCom>2.2900000000</vUnCom>
+          <vProd>27.48</vProd>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vProd>267.44</vProd>
+          <vNF>267.44</vNF>
+        </ICMSTot>
+      </total>
+    </infNFe>
+  </NFe>
+</nfeProc>

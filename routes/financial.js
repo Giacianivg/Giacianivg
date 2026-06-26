@@ -8,6 +8,15 @@ const {
   monthRange,
   buildCategoryBreakdown,
 } = require('../services/financial/expense-helpers');
+const { parseNfe } = require('../services/financial/nfe-parser');
+const { suggestCategory } = require('../services/financial/category-suggester');
+const {
+  isValidClass,
+  coerceClass,
+  normalizeDesc,
+  computeBusinessAmount,
+  DEFAULT_ITEM_CLASS,
+} = require('../services/financial/classification');
 
 const router = Router();
 
@@ -350,6 +359,259 @@ router.delete('/expenses/:id', async (req, res) => {
 
     if (error || !data) return notFound(res, 'Despesa');
     return ok(res, { deleted: data.id });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMPRAS — notas de NF-e COM itens (Camada 1). Parsing canônico no servidor.
+// O XML chega como TEXTO no body JSON (sem upload de arquivo). A despesa continua
+// sendo a linha do financeiro, agora ligada à nota por expenses.invoice_id.
+// ════════════════════════════════════════════════════════════════════════════
+
+// POST /api/financial/invoices/preview — parseia e devolve nota+itens+categoria
+// sugerida. NÃO salva nada.
+router.post('/invoices/preview', async (req, res) => {
+  try {
+    const xml = req.body && req.body.xml;
+    if (!xml || typeof xml !== 'string') {
+      return fail(res, 'missing_xml', 'Envie o conteúdo do XML em "xml".');
+    }
+
+    const parsed = parseNfe(xml);
+    if (!parsed.ok) return fail(res, 'parse_error', parsed.error);
+
+    // Nota já importada? Avisa cedo (dedup mora em purchase_invoices.nfe_key).
+    const { data: existing } = await supabaseAdmin
+      .from('purchase_invoices')
+      .select('id')
+      .eq('nfe_key', parsed.invoice.nfe_key)
+      .maybeSingle();
+
+    // Categoria sugerida a partir dos itens.
+    const { data: categories } = await supabaseAdmin
+      .from('expense_categories')
+      .select('id, name')
+      .eq('is_active', true);
+
+    const suggestion = suggestCategory(parsed.items, categories || []);
+
+    // Classe sugerida por item, a partir da memória de classificação.
+    const matchKeys = parsed.items.map((it) => normalizeDesc(it.description));
+    const uniqueKeys = [...new Set(matchKeys.filter(Boolean))];
+    const memMap = {};
+    if (uniqueKeys.length) {
+      const { data: mem } = await supabaseAdmin
+        .from('item_classification_memory')
+        .select('match_key, item_class')
+        .in('match_key', uniqueKeys);
+      for (const m of mem || []) memMap[m.match_key] = m.item_class;
+    }
+
+    const items = parsed.items.map((it, idx) => ({
+      ...it,
+      suggested_class: memMap[matchKeys[idx]] || DEFAULT_ITEM_CLASS,
+    }));
+
+    const business_amount = computeBusinessAmount(
+      parsed.invoice.total_amount,
+      items.map((i) => ({ item_class: i.suggested_class, total_price: i.total_price })),
+    );
+
+    return ok(res, {
+      invoice: parsed.invoice,
+      items,
+      items_count: items.length,
+      suggested_category_id: suggestion.category_id,
+      suggested_category_name: suggestion.category_name,
+      business_amount,
+      already_imported: !!existing,
+    });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// POST /api/financial/invoices — re-parseia o XML e salva (nota+itens+despesa)
+// de forma atômica via RPC. Body: { xml, category_id, payment_method?, is_test? }.
+router.post('/invoices', async (req, res) => {
+  try {
+    const xml = req.body && req.body.xml;
+    if (!xml || typeof xml !== 'string') {
+      return fail(res, 'missing_xml', 'Envie o conteúdo do XML em "xml".');
+    }
+    if (!req.body.category_id) {
+      return fail(res, 'missing_category', 'Selecione uma categoria.');
+    }
+
+    // Re-parseia no servidor (não confia em valores vindos do cliente). As CLASSES
+    // são input do usuário (vêm alinhadas por índice com os itens parseados).
+    const parsed = parseNfe(xml);
+    if (!parsed.ok) return fail(res, 'parse_error', parsed.error);
+
+    const classes = Array.isArray(req.body.item_classes) ? req.body.item_classes : [];
+    const items = parsed.items.map((it, idx) => ({
+      ...it,
+      item_class: coerceClass(classes[idx]),
+      match_key: normalizeDesc(it.description),
+    }));
+
+    const payload = {
+      ...parsed.invoice,
+      category_id: req.body.category_id,
+      payment_method: req.body.payment_method || 'boleto',
+      is_test: req.body.is_test === true,
+      items,
+    };
+
+    const { data, error } = await supabaseAdmin.rpc('import_nfe_invoice', { payload });
+    if (error) {
+      if (error.code === '23503') return fail(res, 'invalid_category', 'Categoria inexistente');
+      return serverError(res, error);
+    }
+    if (!data || data.success !== true) {
+      const code = (data && data.error) || 'import_failed';
+      const msg  = (data && data.message) || 'Falha ao importar a nota.';
+      const http = code === 'duplicate_nfe' ? 409 : 400;
+      return fail(res, code, msg, http);
+    }
+
+    return ok(res, {
+      invoice_id: data.invoice_id,
+      expense_id: data.expense_id,
+      items_count: data.items_count,
+      business_amount: data.business_amount,
+    }, 201);
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// GET /api/financial/invoices?month=YYYY-MM — lista de notas (sem itens)
+router.get('/invoices', async (req, res) => {
+  try {
+    let query = supabaseAdmin
+      .from('purchase_invoices')
+      .select('id, nfe_key, supplier_name, supplier_cnpj, invoice_number, issue_date, total_amount, business_amount, category_id, created_at, expense_categories(name, icon)')
+      .eq('is_test', false)
+      .order('issue_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    if (/^\d{4}-\d{2}$/.test(String(req.query.month || ''))) {
+      const { from, to } = monthRange(req.query.month);
+      query = query.gte('issue_date', from).lte('issue_date', to);
+    }
+
+    const { data, error } = await query;
+    if (error) return serverError(res, error);
+
+    const invoices = (data || []).map((n) => ({
+      id: n.id,
+      nfe_key: n.nfe_key,
+      supplier_name: n.supplier_name,
+      supplier_cnpj: n.supplier_cnpj,
+      invoice_number: n.invoice_number,
+      issue_date: n.issue_date,
+      total_amount: Number(n.total_amount),
+      business_amount: Number(n.business_amount),
+      category_id: n.category_id,
+      category_name: n.expense_categories?.name || 'Sem categoria',
+      category_icon: n.expense_categories?.icon || null,
+      created_at: n.created_at,
+    }));
+
+    return ok(res, { invoices, count: invoices.length });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// GET /api/financial/invoices/:id — nota + itens
+router.get('/invoices/:id', async (req, res) => {
+  try {
+    const { data: invoice, error: invErr } = await supabaseAdmin
+      .from('purchase_invoices')
+      .select('id, nfe_key, supplier_name, supplier_cnpj, invoice_number, issue_date, total_amount, business_amount, category_id, created_at, expense_categories(name, icon)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (invErr) return serverError(res, invErr);
+    if (!invoice) return notFound(res, 'Nota');
+
+    const { data: items, error: itErr } = await supabaseAdmin
+      .from('purchase_invoice_items')
+      .select('id, product_code, description, ncm, cfop, quantity, unit, unit_price, total_price, item_class')
+      .eq('invoice_id', invoice.id)
+      .order('created_at', { ascending: true });
+
+    if (itErr) return serverError(res, itErr);
+
+    return ok(res, {
+      invoice: {
+        id: invoice.id,
+        nfe_key: invoice.nfe_key,
+        supplier_name: invoice.supplier_name,
+        supplier_cnpj: invoice.supplier_cnpj,
+        invoice_number: invoice.invoice_number,
+        issue_date: invoice.issue_date,
+        total_amount: Number(invoice.total_amount),
+        business_amount: Number(invoice.business_amount),
+        category_id: invoice.category_id,
+        category_name: invoice.expense_categories?.name || 'Sem categoria',
+        category_icon: invoice.expense_categories?.icon || null,
+        created_at: invoice.created_at,
+      },
+      items: (items || []).map((i) => ({
+        ...i,
+        quantity: i.quantity != null ? Number(i.quantity) : null,
+        unit_price: i.unit_price != null ? Number(i.unit_price) : null,
+        total_price: i.total_price != null ? Number(i.total_price) : null,
+      })),
+      items_count: (items || []).length,
+    });
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// PATCH /api/financial/invoices/:id/items/:itemId — reclassifica um item.
+// Recalcula o business_amount e sincroniza a despesa do negócio (RPC atômica).
+router.patch('/invoices/:id/items/:itemId', async (req, res) => {
+  try {
+    const itemClass = req.body && req.body.item_class;
+    if (!isValidClass(itemClass)) {
+      return fail(res, 'invalid_class', 'Classe inválida.');
+    }
+
+    // Busca o item (e confirma que pertence à nota) para montar o match_key.
+    const { data: item, error: itErr } = await supabaseAdmin
+      .from('purchase_invoice_items')
+      .select('id, description, invoice_id')
+      .eq('id', req.params.itemId)
+      .eq('invoice_id', req.params.id)
+      .maybeSingle();
+
+    if (itErr) return serverError(res, itErr);
+    if (!item) return notFound(res, 'Item');
+
+    const { data, error } = await supabaseAdmin.rpc('reclassify_invoice_item', {
+      p_item_id: item.id,
+      p_class: itemClass,
+      p_match_key: normalizeDesc(item.description),
+    });
+
+    if (error) return serverError(res, error);
+    if (!data || data.success !== true) {
+      return fail(res, (data && data.error) || 'reclassify_failed',
+        (data && data.message) || 'Falha ao reclassificar o item.');
+    }
+
+    return ok(res, {
+      invoice_id: data.invoice_id,
+      business_amount: data.business_amount,
+      expense_id: data.expense_id,
+    });
   } catch (err) {
     return serverError(res, err);
   }

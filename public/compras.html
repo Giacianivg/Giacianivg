@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sb-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xeGVzanhicXVwbWhuaXZrZnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MjAzODgsImV4cCI6MjA4OTA5NjM4OH0.MHAGQTNBNrDAPR3jCsPz8wftXriNrwCR6eyYbVemYDk">
+  <title>Compras — Luz da Lua</title>
+  <script>(function(){var t=localStorage.getItem('ldl-theme')||'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+  <link rel="stylesheet" href="design-system/t.css">
+  <link rel="stylesheet" href="design-system/c.css">
+  <link rel="stylesheet" href="design-system/l.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .page-body { max-width: none !important; }
+
+    .section {
+      background: var(--sur1);
+      border: 1px solid var(--bdr1);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      margin-bottom: var(--sp-5);
+    }
+    .section-head {
+      padding: var(--sp-4) var(--sp-5);
+      border-bottom: 1px solid var(--bdr1);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+    }
+    .section-title { font-size: .9375rem; font-weight: 700; color: var(--tx1); }
+    .section-sub   { font-size: .8125rem; color: var(--tx3); margin-top: 2px; }
+
+    .fin-table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+    .fin-table th {
+      padding: 10px 14px; text-align: left; font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .05em;
+      color: var(--tx3); background: var(--sur2);
+      border-bottom: 1px solid var(--bdr1); white-space: nowrap;
+    }
+    .fin-table td {
+      padding: 11px 14px; color: var(--tx1);
+      border-bottom: 1px solid var(--bdr0); white-space: nowrap;
+    }
+    .fin-table tr:last-child td { border-bottom: none; }
+    .fin-table tbody tr.clickable { cursor: pointer; }
+    .fin-table tbody tr.clickable:hover td { background: rgba(99,102,241,.06); }
+    .fin-table .num { font-variant-numeric: tabular-nums; text-align: right; }
+    .fin-table .muted { color: var(--tx3); }
+
+    .cat-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 9999px; font-size: .72rem; font-weight: 600;
+      background: var(--sur2); color: var(--tx2); border: 1px solid var(--bdr1);
+    }
+
+    /* Modal extra-wide para o preview com tabela de itens */
+    .modal.modal-wide { max-width: 760px; width: 96vw; }
+    .items-table { width: 100%; border-collapse: collapse; font-size: .78rem; margin-top: var(--sp-2); }
+    .items-table th { padding: 6px 8px; text-align: left; color: var(--tx3); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--bdr1); white-space: nowrap; }
+    .items-table td { padding: 6px 8px; border-bottom: 1px solid var(--bdr0); color: var(--tx1); }
+    .items-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .items-scroll { max-height: 320px; overflow-y: auto; border: 1px solid var(--bdr0); border-radius: var(--r-md); }
+
+    .preview-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+    .preview-grid .pg-item { background: var(--sur2); border-radius: var(--r-md); padding: var(--sp-3); }
+    .pg-lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tx3); margin-bottom: 2px; }
+    .pg-val { font-size: .9rem; font-weight: 700; color: var(--tx1); }
+    .pg-val.big { font-size: 1.1rem; color: var(--ok); }
+
+    .empty { text-align: center; color: var(--tx3); padding: var(--sp-8); }
+
+    /* Select de classificação por item */
+    .class-sel {
+      width: 100%; max-width: 190px;
+      background: var(--sur1); border: 1px solid var(--bdr1); border-radius: var(--r-sm);
+      color: var(--tx1); padding: 3px 6px; font-size: .74rem; cursor: pointer;
+    }
+    .class-sel.is-particular { border-color: rgba(244,63,94,.5); color: #f43f5e; }
+    tr.row-particular td { opacity: .6; }
+
+    /* Resumo fiscal vs negócio */
+    .biz-summary {
+      background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-md);
+      padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: 4px;
+    }
+    .bs-row { display: flex; justify-content: space-between; font-size: .82rem; color: var(--tx2); }
+    .bs-row span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .bs-out { color: #f43f5e; }
+    .bs-total { border-top: 1px solid var(--bdr1); margin-top: 4px; padding-top: 6px; font-size: .95rem; color: var(--tx1); }
+    .bs-total span:last-child { color: var(--ok); font-weight: 800; }
+
+    .dt-hint { font-size: .78rem; color: var(--ok); margin-top: var(--sp-2); }
+  </style>
+</head>
+<body>
+<div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="dashboard.html">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="var(--royal-bg)"/>
+        <path d="M21 16a8 8 0 01-8 8 8 8 0 010-16 6 6 0 000 8z" fill="var(--royal-l)" opacity=".9"/>
+        <circle cx="12" cy="9" r="1.5" fill="var(--gold)" opacity=".7"/>
+      </svg>
+      <div>
+        <div class="sidebar-brand-name">Luz da Lua</div>
+        <div class="sidebar-brand-sub">Operações</div>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Principal</div>
+      <a class="nav-link" href="dashboard.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a class="nav-link" href="frontdesk.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Front Desk</a>
+      <a class="nav-link" href="bookings.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Reservas</a>
+      <a class="nav-link" href="vouchers.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Vouchers</a>
+      <a class="nav-link" href="rooms.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M2 12h20M8 7V4h8v3"/><rect x="5" y="7" width="5" height="5" rx="1"/></svg>Quartos</a>
+      <a class="nav-link" href="map.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>Mapa</a>
+      <a class="nav-link" href="calendar.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendário</a>
+      <a class="nav-link" href="follow-ups.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Follow-ups</a>
+      <a class="nav-link" href="financial.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Financeiro</a>
+      <a class="nav-link active" href="compras.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>Compras</a>
+      <a class="nav-link" href="leads.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Leads</a>
+      <div class="nav-section-title" style="margin-top:var(--sp-3)">AI OS</div>
+      <a class="nav-link" href="command-center.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Command Center</a>
+      <a class="nav-link" href="luna-training.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 2.5-1.3 4.7-3.3 6L15 21H9l-.3-6A7 7 0 0112 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>Treinamento Luna</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="theme-toggle">
+        <span>Tema claro</span>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Alternar tema"></button>
+      </div>
+      <div class="sidebar-user">
+        <div class="avatar avatar-sm" id="user-avatar">?</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-email" data-user-email></div>
+        </div>
+        <button class="btn btn-ghost btn-icon" data-action="logout" title="Sair">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1 class="page-title">Compras</h1>
+      </div>
+      <div class="topbar-right">
+        <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
+        <button class="btn btn-primary" id="btn-import-xml" title="Importar nota de XML de NF-e">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+          Importar XML
+        </button>
+        <input type="file" id="xml-file" accept=".xml" hidden>
+        <button class="btn btn-secondary" id="btn-refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Atualizar
+        </button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Notas de compra</div>
+            <div class="section-sub" id="inv-sub">Importe o XML da NF-e para registrar a nota e seus produtos.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--sp-3)">
+            <select class="year-select" id="inv-month" style="background:var(--sur2);border:1px solid var(--bdr1);border-radius:var(--r-sm);color:var(--tx1);padding:5px 10px;font-size:.8125rem;cursor:pointer"></select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Fornecedor</th>
+                <th>Nº</th>
+                <th>Categoria</th>
+                <th>Itens</th>
+                <th style="text-align:right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="inv-body">
+              <tr><td colspan="6" class="empty">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ── Modal: preview de importação ──────────────────────────────────── -->
+<div class="modal-backdrop" id="preview-modal">
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <div class="modal-header">
+      <div class="modal-title" id="preview-title">Importar nota</div>
+      <button class="btn btn-ghost btn-icon" id="preview-close" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--sp-3)">
+      <div id="preview-warn" class="form-error" hidden style="background:rgba(234,179,8,.12);color:var(--gold);border:1px solid rgba(234,179,8,.3);padding:8px 12px;border-radius:var(--r-md)"></div>
+      <div class="preview-grid">
+        <div class="pg-item"><div class="pg-lbl">Fornecedor</div><div class="pg-val" id="pv-supplier">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">CNPJ</div><div class="pg-val" id="pv-cnpj">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Nº da nota</div><div class="pg-val" id="pv-number">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Emissão</div><div class="pg-val" id="pv-date">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Itens</div><div class="pg-val" id="pv-count">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Total</div><div class="pg-val big" id="pv-total">—</div></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="pv-category">Categoria da despesa</label>
+        <select class="select" id="pv-category"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pv-payment">Forma de pagamento</label>
+        <select class="select" id="pv-payment">
+          <option value="boleto">Boleto</option>
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="cartao">Cartão</option>
+          <option value="transferencia">Transferência</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="form-label" style="margin-bottom:0">Produtos — classifique cada item</div>
+        <div class="items-scroll">
+          <table class="items-table">
+            <thead><tr><th>Descrição</th><th class="num">Qtd · un</th><th class="num">Total</th><th>Classificação</th></tr></thead>
+            <tbody id="pv-items"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumo ao vivo: fiscal vs. negócio -->
+      <div class="biz-summary">
+        <div class="bs-row"><span>Total da nota (fiscal)</span><span id="bs-fiscal">—</span></div>
+        <div class="bs-row bs-out"><span>Particular (fora do negócio)</span><span id="bs-out">—</span></div>
+        <div class="bs-row bs-total"><span>Total da pousada → financeiro</span><span id="bs-business">—</span></div>
+      </div>
+      <div id="preview-error" class="form-error" hidden></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="preview-cancel">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="preview-confirm">Confirmar importação</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: ver itens de uma nota existente ────────────────────────── -->
+<div class="modal-backdrop" id="detail-modal">
+  <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-title">Nota</div>
+      <button class="btn btn-ghost btn-icon" id="detail-close" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--sp-3)">
+      <div class="preview-grid">
+        <div class="pg-item"><div class="pg-lbl">Fornecedor</div><div class="pg-val" id="dt-supplier">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Nº / Emissão</div><div class="pg-val" id="dt-number">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Categoria</div><div class="pg-val" id="dt-category">—</div></div>
+        <div class="pg-item"><div class="pg-lbl">Total</div><div class="pg-val big" id="dt-total">—</div></div>
+      </div>
+      <div>
+        <div class="form-label" style="margin-bottom:0">Produtos — clique na classificação para corrigir</div>
+        <div class="items-scroll">
+          <table class="items-table">
+            <thead><tr><th>Descrição</th><th class="num">Qtd · un</th><th class="num">Total</th><th>Classificação</th></tr></thead>
+            <tbody id="dt-items"></tbody>
+          </table>
+        </div>
+        <div id="dt-save-hint" class="dt-hint" hidden>Reclassificação salva — financeiro atualizado.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="detail-ok">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="design-system/u.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ── Auth ────────────────────────────────────────────────────
+  const sbMeta = document.querySelector('meta[name="sb-anon"]');
+  const SUPABASE_URL  = 'https://nqxesjxbqupmhnivkfyk.supabase.co';
+  const SUPABASE_ANON = sbMeta ? sbMeta.content : '';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  let authToken = null;
+
+  sb.auth.getUser().then(async ({ data: { user }, error }) => {
+    if (error || !user) {
+      await sb.auth.signOut();
+      sessionStorage.setItem('ldl-return-to', window.location.pathname);
+      window.location.href = '/login.html';
+      return;
+    }
+    const emailEl = document.querySelector('[data-user-email]');
+    const avatarEl = document.getElementById('user-avatar');
+    if (emailEl) emailEl.textContent = user.email;
+    if (avatarEl) avatarEl.textContent = (user.email || '?')[0].toUpperCase();
+    const { data: { session } } = await sb.auth.getSession();
+    authToken = session?.access_token;
+    init();
+  });
+
+  document.querySelector('[data-action="logout"]')?.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/login.html';
+  });
+
+  async function apiFetch(path) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, { headers: { Authorization: `Bearer ${authToken}` } });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  async function apiSend(path, method, body) {
+    if (!authToken) { const { data } = await sb.auth.getSession(); authToken = data?.session?.access_token; }
+    if (!authToken) { window.location.href = '/login.html'; return null; }
+    const res = await fetch(path, {
+      method,
+      headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status === 401) { window.location.href = '/login.html'; return null; }
+    return res.json();
+  }
+
+  // ── State ────────────────────────────────────────────────────
+  const MONTH_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  let categories = [];
+  let previewState = null; // { xml, total } guardado entre preview e confirmação
+
+  // As 4 classes (espelham services/financial/classification.js).
+  const ITEM_CLASS_OPTIONS = [
+    { v: 'pousada_estoque',     l: 'Estoque da pousada' },
+    { v: 'pousada_nao_estoque', l: 'Despesa (não-estoque)' },
+    { v: 'ativo_imobilizado',   l: 'Ativo imobilizado' },
+    { v: 'particular',          l: 'Particular' },
+  ];
+  function classSelectHtml(selected, extraClass) {
+    const opts = ITEM_CLASS_OPTIONS.map(o =>
+      `<option value="${o.v}"${o.v === selected ? ' selected' : ''}>${o.l}</option>`).join('');
+    return `<select class="class-sel ${extraClass || ''}">${opts}</select>`;
+  }
+  function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+  // Espelha computeBusinessAmount do backend (Opção B): vNF − Σ particulares, piso 0;
+  // 100% particular → 0.
+  function computeBusiness(vNF, rows) {
+    const list = rows || [];
+    const nonPart = list.filter(r => r.cls !== 'particular');
+    if (!nonPart.length) return 0;
+    const partSum = list.filter(r => r.cls === 'particular')
+      .reduce((s, r) => s + (Number(r.total) || 0), 0);
+    return Math.max(0, round2(round2(vNF) - round2(partSum)));
+  }
+
+  document.getElementById('date-label').textContent =
+    new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long' });
+
+  const invMonthSel = document.getElementById('inv-month');
+  const previewModal = document.getElementById('preview-modal');
+  const detailModal  = document.getElementById('detail-modal');
+
+  function init() {
+    // Seletor de mês: "Todos" + últimos 12 meses
+    const allOpt = document.createElement('option');
+    allOpt.value = ''; allOpt.textContent = 'Todos os meses';
+    invMonthSel.appendChild(allOpt);
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${MONTH_FULL[d.getMonth()]} ${d.getFullYear()}`;
+      invMonthSel.appendChild(opt);
+    }
+    invMonthSel.addEventListener('change', loadInvoices);
+
+    // Importar XML
+    const xmlInput = document.getElementById('xml-file');
+    document.getElementById('btn-import-xml').addEventListener('click', () => xmlInput.click());
+    xmlInput.addEventListener('change', () => {
+      const file = xmlInput.files && xmlInput.files[0];
+      if (file) handleXmlFile(file);
+      xmlInput.value = '';
+    });
+    document.getElementById('btn-refresh').addEventListener('click', loadInvoices);
+
+    // Modais
+    document.getElementById('preview-close').addEventListener('click', closePreview);
+    document.getElementById('preview-cancel').addEventListener('click', closePreview);
+    document.getElementById('preview-confirm').addEventListener('click', confirmImport);
+    previewModal.addEventListener('click', (e) => { if (e.target === previewModal) closePreview(); });
+    document.getElementById('detail-close').addEventListener('click', closeDetail);
+    document.getElementById('detail-ok').addEventListener('click', closeDetail);
+    detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetail(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (previewModal.classList.contains('open')) closePreview();
+      if (detailModal.classList.contains('open')) closeDetail();
+    });
+
+    loadCategories().then(loadInvoices);
+  }
+
+  async function loadCategories() {
+    const res = await apiFetch('/api/financial/categories?active=true');
+    categories = (res && res.success) ? (res.categories || []) : [];
+  }
+
+  // ── Lista de notas ───────────────────────────────────────────
+  async function loadInvoices() {
+    const body = document.getElementById('inv-body');
+    body.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+    const month = invMonthSel.value;
+    const res = await apiFetch(`/api/financial/invoices${month ? `?month=${month}` : ''}`);
+    if (!res || !res.success) {
+      body.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar notas.</td></tr>';
+      return;
+    }
+    const invoices = res.invoices || [];
+    const total = invoices.reduce((s, n) => s + Number(n.total_amount || 0), 0);
+    document.getElementById('inv-sub').textContent =
+      invoices.length
+        ? `${invoices.length} nota${invoices.length !== 1 ? 's' : ''} · ${fmtBRL(total)} em compras`
+        : 'Importe o XML da NF-e para registrar a nota e seus produtos.';
+
+    if (!invoices.length) {
+      body.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma nota neste período. Clique em “Importar XML”.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = invoices.map(n => {
+      const diff = round2(n.total_amount) !== round2(n.business_amount);
+      const totalCell = diff
+        ? `<div style="font-weight:700">${fmtBRL(n.business_amount)}</div>
+           <div class="muted" style="font-size:.72rem">fiscal ${fmtBRL(n.total_amount)}</div>`
+        : `<div style="font-weight:700">${fmtBRL(n.total_amount)}</div>`;
+      return `
+      <tr class="clickable" data-id="${n.id}">
+        <td class="num">${fmtDate(n.issue_date)}</td>
+        <td style="font-weight:600">${esc(n.supplier_name) || '<span class="muted">—</span>'}</td>
+        <td class="muted">${esc(n.invoice_number) || '—'}</td>
+        <td><span class="cat-pill">${n.category_icon ? n.category_icon + ' ' : ''}${esc(n.category_name)}</span></td>
+        <td class="muted"></td>
+        <td class="num">${totalCell}</td>
+      </tr>`;
+    }).join('');
+
+    body.querySelectorAll('tr.clickable').forEach(tr =>
+      tr.addEventListener('click', () => openDetail(tr.dataset.id))
+    );
+  }
+
+  // ── Importar: lê o arquivo e pede o preview ao servidor ──────
+  function handleXmlFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => requestPreview(reader.result);
+    reader.onerror = () => alert('Não consegui ler o arquivo.');
+    reader.readAsText(file);
+  }
+
+  async function requestPreview(xml) {
+    const res = await apiSend('/api/financial/invoices/preview', 'POST', { xml });
+    if (!res || !res.success) {
+      alert((res && res.message) || 'Não foi possível ler esta nota.');
+      return;
+    }
+    openPreview(res, xml);
+  }
+
+  function openPreview(p, xml) {
+    const inv = p.invoice || {};
+    previewState = { xml, total: Number(inv.total_amount) || 0 };
+
+    document.getElementById('pv-supplier').textContent = inv.supplier_name || '—';
+    document.getElementById('pv-cnpj').textContent     = inv.supplier_cnpj || '—';
+    document.getElementById('pv-number').textContent   = inv.invoice_number || '—';
+    document.getElementById('pv-date').textContent     = fmtDate(inv.issue_date);
+    document.getElementById('pv-count').textContent    = p.items_count;
+    document.getElementById('pv-total').textContent    = fmtBRL(inv.total_amount);
+
+    // Categorias (pré-seleciona a sugerida)
+    const catSel = document.getElementById('pv-category');
+    catSel.innerHTML = categories.map(c =>
+      `<option value="${c.id}"${c.id === p.suggested_category_id ? ' selected' : ''}>${c.icon ? c.icon + ' ' : ''}${esc(c.name)}</option>`
+    ).join('');
+
+    // Itens — cada um com select de classe (pré-marcado pela sugestão da memória).
+    document.getElementById('pv-items').innerHTML = (p.items || []).map(it => `
+      <tr>
+        <td>${esc(it.description)}</td>
+        <td class="num">${fmtQtyUnit(it.quantity, it.unit)}</td>
+        <td class="num" data-total="${Number(it.total_price) || 0}">${it.total_price != null ? fmtBRL(it.total_price) : '—'}</td>
+        <td>${classSelectHtml(it.suggested_class, it.suggested_class === 'particular' ? 'is-particular' : '')}</td>
+      </tr>`).join('');
+
+    // Recalcula o resumo ao vivo a cada mudança de classe.
+    document.getElementById('pv-items').querySelectorAll('.class-sel').forEach(sel =>
+      sel.addEventListener('change', recomputePreview));
+    recomputePreview();
+
+    const warn = document.getElementById('preview-warn');
+    if (p.already_imported) {
+      warn.textContent = 'Esta nota já foi importada antes — confirmar dará erro de duplicada.';
+      warn.hidden = false;
+    } else {
+      warn.hidden = true;
+    }
+    document.getElementById('preview-error').hidden = true;
+    previewModal.classList.add('open');
+  }
+
+  function previewRows() {
+    return [...document.getElementById('pv-items').querySelectorAll('tr')].map(tr => ({
+      cls: tr.querySelector('.class-sel').value,
+      total: Number(tr.querySelector('[data-total]').dataset.total) || 0,
+    }));
+  }
+
+  function recomputePreview() {
+    const vNF = previewState ? previewState.total : 0;
+    const rows = previewRows();
+    const business = computeBusiness(vNF, rows);
+    document.getElementById('bs-fiscal').textContent   = fmtBRL(vNF);
+    document.getElementById('bs-out').textContent      = '− ' + fmtBRL(round2(vNF) - business);
+    document.getElementById('bs-business').textContent = fmtBRL(business);
+    // Realce visual das linhas particulares
+    document.getElementById('pv-items').querySelectorAll('tr').forEach(tr => {
+      const sel = tr.querySelector('.class-sel');
+      const part = sel.value === 'particular';
+      tr.classList.toggle('row-particular', part);
+      sel.classList.toggle('is-particular', part);
+    });
+  }
+
+  function closePreview() { previewModal.classList.remove('open'); previewState = null; }
+
+  async function confirmImport() {
+    if (!previewState) return;
+    const errEl = document.getElementById('preview-error');
+    const btn = document.getElementById('preview-confirm');
+    errEl.hidden = true;
+
+    const payload = {
+      xml: previewState.xml,
+      category_id: document.getElementById('pv-category').value,
+      payment_method: document.getElementById('pv-payment').value,
+      // Classes alinhadas por índice com os itens (o servidor re-parseia o XML).
+      item_classes: previewRows().map(r => r.cls),
+    };
+    if (!payload.category_id) { errEl.textContent = 'Selecione uma categoria.'; errEl.hidden = false; return; }
+
+    btn.disabled = true; btn.textContent = 'Importando...';
+    const res = await apiSend('/api/financial/invoices', 'POST', payload);
+    btn.disabled = false; btn.textContent = 'Confirmar importação';
+
+    if (!res || !res.success) {
+      errEl.textContent = (res && res.message) || 'Erro ao importar a nota.';
+      errEl.hidden = false;
+      return;
+    }
+    closePreview();
+    invMonthSel.value = ''; // mostra todas para garantir que a nova nota apareça
+    loadInvoices();
+  }
+
+  // ── Detalhe de nota existente (com reclassificação editável) ─
+  let detailInvoiceId = null;
+
+  async function openDetail(id) {
+    const res = await apiFetch(`/api/financial/invoices/${id}`);
+    if (!res || !res.success) { alert('Não consegui abrir esta nota.'); return; }
+    const inv = res.invoice;
+    detailInvoiceId = inv.id;
+    document.getElementById('detail-title').textContent =
+      inv.supplier_name ? `Nota — ${inv.supplier_name}` : 'Nota';
+    document.getElementById('dt-supplier').textContent = inv.supplier_name || '—';
+    document.getElementById('dt-number').textContent =
+      `${inv.invoice_number ? 'NF ' + inv.invoice_number : '—'} · ${fmtDate(inv.issue_date)}`;
+    document.getElementById('dt-category').textContent =
+      `${inv.category_icon ? inv.category_icon + ' ' : ''}${inv.category_name}`;
+    document.getElementById('dt-save-hint').hidden = true;
+    renderDetailTotal(inv.total_amount, inv.business_amount);
+
+    document.getElementById('dt-items').innerHTML = (res.items || []).map(it => `
+      <tr data-item-id="${it.id}">
+        <td>${esc(it.description)}</td>
+        <td class="num">${fmtQtyUnit(it.quantity, it.unit)}</td>
+        <td class="num">${it.total_price != null ? fmtBRL(it.total_price) : '—'}</td>
+        <td>${classSelectHtml(it.item_class, it.item_class === 'particular' ? 'is-particular' : '')}</td>
+      </tr>`).join('') || '<tr><td colspan="4" class="empty">Nota sem itens.</td></tr>';
+
+    document.getElementById('dt-items').querySelectorAll('tr[data-item-id]').forEach(tr => {
+      const sel = tr.querySelector('.class-sel');
+      if (sel) sel.addEventListener('change', () => reclassifyItem(tr.dataset.itemId, sel.value, sel));
+    });
+
+    detailModal.classList.add('open');
+  }
+
+  function renderDetailTotal(fiscal, business) {
+    const diff = round2(fiscal) !== round2(business);
+    document.getElementById('dt-total').innerHTML = diff
+      ? `${fmtBRL(business)} <span class="muted" style="font-size:.72rem;font-weight:400">(fiscal ${fmtBRL(fiscal)})</span>`
+      : fmtBRL(fiscal);
+  }
+
+  async function reclassifyItem(itemId, cls, sel) {
+    sel.disabled = true;
+    const res = await apiSend(`/api/financial/invoices/${detailInvoiceId}/items/${itemId}`, 'PATCH', { item_class: cls });
+    sel.disabled = false;
+    if (!res || !res.success) {
+      alert((res && res.message) || 'Não consegui reclassificar o item.');
+      return;
+    }
+    // Realce da linha + recarrega o detalhe p/ refletir o novo business_amount.
+    sel.classList.toggle('is-particular', cls === 'particular');
+    sel.closest('tr').classList.toggle('row-particular', cls === 'particular');
+    const inv = await apiFetch(`/api/financial/invoices/${detailInvoiceId}`);
+    if (inv && inv.success) renderDetailTotal(inv.invoice.total_amount, inv.invoice.business_amount);
+    document.getElementById('dt-save-hint').hidden = false;
+    loadInvoices(); // a lista por baixo reflete o novo valor do negócio
+  }
+
+  function closeDetail() { detailModal.classList.remove('open'); detailInvoiceId = null; }
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function fmtBRL(v) {
+    return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
+  }
+  function fmtQty(v) {
+    if (v == null) return '—';
+    return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(3)));
+  }
+  // Quantidade + unidade comercial da nota (uCom). Ex.: "3200 G", "1 FD", "24 UN".
+  // É como o fornecedor faturou — não convertemos fardo→unidades (isso é estoque,
+  // Camada 3 futura). Mostrar a unidade evita ler "1" como 1 unidade quando é 1 fardo.
+  function fmtQtyUnit(v, unit) {
+    const q = fmtQty(v);
+    if (q === '—') return '—';
+    return unit ? `${q} ${esc(unit)}` : q;
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${y.slice(2)}`;
+  }
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+})();
+</script>
+</body>
+</html>

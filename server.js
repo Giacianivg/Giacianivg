@@ -141,6 +141,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Compras: o XML da NF-e (texto) viaja no body JSON e pode passar de 100KB em
+// notas com muitos itens. Parser dedicado de 5MB só para esta rota — o global
+// abaixo segue apertado (100KB) para todo o resto.
+app.use('/api/financial/invoices', express.json({ limit: '5mb' }));
 app.use(express.json());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/design-system', express.static(path.join(__dirname, 'public', 'design-system')));
