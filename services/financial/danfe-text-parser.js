@@ -15,7 +15,22 @@
 // que preservam quebras de linha (pdf-parse) ou entregam texto corrido (unpdf).
 // As 2 alíquotas finais (com PONTO decimal) ancoram o fim de cada item.
 // UNID flexível ([A-Z0-9]+): casa 'UN', 'KG' e codificações tipo 'CX012UN'.
-const ITEM_RE = /(\d{3,})\s+(.+?)\s+(\d{8})\s+(\d{3})\s+(\d{3,4})\s+([A-Z0-9]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+\s+\d+\.\d{2}\s+\d+\.\d{2}/g;
+// Descrição limitada a 120 chars (máx. do xProd na NF-e) — impede que um número
+// de endereço/fiscal vire "código" e estique a descrição por todo o cabeçalho/
+// rodapé (defesa em profundidade junto com o recorte da região de produtos).
+const ITEM_RE = /(\d{3,})\s+(.{1,120}?)\s+(\d{8})\s+(\d{3})\s+(\d{3,4})\s+([A-Z0-9]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+[\d.,]+\s+[\d.,]+\s+\d+\.\d{2}\s+\d+\.\d{2}/g;
+
+// Recorta SÓ a(s) região(ões) da tabela de produtos: do fim do cabeçalho de
+// colunas ("ALIQ IPI") até "DADOS ADICIONAIS"/"RESERVADO AO FISCO", por página.
+// Remove cabeçalho do emitente, rodapé, canhoto e o bloco de informações fiscais
+// (infAdic) — que senão contaminavam a descrição dos produtos.
+const PRODUCT_REGION_RE = /DADOS DO PRODUTO[\s\S]*?ALIQ\s+IPI\s+([\s\S]*?)(?:DADOS ADICIONAIS|RESERVADO AO FISCO|$)/gi;
+
+function productRegion(text) {
+  let region = '';
+  for (const m of text.matchAll(PRODUCT_REGION_RE)) region += m[1] + ' ';
+  return region.trim() || text; // sem marcadores → usa o texto todo (a regex limitada protege)
+}
 
 function brNum(s) {
   if (s == null) return null;
@@ -100,9 +115,9 @@ function parseDanfeText(text) {
   if (tM) total_amount = brNum(tM[1]);
   else uncertain.push('total_amount');
 
-  // ── Itens (matchAll no texto inteiro; cabeçalho/rodapé não casam a regex) ──
+  // ── Itens (só na região da tabela de produtos; sem cabeçalho/rodapé/fiscal) ──
   const items = [];
-  for (const m of text.matchAll(ITEM_RE)) {
+  for (const m of productRegion(text).matchAll(ITEM_RE)) {
     items.push({
       product_code: m[1],
       description: m[2].replace(/\s+/g, ' ').trim(),

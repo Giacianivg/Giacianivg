@@ -53,6 +53,17 @@ describe('parseDanfeText — DANFE válida', () => {
     assert.equal(r.items[0].description, 'CERVEJA EXEMPLO LT 350ML');
     assert.equal(r.items[0].ncm, '22030000');
   });
+
+  test('anti-contaminação: texto fiscal/cabeçalho/rodapé NÃO vira item', () => {
+    // Fixture tem cabeçalho (Nº 100), bloco fiscal (Decr. 52665/2007, RICMS, PIS,
+    // COFINS, Fatura, Pedido) e canhoto "RECEBEMOS DE". Nada disso pode virar item
+    // nem contaminar descrição. Só os 4 produtos reais.
+    assert.equal(r.items.length, 4);
+    for (const it of r.items) {
+      assert.ok(it.description.length <= 120, `descrição longa: ${it.description}`);
+      assert.doesNotMatch(it.description, /FISCO|RECEBEMOS|RICMS|COFINS|ADICION|DANFE|FATURA|PEDIDO|REDUCAO|REDUÇÃO/i);
+    }
+  });
 });
 
 describe('parseDanfeText — divergências e erros', () => {

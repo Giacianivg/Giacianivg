@@ -29,6 +29,11 @@ test('importFromPdf extrai uma DANFE real (pulado se não houver PDF local)', { 
     assert.ok(d.header.access_key && d.header.access_key.length === 44, `${f}: chave de 44 díg`);
     assert.ok(d.header.total_amount > 0, `${f}: total > 0`);
     assert.ok(d.items.length > 0, `${f}: ao menos 1 item`);
+    // Anti-contaminação: nenhuma descrição pode conter texto fiscal/rodapé.
+    for (const it of d.items) {
+      assert.ok(it.description.length <= 120, `${f}: descrição longa (${it.description.length}): ${it.description.slice(0, 60)}`);
+      assert.doesNotMatch(it.description, /FISCO|RECEBEMOS|RICMS|COFINS|ADICION|DANFE|GLEBA/i, `${f}: descrição contaminada`);
+    }
     // Se a confiança é alta, a soma dos itens tem de bater com o total.
     if (d.source_confidence === 'high') {
       const soma = Math.round(d.items.reduce((s, i) => s + (i.total_price || 0), 0) * 100) / 100;
