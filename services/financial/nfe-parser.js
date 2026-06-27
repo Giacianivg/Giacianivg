@@ -105,6 +105,7 @@ function parseNfe(xmlText) {
   // Identificação da nota.
   const ide = deepFind(infNFe, 'ide') || {};
   const invoice_number = txt(ide.nNF) || null;
+  const series = txt(ide.serie) || null;
   const issue_date = dateOnly(ide.dhEmi) || dateOnly(ide.dEmi);
 
   // Total: ICMSTot/vNF.
@@ -138,6 +139,7 @@ function parseNfe(xmlText) {
       supplier_name,
       supplier_cnpj,
       invoice_number,
+      series,
       issue_date,
       total_amount: Math.round(total_amount * 100) / 100,
     },

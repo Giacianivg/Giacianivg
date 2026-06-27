@@ -153,11 +153,11 @@
       </div>
       <div class="topbar-right">
         <span style="font-size:.8125rem;color:var(--tx3)" id="date-label"></span>
-        <button class="btn btn-primary" id="btn-import-xml" title="Importar nota de XML de NF-e">
+        <button class="btn btn-primary" id="btn-import-xml" title="Importar nota: XML de NF-e ou PDF de DANFE">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-          Importar XML
+          Importar XML / PDF
         </button>
-        <input type="file" id="xml-file" accept=".xml" hidden>
+        <input type="file" id="xml-file" accept=".xml,.pdf" hidden>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -170,7 +170,7 @@
         <div class="section-head">
           <div>
             <div class="section-title">Notas de compra</div>
-            <div class="section-sub" id="inv-sub">Importe o XML da NF-e para registrar a nota e seus produtos.</div>
+            <div class="section-sub" id="inv-sub">Importe o XML da NF-e ou o PDF da DANFE para registrar a nota e seus produtos.</div>
           </div>
           <div style="display:flex;align-items:center;gap:var(--sp-3)">
             <select class="year-select" id="inv-month" style="background:var(--sur2);border:1px solid var(--bdr1);border-radius:var(--r-sm);color:var(--tx1);padding:5px 10px;font-size:.8125rem;cursor:pointer"></select>
@@ -401,7 +401,7 @@
     document.getElementById('btn-import-xml').addEventListener('click', () => xmlInput.click());
     xmlInput.addEventListener('change', () => {
       const file = xmlInput.files && xmlInput.files[0];
-      if (file) handleXmlFile(file);
+      if (file) handleFile(file);
       xmlInput.value = '';
     });
     document.getElementById('btn-refresh').addEventListener('click', loadInvoices);
@@ -443,10 +443,10 @@
     document.getElementById('inv-sub').textContent =
       invoices.length
         ? `${invoices.length} nota${invoices.length !== 1 ? 's' : ''} · ${fmtBRL(total)} em compras`
-        : 'Importe o XML da NF-e para registrar a nota e seus produtos.';
+        : 'Importe o XML da NF-e ou o PDF da DANFE para registrar a nota e seus produtos.';
 
     if (!invoices.length) {
-      body.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma nota neste período. Clique em “Importar XML”.</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="empty">Nenhuma nota neste período. Clique em “Importar XML / PDF”.</td></tr>';
       return;
     }
 
@@ -472,26 +472,36 @@
     );
   }
 
-  // ── Importar: lê o arquivo e pede o preview ao servidor ──────
-  function handleXmlFile(file) {
+  // ── Importar: lê o arquivo (XML texto ou PDF base64) e pede o preview ────────
+  function handleFile(file) {
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
     const reader = new FileReader();
-    reader.onload = () => requestPreview(reader.result);
     reader.onerror = () => alert('Não consegui ler o arquivo.');
-    reader.readAsText(file);
+    if (isPdf) {
+      reader.onload = () => {
+        // readAsDataURL → "data:...;base64,XXXX"; mando só o XXXX.
+        const b64 = String(reader.result).split(',')[1] || '';
+        requestPreview({ pdf_base64: b64 });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = () => requestPreview({ xml: reader.result });
+      reader.readAsText(file);
+    }
   }
 
-  async function requestPreview(xml) {
-    const res = await apiSend('/api/financial/invoices/preview', 'POST', { xml });
+  async function requestPreview(sourcePayload) {
+    const res = await apiSend('/api/financial/invoices/preview', 'POST', sourcePayload);
     if (!res || !res.success) {
       alert((res && res.message) || 'Não foi possível ler esta nota.');
       return;
     }
-    openPreview(res, xml);
+    openPreview(res, sourcePayload);
   }
 
-  function openPreview(p, xml) {
+  function openPreview(p, sourcePayload) {
     const inv = p.invoice || {};
-    previewState = { xml, total: Number(inv.total_amount) || 0 };
+    previewState = { source: sourcePayload, total: Number(inv.total_amount) || 0 };
 
     document.getElementById('pv-supplier').textContent = inv.supplier_name || '—';
     document.getElementById('pv-cnpj').textContent     = inv.supplier_cnpj || '—';
@@ -520,9 +530,19 @@
       sel.addEventListener('change', recomputePreview));
     recomputePreview();
 
+    // Avisos: duplicada, baixa confiança da extração e campos incertos/divergências.
+    const msgs = [];
+    if (p.already_imported) msgs.push('⚠️ Esta nota já foi importada antes — confirmar dará erro de duplicada.');
+    if (p.source_confidence && p.source_confidence !== 'high') {
+      msgs.push('⚠️ Dados extraídos automaticamente — confira antes de confirmar.');
+    }
+    (p.warnings || []).forEach(w => msgs.push('• ' + w));
+    if ((p.uncertain_fields || []).length) {
+      msgs.push('• Campos a conferir: ' + p.uncertain_fields.join(', '));
+    }
     const warn = document.getElementById('preview-warn');
-    if (p.already_imported) {
-      warn.textContent = 'Esta nota já foi importada antes — confirmar dará erro de duplicada.';
+    if (msgs.length) {
+      warn.innerHTML = msgs.map(esc).join('<br>');
       warn.hidden = false;
     } else {
       warn.hidden = true;
@@ -563,10 +583,10 @@
     errEl.hidden = true;
 
     const payload = {
-      xml: previewState.xml,
+      ...previewState.source,   // { xml } ou { pdf_base64 } — mesma fonte do preview
       category_id: document.getElementById('pv-category').value,
       payment_method: document.getElementById('pv-payment').value,
-      // Classes alinhadas por índice com os itens (o servidor re-parseia o XML).
+      // Classes alinhadas por índice com os itens (o servidor re-processa a fonte).
       item_classes: previewRows().map(r => r.cls),
     };
     if (!payload.category_id) { errEl.textContent = 'Selecione uma categoria.'; errEl.hidden = false; return; }

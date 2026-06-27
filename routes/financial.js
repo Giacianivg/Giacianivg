@@ -8,7 +8,7 @@ const {
   monthRange,
   buildCategoryBreakdown,
 } = require('../services/financial/expense-helpers');
-const { parseNfe } = require('../services/financial/nfe-parser');
+const { importInvoice } = require('../services/financial/invoice-import');
 const { suggestCategory } = require('../services/financial/category-suggester');
 const {
   isValidClass,
@@ -374,19 +374,20 @@ router.delete('/expenses/:id', async (req, res) => {
 // sugerida. NÃO salva nada.
 router.post('/invoices/preview', async (req, res) => {
   try {
-    const xml = req.body && req.body.xml;
-    if (!xml || typeof xml !== 'string') {
-      return fail(res, 'missing_xml', 'Envie o conteúdo do XML em "xml".');
+    const { xml, pdf_base64 } = req.body || {};
+    if (!xml && !pdf_base64) {
+      return fail(res, 'missing_source', 'Envie um XML ou um PDF.');
     }
 
-    const parsed = parseNfe(xml);
-    if (!parsed.ok) return fail(res, 'parse_error', parsed.error);
+    // Adapter por fonte → InvoiceImportData. XML e PDF hoje; foto entra aqui depois.
+    const data = await importInvoice({ xml, pdf_base64 });
+    if (!data.ok) return fail(res, 'parse_error', data.error);
 
     // Nota já importada? Avisa cedo (dedup mora em purchase_invoices.nfe_key).
     const { data: existing } = await supabaseAdmin
       .from('purchase_invoices')
       .select('id')
-      .eq('nfe_key', parsed.invoice.nfe_key)
+      .eq('nfe_key', data.header.access_key)
       .maybeSingle();
 
     // Categoria sugerida a partir dos itens.
@@ -395,10 +396,10 @@ router.post('/invoices/preview', async (req, res) => {
       .select('id, name')
       .eq('is_active', true);
 
-    const suggestion = suggestCategory(parsed.items, categories || []);
+    const suggestion = suggestCategory(data.items, categories || []);
 
     // Classe sugerida por item, a partir da memória de classificação.
-    const matchKeys = parsed.items.map((it) => normalizeDesc(it.description));
+    const matchKeys = data.items.map((it) => normalizeDesc(it.description));
     const uniqueKeys = [...new Set(matchKeys.filter(Boolean))];
     const memMap = {};
     if (uniqueKeys.length) {
@@ -409,23 +410,28 @@ router.post('/invoices/preview', async (req, res) => {
       for (const m of mem || []) memMap[m.match_key] = m.item_class;
     }
 
-    const items = parsed.items.map((it, idx) => ({
+    const items = data.items.map((it, idx) => ({
       ...it,
       suggested_class: memMap[matchKeys[idx]] || DEFAULT_ITEM_CLASS,
     }));
 
     const business_amount = computeBusinessAmount(
-      parsed.invoice.total_amount,
+      data.header.total_amount,
       items.map((i) => ({ item_class: i.suggested_class, total_price: i.total_price })),
     );
 
     return ok(res, {
-      invoice: parsed.invoice,
+      source: data.source,
+      source_confidence: data.source_confidence,
+      mode: data.mode,
+      invoice: data.header,
       items,
       items_count: items.length,
       suggested_category_id: suggestion.category_id,
       suggested_category_name: suggestion.category_name,
       business_amount,
+      uncertain_fields: data.uncertain_fields,
+      warnings: data.warnings,
       already_imported: !!existing,
     });
   } catch (err) {
@@ -437,28 +443,34 @@ router.post('/invoices/preview', async (req, res) => {
 // de forma atômica via RPC. Body: { xml, category_id, payment_method?, is_test? }.
 router.post('/invoices', async (req, res) => {
   try {
-    const xml = req.body && req.body.xml;
-    if (!xml || typeof xml !== 'string') {
-      return fail(res, 'missing_xml', 'Envie o conteúdo do XML em "xml".');
+    const { xml, pdf_base64 } = req.body || {};
+    if (!xml && !pdf_base64) {
+      return fail(res, 'missing_source', 'Envie um XML ou um PDF.');
     }
     if (!req.body.category_id) {
       return fail(res, 'missing_category', 'Selecione uma categoria.');
     }
 
-    // Re-parseia no servidor (não confia em valores vindos do cliente). As CLASSES
-    // são input do usuário (vêm alinhadas por índice com os itens parseados).
-    const parsed = parseNfe(xml);
-    if (!parsed.ok) return fail(res, 'parse_error', parsed.error);
+    // Re-processa no servidor (não confia em valores vindos do cliente). As CLASSES
+    // são input do usuário (vêm alinhadas por índice com os itens).
+    const imported = await importInvoice({ xml, pdf_base64 });
+    if (!imported.ok) return fail(res, 'parse_error', imported.error);
 
     const classes = Array.isArray(req.body.item_classes) ? req.body.item_classes : [];
-    const items = parsed.items.map((it, idx) => ({
+    const items = imported.items.map((it, idx) => ({
       ...it,
       item_class: coerceClass(classes[idx]),
       match_key: normalizeDesc(it.description),
     }));
 
+    const h = imported.header;
     const payload = {
-      ...parsed.invoice,
+      nfe_key: h.access_key,
+      supplier_name: h.supplier_name,
+      supplier_cnpj: h.supplier_cnpj,
+      invoice_number: h.invoice_number,
+      issue_date: h.issue_date,
+      total_amount: h.total_amount,
       category_id: req.body.category_id,
       payment_method: req.body.payment_method || 'boleto',
       is_test: req.body.is_test === true,

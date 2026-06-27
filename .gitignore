@@ -38,3 +38,7 @@ database/.temp-deploy/
 instalar-arquitetura-bpec.ps1
 public/files.zip
 .mcp.json
+
+# PDFs reais de teste (dados pessoais) — não versionar
+tests/fixtures/*.pdf
+tests/fixtures/*.PDF
