@@ -940,20 +940,37 @@
   }
 
   // ── Foto de cupom → Claude visão → modal pré-preenchido (sempre rascunho) ──
+  // Redimensiona e converte pra JPEG no navegador antes de enviar: resolve foto
+  // grande de celular (limite da API) e formato HEIC (iPhone), que a Anthropic
+  // não aceita. O canvas re-encoda qualquer imagem que o navegador exibe.
   function handleReceiptPhoto(file) {
-    const reader = new FileReader();
-    reader.onerror = () => alert('Não consegui ler a foto.');
-    reader.onload = async () => {
-      const b64 = String(reader.result).split(',')[1] || '';
-      const btn = document.getElementById('btn-scan-receipt');
-      btn.disabled = true; const lbl = btn.innerHTML; btn.innerHTML = 'Lendo foto...';
-      const res = await apiSend('/api/financial/expenses/scan', 'POST',
-        { image_base64: b64, mime_type: file.type });
-      btn.disabled = false; btn.innerHTML = lbl;
-      if (!res || !res.success) { alert((res && res.message) || 'Não consegui ler a foto.'); return; }
-      openExpenseFromScan(res);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(url); alert('Não consegui abrir a foto. Tente tirar de novo ou usar outra imagem.'); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1600; // a API já reduz pra ~1568px; mandar maior só desperdiça
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (Math.max(w, h) > MAX) { const s = MAX / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      let b64;
+      try { b64 = (c.toDataURL('image/jpeg', 0.85).split(',')[1]) || ''; }
+      catch (_) { alert('Não consegui processar a foto.'); return; }
+      sendReceiptScan(b64);
     };
-    reader.readAsDataURL(file);
+    img.src = url;
+  }
+
+  async function sendReceiptScan(b64) {
+    const btn = document.getElementById('btn-scan-receipt');
+    btn.disabled = true; const lbl = btn.innerHTML; btn.innerHTML = 'Lendo foto...';
+    const res = await apiSend('/api/financial/expenses/scan', 'POST',
+      { image_base64: b64, mime_type: 'image/jpeg' });
+    btn.disabled = false; btn.innerHTML = lbl;
+    if (!res || !res.success) { alert((res && res.message) || 'Não consegui ler a foto.'); return; }
+    openExpenseFromScan(res);
   }
 
   function openExpenseFromScan(s) {

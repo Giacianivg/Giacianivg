@@ -147,7 +147,11 @@ async function importFromPhoto(base64, mimeType) {
       }),
       signal: AbortSignal.timeout(25000),
     });
-    if (!res.ok) return { ok: false, error: `Falha na leitura da foto (HTTP ${res.status}).` };
+    if (!res.ok) {
+      let detail = '';
+      try { const e = await res.json(); detail = e && e.error && e.error.message ? ` — ${e.error.message}` : ''; } catch (_) { /* ignora */ }
+      return { ok: false, error: `Falha na leitura da foto (HTTP ${res.status})${detail}.` };
+    }
     const data = await res.json();
     text = data && data.content && data.content[0] && data.content[0].text;
   } catch (e) {
