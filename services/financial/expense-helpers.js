@@ -66,6 +66,7 @@ function validateExpense(body = {}) {
     category_id: body.category_id,
     description,
     payment_method,
+    is_personal: body.is_personal === true,
   };
   if (expense_date) normalized.expense_date = expense_date;
   if (nfe_key) normalized.nfe_key = nfe_key;

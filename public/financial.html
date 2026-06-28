@@ -170,6 +170,15 @@
       border-radius: var(--r-sm); color: var(--tx1); padding: 5px 10px;
       font-size: .8125rem; cursor: pointer;
     }
+    /* Seletor negócio/particular */
+    .seg-opt {
+      flex: 1; display: flex; align-items: center; gap: 6px; cursor: pointer;
+      background: var(--sur2); border: 1px solid var(--bdr1); border-radius: var(--r-md);
+      padding: 8px 12px; font-size: .8125rem; color: var(--tx1);
+    }
+    .seg-opt:has(input:checked) { border-color: var(--royal-l); background: rgba(99,102,241,.08); }
+    /* Campo de baixa confiança (foto) → revisão obrigatória */
+    .field-uncertain { border-color: var(--gold) !important; box-shadow: 0 0 0 2px rgba(234,179,8,.18); }
   </style>
 </head>
 <body>
@@ -238,6 +247,11 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Despesa
         </button>
+        <button class="btn btn-secondary" id="btn-scan-receipt" title="Foto de cupom — lê valor e data automaticamente">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Foto de cupom
+        </button>
+        <input type="file" id="receipt-file" accept="image/*" capture="environment" hidden>
         <button class="btn btn-secondary" id="btn-refresh">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Atualizar
@@ -435,6 +449,15 @@
           <label class="form-label" for="exp-desc">Descrição <span class="form-hint" style="display:inline">(opcional)</span></label>
           <input class="input" type="text" id="exp-desc" maxlength="200" placeholder="Ex.: conta de luz junho">
         </div>
+        <div class="form-group">
+          <label class="form-label">Classificação</label>
+          <div style="display:flex;gap:var(--sp-2)">
+            <label class="seg-opt"><input type="radio" name="exp-class" value="negocio" checked> Do negócio</label>
+            <label class="seg-opt"><input type="radio" name="exp-class" value="particular"> Particular</label>
+          </div>
+          <div class="form-hint">Particular fica registrado, mas <b>fora</b> dos totais do negócio.</div>
+        </div>
+        <div id="exp-scan-banner" class="form-error" hidden style="background:rgba(234,179,8,.12);color:var(--gold);border:1px solid rgba(234,179,8,.3);padding:8px 12px;border-radius:var(--r-md)"></div>
         <div id="exp-error" class="form-error" hidden></div>
       </div>
       <div class="modal-footer">
@@ -813,6 +836,15 @@
     document.getElementById('btn-add-expense').addEventListener('click', openExpenseModal);
     document.getElementById('btn-add-expense-2').addEventListener('click', openExpenseModal);
 
+    // Foto de cupom (Claude visão)
+    const receiptInput = document.getElementById('receipt-file');
+    document.getElementById('btn-scan-receipt').addEventListener('click', () => receiptInput.click());
+    receiptInput.addEventListener('change', () => {
+      const file = receiptInput.files && receiptInput.files[0];
+      if (file) handleReceiptPhoto(file);
+      receiptInput.value = '';
+    });
+
     // Controles do modal
     document.getElementById('expense-close').addEventListener('click', closeExpenseModal);
     document.getElementById('expense-cancel').addEventListener('click', closeExpenseModal);
@@ -869,10 +901,10 @@
       if (!items.length) {
         body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:var(--sp-6)">Sem lançamentos.</td></tr>';
       } else {
-        body.innerHTML = items.map(e => `<tr>
+        body.innerHTML = items.map(e => `<tr${e.is_personal ? ' style="opacity:.6"' : ''}>
           <td class="num">${fmtDate(e.expense_date)}</td>
           <td>${e.category_icon ? e.category_icon + ' ' : ''}${esc(e.category_name)}</td>
-          <td class="muted">${esc(e.description) || '—'}</td>
+          <td class="muted">${esc(e.description) || '—'}${e.is_personal ? ' <span style="font-size:.65rem;background:var(--sur2);border:1px solid var(--bdr1);border-radius:9999px;padding:1px 6px;color:var(--tx3)">particular</span>' : ''}</td>
           <td class="muted">${PAYMENT_LABELS[e.payment_method] || e.payment_method}</td>
           <td class="num" style="text-align:right;font-weight:700">${fmtBRL(e.amount)}</td>
           <td class="td-action"><button class="btn btn-ghost btn-icon btn-del-exp" data-id="${e.id}" title="Excluir">
@@ -890,6 +922,7 @@
     document.getElementById('expense-modal-title').textContent = 'Nova despesa';
     document.getElementById('expense-form').reset();
     document.getElementById('exp-error').hidden = true;
+    clearScanState();
     // Data padrão = hoje (timezone local)
     const now = new Date();
     document.getElementById('exp-date').value =
@@ -898,6 +931,47 @@
     setTimeout(() => document.getElementById('exp-amount').focus(), 50);
   }
   function closeExpenseModal() { expModal.classList.remove('open'); }
+
+  // Limpa o estado de "veio de foto" (banner + destaques de campos incertos).
+  function clearScanState() {
+    document.getElementById('exp-scan-banner').hidden = true;
+    ['exp-amount','exp-category','exp-date','exp-desc'].forEach(id =>
+      document.getElementById(id).classList.remove('field-uncertain'));
+  }
+
+  // ── Foto de cupom → Claude visão → modal pré-preenchido (sempre rascunho) ──
+  function handleReceiptPhoto(file) {
+    const reader = new FileReader();
+    reader.onerror = () => alert('Não consegui ler a foto.');
+    reader.onload = async () => {
+      const b64 = String(reader.result).split(',')[1] || '';
+      const btn = document.getElementById('btn-scan-receipt');
+      btn.disabled = true; const lbl = btn.innerHTML; btn.innerHTML = 'Lendo foto...';
+      const res = await apiSend('/api/financial/expenses/scan', 'POST',
+        { image_base64: b64, mime_type: file.type });
+      btn.disabled = false; btn.innerHTML = lbl;
+      if (!res || !res.success) { alert((res && res.message) || 'Não consegui ler a foto.'); return; }
+      openExpenseFromScan(res);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function openExpenseFromScan(s) {
+    openExpenseModal();
+    document.getElementById('expense-modal-title').textContent = 'Despesa (foto de cupom)';
+    if (s.amount != null)       document.getElementById('exp-amount').value = s.amount;
+    if (s.expense_date)         document.getElementById('exp-date').value   = s.expense_date;
+    if (s.supplier_name)        document.getElementById('exp-desc').value   = s.supplier_name;
+
+    // Banner de revisão + destaque dos campos de baixa confiança.
+    const banner = document.getElementById('exp-scan-banner');
+    banner.textContent = (s.warnings && s.warnings[0]) || '📷 Dados extraídos da foto — confira antes de salvar.';
+    banner.hidden = false;
+    const map = { total_amount:'exp-amount', issue_date:'exp-date', supplier_name:'exp-desc' };
+    (s.uncertain_fields || []).forEach(f => { if (map[f]) document.getElementById(map[f]).classList.add('field-uncertain'); });
+    // Categoria sempre precisa de escolha manual no cupom.
+    document.getElementById('exp-category').classList.add('field-uncertain');
+  }
 
   async function submitExpense(e) {
     e.preventDefault();
@@ -911,6 +985,7 @@
       payment_method: document.getElementById('exp-payment').value,
       expense_date: document.getElementById('exp-date').value || undefined,
       description: document.getElementById('exp-desc').value,
+      is_personal: (document.querySelector('input[name="exp-class"]:checked') || {}).value === 'particular',
     };
 
     if (!(Number(payload.amount) > 0)) { errEl.textContent = 'Informe um valor maior que zero.'; errEl.hidden = false; return; }

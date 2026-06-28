@@ -9,6 +9,7 @@ const {
   buildCategoryBreakdown,
 } = require('../services/financial/expense-helpers');
 const { importInvoice } = require('../services/financial/invoice-import');
+const { importFromPhoto } = require('../services/financial/photo-receipt');
 const { suggestCategory } = require('../services/financial/category-suggester');
 const {
   isValidClass,
@@ -270,7 +271,7 @@ router.get('/expenses', async (req, res) => {
 
     const { data, error } = await supabaseAdmin
       .from('expenses')
-      .select('id, amount, category_id, description, payment_method, expense_date, created_at, expense_categories(name, icon)')
+      .select('id, amount, category_id, description, payment_method, expense_date, is_personal, created_at, expense_categories(name, icon)')
       .eq('is_test', false)
       .gte('expense_date', from)
       .lte('expense_date', to)
@@ -279,6 +280,8 @@ router.get('/expenses', async (req, res) => {
 
     if (error) return serverError(res, error);
 
+    // Lista mostra TODAS (com marcador); o total do negócio (summary) é quem
+    // exclui as particulares.
     const expenses = (data || []).map(e => ({
       id: e.id,
       amount: Number(e.amount),
@@ -288,6 +291,7 @@ router.get('/expenses', async (req, res) => {
       description: e.description,
       payment_method: e.payment_method,
       expense_date: e.expense_date,
+      is_personal: e.is_personal === true,
       created_at: e.created_at,
     }));
 
@@ -306,6 +310,7 @@ router.get('/expenses/summary', async (req, res) => {
       .from('expenses')
       .select('amount, category_id, expense_categories(name, icon)')
       .eq('is_test', false)
+      .eq('is_personal', false) // totais do negócio não incluem gastos particulares
       .gte('expense_date', from)
       .lte('expense_date', to);
 
@@ -333,7 +338,7 @@ router.post('/expenses', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('expenses')
       .insert(normalized)
-      .select('id, amount, category_id, description, payment_method, expense_date, created_at')
+      .select('id, amount, category_id, description, payment_method, expense_date, is_personal, created_at')
       .single();
 
     if (error) {
@@ -342,6 +347,35 @@ router.post('/expenses', async (req, res) => {
       return serverError(res, error);
     }
     return ok(res, { expense: data }, 201);
+  } catch (err) {
+    return serverError(res, err);
+  }
+});
+
+// POST /api/financial/expenses/scan — lê a FOTO de um cupom simples (Claude visão)
+// e devolve os campos extraídos para pré-preencher o modal. NÃO salva (sempre
+// rascunho). Body: { image_base64, mime_type }.
+router.post('/expenses/scan', async (req, res) => {
+  try {
+    const image = req.body && req.body.image_base64;
+    if (!image || typeof image !== 'string') {
+      return fail(res, 'missing_image', 'Envie a foto em "image_base64".');
+    }
+
+    const data = await importFromPhoto(image, req.body.mime_type);
+    if (!data.ok) return fail(res, 'scan_error', data.error);
+
+    const h = data.header;
+    return ok(res, {
+      source: data.source,
+      source_confidence: data.source_confidence,
+      // Pré-preenchimento do modal de despesa:
+      amount: h.total_amount,
+      expense_date: h.issue_date,
+      supplier_name: h.supplier_name,
+      uncertain_fields: data.uncertain_fields,
+      warnings: data.warnings,
+    });
   } catch (err) {
     return serverError(res, err);
   }
