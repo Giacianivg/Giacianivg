@@ -21,11 +21,12 @@ const PROMPT = [
   'Esta é a foto de um cupom/comprovante de compra (feira, padaria, mercado, posto de gás).',
   'Extraia APENAS estes campos e responda SOMENTE com um JSON válido, sem texto antes ou depois:',
   '{',
-  '  "total": número do valor total pago em reais (ponto decimal, ex: 84.50) ou null,',
+  '  "total": o valor total pago, como TEXTO entre aspas EXATAMENTE como impresso no cupom (ex: "1.950,00", "84,50", "R$ 12,00") ou null,',
   '  "date": data da compra como "YYYY-MM-DD" ou null,',
   '  "supplier": nome do estabelecimento (string) ou null,',
   '  "confidence": { "total": "high"|"low", "date": "high"|"low", "supplier": "high"|"low" }',
   '}',
+  'No Brasil o ponto é separador de MILHAR e a vírgula é o DECIMAL: "1.950,00" são mil novecentos e cinquenta reais (1950), não 1,95.',
   'Use "low" quando não tiver certeza do campo. Se um campo não estiver legível, use null e "low".',
 ].join('\n');
 
@@ -44,9 +45,31 @@ function extractJson(text) {
   }
 }
 
+// Parse de valor em reais robusto ao formato brasileiro (ponto = milhar,
+// vírgula = decimal). Aceita string ("1.950,00", "84,50", "1.950") ou número.
+//   "1.950,00" → 1950   |  "84,50" → 84.5   |  "1.950" → 1950 (milhar)
+//   "84.50"    → 84.5   |  "1950"  → 1950   |  número 1950 → 1950
 function num(v) {
   if (v === null || v === undefined || v === '') return null;
-  const n = Number(String(v).replace(/[^\d.,-]/g, '').replace(',', '.'));
+  if (typeof v === 'number') {
+    return Number.isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null;
+  }
+  let s = String(v).replace(/[^\d.,]/g, '');
+  if (!s) return null;
+
+  if (s.includes(',')) {
+    // vírgula presente = decimal brasileiro; pontos são separador de milhar.
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (s.includes('.')) {
+    // só pontos: 1–2 dígitos depois do último ponto = decimal; senão = milhar.
+    const lastDot = s.lastIndexOf('.');
+    const decimals = s.length - lastDot - 1;
+    s = (decimals === 1 || decimals === 2)
+      ? s.slice(0, lastDot).replace(/\./g, '') + '.' + s.slice(lastDot + 1)
+      : s.replace(/\./g, '');
+  }
+
+  const n = Number(s);
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 

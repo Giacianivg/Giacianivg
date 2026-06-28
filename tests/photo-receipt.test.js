@@ -53,6 +53,19 @@ describe('parseReceiptResponse — cupom legível', () => {
   });
 });
 
+describe('parseReceiptResponse — formato brasileiro de valor (regressão)', () => {
+  const total = (v) => parseReceiptResponse(JSON.stringify({ total: v, supplier: 'X' })).header.total_amount;
+
+  test('"1.950,00" (milhar + decimal) → 1950', () => assert.equal(total('1.950,00'), 1950));
+  test('"1.950" (só milhar) → 1950, NÃO 1.95', () => assert.equal(total('1.950'), 1950));
+  test('"R$ 1.950,00" com símbolo → 1950', () => assert.equal(total('R$ 1.950,00'), 1950));
+  test('"84,50" (decimal vírgula) → 84.5', () => assert.equal(total('84,50'), 84.5));
+  test('"84.50" (decimal ponto, 2 casas) → 84.5', () => assert.equal(total('84.50'), 84.5));
+  test('"1950" puro → 1950', () => assert.equal(total('1950'), 1950));
+  test('"12.000,00" → 12000', () => assert.equal(total('12.000,00'), 12000));
+  test('número JSON 1950 → 1950', () => assert.equal(total(1950), 1950));
+});
+
 describe('parseReceiptResponse — campos incertos / ausentes', () => {
   test('confiança baixa e campo nulo entram em uncertain_fields', () => {
     const r = parseReceiptResponse(JSON.stringify({
