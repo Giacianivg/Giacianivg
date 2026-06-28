@@ -1,7 +1,18 @@
 # STATUS — Pousada Luz da Lua
 
-> Atualizado: 2026-06-24 (sessão: Bloco 1 — Higiene de dados / marcador is_test)
+> Atualizado: 2026-06-27 (sessão: Financeiro — Compras / Importação de notas)
 > Branch: `master`
+
+## Módulo de Compras — Importação de notas (2026-06-26/27) — DEPLOYADO
+
+Lado "saída" do financeiro, em camadas. Tudo em produção (`nqxesjxbqupmhnivkfyk`).
+
+- **Camada 0/1-simples** (migrations 042/043): despesa manual + import de XML criando 1 despesa (aposentado pela Camada 1).
+- **Camada 1 — Compras com itens** (migration 044, commit `2dbb2df`): importa a NOTA e seus PRODUTOS. Cada item é classificável (4 classes: estoque da pousada / despesa não-estoque / ativo imobilizado / particular). `business_amount = vNF − Σ(particulares)`. Página `public/compras.html`. Memória de classificação por descrição. Reclassificação recalcula o financeiro.
+- **Importação multi-fonte** (arquitetura `InvoiceImportData`, um adapter por fonte):
+  - **Fase 1 — XML + PDF da DANFE** (commits `1b9b925` + fix `7f9c99c`): PDF lido com `unpdf` (serverless, sem binário nativo); parser de itens recorta a região de produtos (não contamina com texto fiscal). Item-a-item, alta confiança.
+  - **Fase 2 — Foto de cupom simples** (Caso A, migration 045, commit `9e61fef`): foto de feira/padaria/gás → Claude visão (Haiku) extrai total/data/estabelecimento → vira DESPESA. Marcador `is_personal` (particular/negócio): particular fica fora dos KPIs. Botão "Foto de cupom" em `financial.html`. Sempre rascunho (revisão obrigatória).
+  - **Fase 3 — Foto de DANFE completa item-a-item (Caso B): ADIADO — baixo custo-benefício.** Decisão do Founder (2026-06-27): esforço alto + fragilidade alta (OCR de tabela de 70+ itens de foto, multipágina, erros frequentes) + frequência baixa (nota impressa sem XML nem PDF é raro — Fases 1-2 já cobrem a realidade). Para esse caso raro basta o lançamento manual ou como despesa simples. **Reavaliar só se o caso aparecer com frequência real, com dados.**
 
 ## Bloco 1 — Higiene de dados (is_test) — 2026-06-24
 
