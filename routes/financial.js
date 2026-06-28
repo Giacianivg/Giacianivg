@@ -9,7 +9,7 @@ const {
   buildCategoryBreakdown,
 } = require('../services/financial/expense-helpers');
 const { importInvoice } = require('../services/financial/invoice-import');
-const { importFromPhoto } = require('../services/financial/photo-receipt');
+const { extractReceipt } = require('../services/financial/ocr');
 const { suggestCategory } = require('../services/financial/category-suggester');
 const {
   isValidClass,
@@ -362,11 +362,17 @@ router.post('/expenses/scan', async (req, res) => {
       return fail(res, 'missing_image', 'Envie a foto em "image_base64".');
     }
 
-    const data = await importFromPhoto(image, req.body.mime_type);
-    if (!data.ok) return fail(res, 'scan_error', data.error);
+    const data = await extractReceipt(image, req.body.mime_type);
+
+    // Falha de OCR NÃO é erro do sistema: devolve 200 com ocr_status 'failed' e
+    // uma mensagem genérica. O frontend degrada para o lançamento manual.
+    if (!data.ok) {
+      return ok(res, { ocr_status: 'failed', reason: data.message });
+    }
 
     const h = data.header;
     return ok(res, {
+      ocr_status: 'ok',
       source: data.source,
       source_confidence: data.source_confidence,
       // Pré-preenchimento do modal de despesa:

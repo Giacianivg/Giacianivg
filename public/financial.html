@@ -969,8 +969,20 @@
     const res = await apiSend('/api/financial/expenses/scan', 'POST',
       { image_base64: b64, mime_type: 'image/jpeg' });
     btn.disabled = false; btn.innerHTML = lbl;
-    if (!res || !res.success) { alert((res && res.message) || 'Não consegui ler a foto.'); return; }
-    openExpenseFromScan(res);
+
+    // OCR leu → modal pré-preenchido. Qualquer falha (sem leitura/IA indisponível)
+    // → degrada para o lançamento MANUAL, nunca trava o usuário.
+    if (res && res.success && res.ocr_status === 'ok') {
+      openExpenseFromScan(res);
+    } else {
+      openExpenseModal();
+      const banner = document.getElementById('exp-scan-banner');
+      banner.textContent = (res && res.reason)
+        || 'Não consegui ler a foto automaticamente — preencha manualmente.';
+      banner.hidden = false;
+      document.getElementById('exp-category').classList.add('field-uncertain');
+      setTimeout(() => document.getElementById('exp-amount').focus(), 60);
+    }
   }
 
   function openExpenseFromScan(s) {

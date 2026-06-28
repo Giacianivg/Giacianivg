@@ -31,6 +31,11 @@ describe('validateExpense', () => {
     assert.equal(r.normalized.payment_method, 'pix');
   });
 
+  test('marcador particular/negócio: default negócio; true quando particular', () => {
+    assert.equal(validateExpense(base).normalized.is_personal, false);
+    assert.equal(validateExpense({ ...base, is_personal: true }).normalized.is_personal, true);
+  });
+
   test('rejeita amount ausente', () => {
     const r = validateExpense({ category_id: 'cat-1' });
     assert.equal(r.valid, false);
